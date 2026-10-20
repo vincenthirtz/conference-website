@@ -24,6 +24,7 @@
 // une phrase par seconde (au-delà : refusée), la présence au plus chaque
 // seconde.
 
+import { decodeLibraryLook } from '@/config/library/avatarLook';
 import {
   LIBRARY_SERVER_EVENTS,
   LibraryBannedPayload,
@@ -32,6 +33,7 @@ import {
   LibraryUnhidePayload,
 } from '../realtimeTopics';
 import type { LibraryEnterResponse } from '../socialResponses';
+import { bindChatEvents, type LibraryChatEvent } from './chatEvents';
 import {
   LIBRARY_PEER_EVENTS,
   LibraryEmotePayload,
@@ -120,7 +122,12 @@ export type LibraryPosition = { gx: number; gy: number; dir: number };
 
 export type LibraryEnterContext = Pick<
   LibraryEnterResponse,
-  'room' | 'topics' | 'me' | 'hiddenUserIds' | 'discreetByDefault' | 'canBeVisible'
+  | 'room'
+  | 'topics'
+  | 'me'
+  | 'hiddenUserIds'
+  | 'discreetByDefault'
+  | 'canBeVisible'
 >;
 
 export type LibraryConnectionOptions = {
@@ -130,9 +137,16 @@ export type LibraryConnectionOptions = {
   position: LibraryPosition;
   /** Visible au départ ? Défaut : `!discreetByDefault` (et `canBeVisible`). */
   visible?: boolean;
+  /**
+   * Mon look composé (lot 13, forme compacte), lu à CHAQUE envoi de ma
+   * présence ; absent, invalide ou null : seule `avatarId` part.
+   */
+  look?: () => string | null;
   onState: (state: RoomSocialState) => void;
   onEvicted: (eviction: LibraryEviction) => void;
   onStatus?: (status: LibraryConnectionStatus) => void;
+  /** Le chat (lot 6) : événements SERVEUR validés, pour cette salle. */
+  onChat?: (event: LibraryChatEvent) => void;
   now?: () => number;
   setTimer?: (fn: () => void, ms: number) => unknown;
   clearTimer?: (handle: unknown) => void;
@@ -174,7 +188,10 @@ export function readPresence(
     for (let i = metas.length - 1; i >= 0; i -= 1) {
       const meta = metas[i];
       if (!meta || typeof meta !== 'object') continue;
-      const { presence_ref: _ref, ...payload } = meta as Record<string, unknown>;
+      const { presence_ref: _ref, ...payload } = meta as Record<
+        string,
+        unknown
+      >;
       const parsed = parsePeerPayload(LibraryPresencePayload, payload);
       // La clé de présence est celle que la joueuse a choisie : on exige
       // seulement qu'elle soit cohérente avec son payload.
@@ -249,6 +266,8 @@ export function createLibraryRoomConnection(
   }
 
   function presencePayload(): Record<string, unknown> {
+    // Lot 13 : le look ne part que s'il est valide (sinon `avatarId` seul).
+    const look = options.look?.() ?? null;
     return {
       userId: me.userId,
       nickname: me.nickname,
@@ -256,6 +275,7 @@ export function createLibraryRoomConnection(
       gx: position.gx,
       gy: position.gy,
       dir: position.dir,
+      ...(look && decodeLibraryLook(look) ? { look } : {}),
     };
   }
 
@@ -405,6 +425,19 @@ export function createLibraryRoomConnection(
       const parsed = LibraryUnhidePayload.safeParse(msg?.payload);
       if (parsed.success) reveal(parsed.data.userId);
     });
+
+  // Lot 6 — le chat : `message` / `message_hidden` sur le canal serveur de la
+  // salle, MA sourdine dans ma boîte (cf. ./chatEvents.ts).
+  const onChat = options.onChat;
+  if (onChat) {
+    bindChatEvents(
+      { chat: chatChannel, user: userChannel },
+      { roomId: enter.room.id, selfId: me.userId },
+      (event) => {
+        if (!closed) onChat(event);
+      }
+    );
+  }
 
   /* --------------------------------------------------- l'abonnement --- */
 

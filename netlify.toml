@@ -132,6 +132,14 @@
 [functions."recycle-bin-purge-cron"]
   schedule = "23 3 * * *"
 
+# Scheduled function: conservation du chat de la Women's Library (lot 6 de
+# docs/PLAN-womens-library.md). Supprime les messages de plus de 30 jours et
+# les sourdines échues depuis 30 jours ; un message signalé survit dans la
+# copie figée de son ticket. Une fois par jour, 03:47 UTC (heure creuse,
+# décalée de la corbeille). Requiert CRON_SECRET + URL.
+[functions."library-chat-purge-cron"]
+  schedule = "47 3 * * *"
+
 # Scheduled function: paid-plan lifecycle (« Régie solidaire », axe 06 — revenu
 # récurrent). Une fois par jour à 08:00 UTC. Sur les tenants regie/circuit :
 # bascule en 'past_due' les plans actifs expirés, et envoie aux owners une

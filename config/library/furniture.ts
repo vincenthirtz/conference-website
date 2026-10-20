@@ -42,7 +42,37 @@
 // des pièces. Changer un prix ne touche pas les meubles déjà achetés : le
 // registre garde le montant réellement débité.
 //
-// Module PUR (aucun import) : il est recopié tel quel dans le site.
+// LE GRAND CATALOGUE (lot 11, 2026-10-20). Les 49 meubles du lot 3 restent
+// ici, à l'identique (aucune clé renommée ni retirée : des joueuses peuvent
+// les posséder). S'y ajoutent :
+//   - les nouveaux modèles (`furnitureLot11.ts`), reportés du brouillon du
+//     pipeline comme ceux du lot 3 ;
+//   - les VARIANTES DE COULEUR (`furnitureVariants.ts`) : une clé chacune,
+//     rattachée à une FAMILLE (la clé de sa base), dont elle reprend tout sauf
+//     la teinte ;
+//   - les SETS et les fenêtres des meubles d'événement (`furnitureSets.ts`).
+// Chaque entrée exportée porte donc `family`, `variant` (clé de teinte, s'il
+// y en a), `sets` et `window` (meuble d'événement seulement). Une base est sa
+// propre famille ; ses variantes la suivent dans la liste.
+//
+// Module PUR : il n'importe que ses voisins du même dossier, purs eux aussi,
+// et tout est recopié tel quel dans le site.
+
+import { LOT11_FURNITURE } from './furnitureLot11';
+import {
+  type FurnitureSetId,
+  type FurnitureWindow,
+  isWithinWindow,
+  LIBRARY_FURNITURE_SETS,
+} from './furnitureSets';
+import {
+  type FurnitureColor,
+  LIBRARY_FAMILY_COLORS,
+  LIBRARY_FURNITURE_VARIANTS,
+} from './furnitureVariants';
+
+export type { FurnitureSetId, FurnitureWindow } from './furnitureSets';
+export type { FurnitureColor } from './furnitureVariants';
 
 export const FURNITURE_CATEGORIES = [
   'storage',
@@ -80,7 +110,8 @@ export const FURNITURE_KEY_RE = /^[a-z][a-z0-9_]{1,40}$/;
 export const FURNITURE_LAYERS = ['floor', 'wall'] as const;
 export type FurnitureLayer = (typeof FURNITURE_LAYERS)[number];
 
-export type Furniture = {
+/** Ce qu'on écrit pour un modèle : le reste (famille, sets…) est déduit. */
+export type FurnitureBase = {
   /** Clé stable : nom des sprites, ligne d'inventaire. Ne jamais renommer. */
   key: string;
   category: FurnitureCategory;
@@ -101,7 +132,19 @@ export type Furniture = {
   layer?: FurnitureLayer;
 };
 
-export const LIBRARY_FURNITURE: readonly Furniture[] = [
+export type Furniture = FurnitureBase & {
+  /** Clé de la base de la famille ; une base est sa propre famille. */
+  family: string;
+  /** Teinte de cette entrée, si sa famille a des variantes. */
+  variant?: FurnitureColor;
+  /** Sets auxquels le meuble appartient (ceux de sa famille compris). */
+  sets: readonly FurnitureSetId[];
+  /** Meuble d'événement : en vente seulement pendant cette fenêtre. */
+  window?: FurnitureWindow;
+};
+
+/** Les 49 meubles du lot 3, tels qu'ils ont été rendus et vendus. */
+const LOT3_FURNITURE: readonly FurnitureBase[] = [
   // Rangements
   {
     key: 'bookshelf',
@@ -560,6 +603,67 @@ export const LIBRARY_FURNITURE: readonly Furniture[] = [
   },
 ];
 
+/** Les sets d'une clé : ceux qui la listent, et ceux qui listent sa famille. */
+function setsOf(key: string, family: string): FurnitureSetId[] {
+  return LIBRARY_FURNITURE_SETS.filter(
+    (s) => s.keys.includes(key) || s.keys.includes(family)
+  ).map((s) => s.id);
+}
+
+/** La fenêtre de son set d'événement (au plus un, vérifié par les tests). */
+function windowOf(
+  sets: readonly FurnitureSetId[]
+): FurnitureWindow | undefined {
+  return LIBRARY_FURNITURE_SETS.find(
+    (s) => s.kind === 'event' && sets.includes(s.id)
+  )?.window;
+}
+
+function entry(
+  base: FurnitureBase,
+  key: string,
+  family: string,
+  variant: FurnitureColor | undefined
+): Furniture {
+  const sets = setsOf(key, family);
+  const window = windowOf(sets);
+  return {
+    ...base,
+    key,
+    family,
+    ...(variant ? { variant } : {}),
+    sets,
+    ...(window ? { window } : {}),
+  };
+}
+
+/**
+ * Le catalogue complet : chaque base, suivie de ses variantes de couleur.
+ * Une variante dont la base manque est une faute de saisie : on lève, au
+ * chargement du module (les tests le voient tout de suite).
+ */
+function assemble(): Furniture[] {
+  const bases = [...LOT3_FURNITURE, ...LOT11_FURNITURE];
+  const byFamily = new Map<
+    string,
+    (typeof LIBRARY_FURNITURE_VARIANTS)[number][]
+  >();
+  for (const v of LIBRARY_FURNITURE_VARIANTS) {
+    if (!bases.some((b) => b.key === v.family))
+      throw new Error(`variante ${v.key} : famille inconnue ${v.family}`);
+    byFamily.set(v.family, [...(byFamily.get(v.family) ?? []), v]);
+  }
+  const out: Furniture[] = [];
+  for (const base of bases) {
+    out.push(entry(base, base.key, base.key, LIBRARY_FAMILY_COLORS[base.key]));
+    for (const v of byFamily.get(base.key) ?? [])
+      out.push(entry(base, v.key, v.family, v.variant));
+  }
+  return out;
+}
+
+export const LIBRARY_FURNITURE: readonly Furniture[] = assemble();
+
 const BY_KEY: ReadonlyMap<string, Furniture> = new Map(
   LIBRARY_FURNITURE.map((item) => [item.key, item])
 );
@@ -571,4 +675,18 @@ export function getFurniture(key: unknown): Furniture | null {
 
 export function isFurnitureKey(key: unknown): key is string {
   return typeof key === 'string' && BY_KEY.has(key);
+}
+
+/**
+ * En vente maintenant ? Toujours, sauf un meuble d'événement hors de sa
+ * fenêtre. C'est l'achat qui le vérifie ; posséder et poser ne dépendent pas
+ * de la fenêtre.
+ */
+export function isFurnitureOnSale(item: Furniture, now: Date): boolean {
+  return !item.window || isWithinWindow(item.window, now);
+}
+
+/** Les entrées d'une famille, base en tête (vide pour une famille inconnue). */
+export function familyMembers(family: string): Furniture[] {
+  return LIBRARY_FURNITURE.filter((f) => f.family === family);
 }

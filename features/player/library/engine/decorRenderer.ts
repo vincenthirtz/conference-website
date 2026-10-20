@@ -3,6 +3,11 @@
 // renvoie false quand une image manque ou n'est pas encore décodée : le
 // renderer garde alors son dessin procédural (tout ou rien par élément, pour
 // ne jamais mélanger un mur à moitié texturé).
+//
+// APERÇU (lot 12) : `drawDecorScene` dessine le décor SEUL — tranche du
+// plancher, sol, ombre, murs — avec les mêmes sprites et la même pose que la
+// scène, pour l'aperçu des réglages de l'appartement. Là, un élément dont
+// l'image manque est peint en aplat (l'aperçu ne reste jamais vide).
 
 import type { ImageCache } from './assets';
 import {
@@ -13,7 +18,13 @@ import {
   type WallSide,
   type WallVariant,
 } from './decor';
-import { gridToScreen, metersToTiles, TILE_H, TILE_W } from './projection';
+import {
+  type Camera,
+  gridToScreen,
+  metersToTiles,
+  TILE_H,
+  TILE_W,
+} from './projection';
 import type { RoomModel } from './room';
 
 type Ctx = CanvasRenderingContext2D;
@@ -161,4 +172,97 @@ export function drawWallSprites(
     );
   }
   return true;
+}
+
+/* ------------------------------------------------------------ aperçu --- */
+
+/** Épaisseur (m) de la tranche du plancher, comme dans la scène. */
+const SLAB_M = 0.2;
+const PREVIEW = {
+  slabLeft: '#4c3527',
+  slabRight: '#3a281d',
+  floor: '#6f5442',
+  wallLeft: '#cdbfa8',
+  wallRight: '#b9a98f',
+};
+
+function fillPoly(ctx: Ctx, pts: { x: number; y: number }[], color: string) {
+  ctx.beginPath();
+  pts.forEach((p, k) => (k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+/**
+ * Caméra qui fait tenir toute la salle (sol, tranche, murs de `wallHeight` m)
+ * dans un cadre de cssW × cssH px CSS, avec une marge de `pad` px.
+ */
+export function fitDecorCamera(
+  room: { w: number; d: number },
+  wallHeight: number,
+  cssW: number,
+  cssH: number,
+  pad = 8
+): Camera {
+  const left = gridToScreen(0, room.d).x - TILE_W / 2;
+  const right = gridToScreen(room.w, 0).x + TILE_W / 2;
+  const top = gridToScreen(0, 0, wallHeight).y;
+  const bottom = gridToScreen(room.w, room.d, -SLAB_M).y;
+  const zoom = Math.max(
+    0.05,
+    Math.min(
+      (cssW - 2 * pad) / Math.max(1, right - left),
+      (cssH - 2 * pad) / Math.max(1, bottom - top)
+    )
+  );
+  return {
+    zoom,
+    x: cssW / 2 - ((left + right) / 2) * zoom,
+    y: cssH / 2 - ((top + bottom) / 2) * zoom,
+  };
+}
+
+/**
+ * Le décor seul (aperçu des réglages), en coordonnées du monde : la caméra
+ * est posée par l'appelant. Renvoie true quand sol et murs sont en sprites
+ * (false : au moins un aplat d'attente).
+ */
+export function drawDecorScene(
+  ctx: Ctx,
+  room: RoomModel,
+  decor: ManifestDecor | null,
+  pixelRatio: number,
+  images: ImageCache,
+  patterns: PatternCache
+): boolean {
+  const { w, d, wallHeight: h } = room;
+  const g = (x: number, y: number, z = 0) => gridToScreen(x, y, z);
+  fillPoly(
+    ctx,
+    [g(0, d, -SLAB_M), g(w, d, -SLAB_M), g(w, d), g(0, d)],
+    PREVIEW.slabLeft
+  );
+  fillPoly(
+    ctx,
+    [g(w, 0, -SLAB_M), g(w, d, -SLAB_M), g(w, d), g(w, 0)],
+    PREVIEW.slabRight
+  );
+  const floor =
+    decor !== null &&
+    drawFloorSprite(ctx, room, decor, pixelRatio, images, patterns);
+  if (!floor)
+    fillPoly(ctx, [g(0, 0), g(w, 0), g(w, d), g(0, d)], PREVIEW.floor);
+  drawWallShade(ctx, room);
+  const walls =
+    decor !== null && drawWallSprites(ctx, room, decor, pixelRatio, images);
+  if (!walls) {
+    fillPoly(ctx, [g(0, 0), g(0, d), g(0, d, h), g(0, 0, h)], PREVIEW.wallLeft);
+    fillPoly(
+      ctx,
+      [g(0, 0), g(w, 0), g(w, 0, h), g(0, 0, h)],
+      PREVIEW.wallRight
+    );
+  }
+  return floor && walls;
 }

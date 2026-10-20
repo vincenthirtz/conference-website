@@ -1,6 +1,6 @@
 // features/player/library/realtime/payloads.ts — ce qui circule ENTRE
 // NAVIGATEURS sur `library:room:<id>` (lot 5 de docs/PLAN-womens-library.md) :
-//   - la présence : `{ userId, nickname, avatarId, gx, gy, dir }` ;
+//   - la présence : `{ userId, nickname, avatarId, gx, gy, dir, look? }` ;
 //   - les broadcasts : `move { userId, gx, gy, at }`, `emote { userId, emote }`,
 //     `phrase { userId, phraseId }`.
 //
@@ -16,6 +16,10 @@
 // qui identifie l'appelante par sa session et vérifie la cible en base.
 
 import * as z from 'zod';
+import {
+  decodeLibraryLook,
+  LIBRARY_LOOK_CODE_MAX,
+} from '@/config/library/avatarLook';
 import {
   isLibraryEmote,
   isLibraryPhrase,
@@ -41,6 +45,17 @@ export const LibraryPresencePayload = z.object({
   gy: tile,
   /** Direction 0..7 (0 = haut de l'écran, sens horaire). */
   dir: z.number().int().min(0).max(7),
+  /**
+   * Look composé (lot 13), FACULTATIF : la forme compacte de
+   * config/library/avatarLook.ts (7 caractères). Hors des listes fermées, il
+   * est ignoré — pas la présence : l'avatar retombe sur `avatarId`.
+   */
+  look: z
+    .string()
+    .max(LIBRARY_LOOK_CODE_MAX)
+    .refine((v) => decodeLibraryLook(v) !== null)
+    .optional()
+    .catch(undefined),
 });
 export type LibraryPresencePayload = z.infer<typeof LibraryPresencePayload>;
 

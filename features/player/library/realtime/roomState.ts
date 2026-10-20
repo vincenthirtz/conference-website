@@ -31,6 +31,8 @@ export type RemoteAvatar = {
   userId: string;
   nickname: string;
   avatarId: string;
+  /** Look composé annoncé (lot 13, forme compacte déjà validée) ; null : `avatarId`. */
+  look: string | null;
   /** Dernière case CONNUE (présence) : là où le moteur la pose en arrivant. */
   gx: number;
   gy: number;
@@ -83,7 +85,11 @@ export function initialRoomState(args: {
   };
 }
 
-function isRevoked(state: RoomSocialState, userId: string, now: number): boolean {
+function isRevoked(
+  state: RoomSocialState,
+  userId: string,
+  now: number
+): boolean {
   if (!(userId in state.revoked)) return false;
   const until = state.revoked[userId];
   return until === null || until > now;
@@ -129,6 +135,7 @@ export function roomSocialReducer(
           userId: entry.userId,
           nickname: entry.nickname,
           avatarId: entry.avatarId,
+          look: entry.look ?? null,
           gx: entry.gx,
           gy: entry.gy,
           dir: entry.dir,
@@ -159,7 +166,10 @@ export function roomSocialReducer(
           },
         },
         lastMoveAt: { ...state.lastMoveAt, [payload.userId]: payload.at },
-        lastMoveReceivedAt: { ...state.lastMoveReceivedAt, [payload.userId]: now },
+        lastMoveReceivedAt: {
+          ...state.lastMoveReceivedAt,
+          [payload.userId]: now,
+        },
       };
     }
 
@@ -202,13 +212,20 @@ export function roomSocialReducer(
       const hidden = state.hidden.includes(action.userId)
         ? state.hidden
         : [...state.hidden, action.userId].sort();
-      return { ...state, hidden, avatars: without(state.avatars, action.userId) };
+      return {
+        ...state,
+        hidden,
+        avatars: without(state.avatars, action.userId),
+      };
     }
 
     case 'unhide': {
       if (!state.hidden.includes(action.userId)) return state;
       // Elle réapparaît à la prochaine synchronisation de présence.
-      return { ...state, hidden: state.hidden.filter((u) => u !== action.userId) };
+      return {
+        ...state,
+        hidden: state.hidden.filter((u) => u !== action.userId),
+      };
     }
 
     case 'revoke': {
@@ -234,7 +251,10 @@ export function roomSocialReducer(
             ? null
             : a.phrase;
         if (emote !== a.emote || phrase !== a.phrase) changed = true;
-        avatars[id] = emote !== a.emote || phrase !== a.phrase ? { ...a, emote, phrase } : a;
+        avatars[id] =
+          emote !== a.emote || phrase !== a.phrase
+            ? { ...a, emote, phrase }
+            : a;
       }
       const revoked: Record<string, number | null> = {};
       for (const [id, until] of Object.entries(state.revoked)) {

@@ -7,10 +7,20 @@
 //   node tools/library-assets/build.mjs --kind decor          # sols et murs
 //   node tools/library-assets/build.mjs --only a03            # un avatar
 //   node tools/library-assets/build.mjs --only bookshelf_filled,globe
+//   node tools/library-assets/build.mjs --kind furniture --missing   # reprise
+//   node tools/library-assets/build.mjs --kind none           # index seuls
 //
 // Blender : variable BLENDER, sinon la version la plus récente trouvée dans
 // « C:\Program Files\Blender Foundation », sinon « blender » dans le PATH.
 // Un rendu partiel garde les sections du manifeste qu'il ne touche pas.
+//
+// ÉCRITURE PAR FUSION : le manifeste est relu sur disque juste avant chaque
+// écriture, et seules les entrées rendues par CE build y sont remplacées. Deux
+// builds lancés en parallèle (meubles d'un côté, décor ou avatars de l'autre)
+// ne s'écrasent donc pas : chacun ne réécrit que ce qu'il a rendu.
+//
+// `--missing` saute un meuble déjà au manifeste dont les 4 images existent :
+// un long build interrompu reprend là où il s'est arrêté.
 
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
@@ -36,6 +46,62 @@ const CATALOG_DRAFT = path.join(HERE, 'catalog-draft.json');
 // Doit rester identique à iso_common.py et au moteur.
 const TILE = { width: 64, height: 32, meters: 0.5 };
 const PIXEL_RATIO = 2;
+// Les sprites d'un meuble sont toujours `<base><clé>_r<r>.webp` : le manifeste
+// compact ne répète pas l'URL (voir engine/assets.ts, `parseManifest`).
+const FURNITURE_BASE = `${URL_PREFIX}/furniture/`;
+
+/**
+ * Entrée COMPACTE d'un meuble (format du lot 11) :
+ *   { f: [w, d], h: hauteur m, l?: calque, r: [[largeur, hauteur, ax, ay] × 4] }
+ * Une entrée verbeuse (format du lot 3) dont les URL suivent la règle est
+ * convertie ; une autre est gardée telle quelle (le moteur lit les deux).
+ */
+function compactEntry(key, e) {
+  if (!e || Array.isArray(e.r)) return e;
+  const r = (e.rotations ?? []).map((rot, i) =>
+    rot.src === `${FURNITURE_BASE}${key}_r${i}.webp`
+      ? [rot.width, rot.height, rot.anchor.x, rot.anchor.y]
+      : null
+  );
+  if (r.length !== 4 || r.some((x) => x === null)) return e;
+  return {
+    f: [e.footprint.w, e.footprint.d],
+    h: e.height,
+    ...(e.layer ? { l: e.layer } : {}),
+    r,
+  };
+}
+
+/** Empreinte, hauteur, calque et fichiers d'une entrée (compacte ou non). */
+function entryInfo(key, e) {
+  if (Array.isArray(e.r))
+    return {
+      footprint: { w: e.f[0], d: e.f[1] },
+      height: e.h,
+      layer: e.l,
+      files: e.r.map((_, i) => `${key}_r${i}.webp`),
+    };
+  return {
+    footprint: e.footprint,
+    height: e.height,
+    layer: e.layer,
+    files: e.rotations.map((r) => path.posix.basename(r.src)),
+  };
+}
+
+/**
+ * Le manifeste en texte : indenté, sauf les meubles, une ligne par clé (triées)
+ * — compact pour le réseau, lisible en diff.
+ */
+function manifestText(m) {
+  const { furniture, ...rest } = m;
+  const head = JSON.stringify({ ...rest, furniture: '@@FURNITURE@@' }, null, 2);
+  const keys = Object.keys(furniture).sort();
+  const body = keys.length
+    ? `{\n${keys.map((k) => `    ${JSON.stringify(k)}: ${JSON.stringify(furniture[k])}`).join(',\n')}\n  }`
+    : '{}';
+  return `${head.replace('"@@FURNITURE@@"', body)}\n`;
+}
 
 function findBlender() {
   if (process.env.BLENDER) return process.env.BLENDER;
@@ -74,7 +140,7 @@ function runBlender(blender, script, args, okToken) {
     throw new Error(`${script} en échec (code ${run.status})`);
   }
   for (const line of log.split('\n')) {
-    if (/^LIBRARY_(ASSET_OK|AVATAR_OK|DECOR|FILL|REPACK)/.test(line))
+    if (/^LIBRARY_(ASSET_OK|AVATAR_OK|DECOR|FILL|RECOLOR|REPACK)/.test(line))
       console.log(line);
   }
 }
@@ -92,12 +158,14 @@ function creditsMarkdown(credits) {
     '',
     'Sprites rendus par `tools/library-assets` à partir de modèles 3D et de',
     'textures. Toutes les sources ci-dessous sont sous licence CC0 1.0 : aucune',
-    'attribution n’est exigée, on la donne quand même.',
+    'attribution n’est exigée, on la donne quand même. La licence de Poly Haven',
+    'est revérifiée à chaque build (https://polyhaven.com/license).',
     '',
   ];
   for (const c of byUrl.values()) {
+    const name = c.url ? `[${c.name}](${c.url})` : c.name;
     lines.push(
-      `- [${c.name}](${c.url}), ${c.authors.join(', ')} (${c.license}) — ${[...c.usages].join(', ')}`
+      `- ${name}, ${c.authors.join(', ')} (${c.license}) — ${[...c.usages].join(', ')}`
     );
   }
   return `${lines.join('\n')}\n`;
@@ -113,6 +181,8 @@ const { values } = parseArgs({
     'decor-samples': { type: 'string', default: '128' },
     'avatar-samples': { type: 'string', default: '48' },
     quality: { type: 'string' },
+    // Reprise : saute les meubles déjà rendus (manifeste + 4 images).
+    missing: { type: 'boolean', default: false },
   },
 });
 const only = values.only ? new Set(values.only.split(',')) : null;
@@ -130,36 +200,71 @@ for (const dir of [furnitureDir, avatarDir, decorDir, SPEC_DIR])
 const hdri = await fetchHdri(sources.hdri);
 const credits = [{ usage: 'éclairage', ...hdri.credit }];
 const manifestPath = path.join(OUT_DIR, 'manifest.json');
-const existing = existsSync(manifestPath)
-  ? JSON.parse(await readFile(manifestPath, 'utf8'))
-  : null;
-// Un manifeste rendu avec un autre contrat de case ne se complète pas : on
-// repart de zéro, sinon il mélangerait deux échelles.
-const previous =
-  existing && JSON.stringify(existing.tile) === JSON.stringify(TILE)
-    ? existing
-    : { furniture: {}, avatars: {} };
-const furniture = { ...previous.furniture };
+
+/**
+ * Le manifeste sur disque, ou `{}`. Un manifeste rendu avec un autre contrat
+ * de case ne se complète pas : on repart de zéro, sinon il mélangerait deux
+ * échelles.
+ */
+async function readDiskManifest() {
+  try {
+    const m = JSON.parse(await readFile(manifestPath, 'utf8'));
+    return JSON.stringify(m.tile) === JSON.stringify(TILE) ? m : {};
+  } catch {
+    return {};
+  }
+}
+
+const previous = await readDiskManifest();
+const furniture = {};
+for (const [k, v] of Object.entries(previous.furniture ?? {}))
+  furniture[k] = compactEntry(k, v);
 const avatars = { ...(previous.avatars ?? {}) };
 const decor = {
   floors: { ...(previous.decor?.floors ?? {}) },
   walls: { ...(previous.decor?.walls ?? {}) },
 };
+// Ce que CE build a rendu (ou retiré) : seules ces entrées sont réécrites.
+const touched = {
+  furniture: new Set(),
+  furnitureRemoved: new Set(),
+  floors: new Set(),
+  walls: new Set(),
+  avatars: new Set(),
+};
 
 // Le manifeste est réécrit après chaque rendu : un long build interrompu garde
-// ce qui est déjà fait.
+// ce qui est déjà fait. Il est relu juste avant : un build parallèle (décor,
+// avatars) garde ses propres entrées, et ses sections inconnues d'ici aussi.
 async function saveManifest() {
+  const disk = await readDiskManifest();
+  const outFurniture = {};
+  for (const [k, v] of Object.entries(disk.furniture ?? {}))
+    outFurniture[k] = compactEntry(k, v);
+  for (const k of touched.furnitureRemoved) delete outFurniture[k];
+  for (const k of touched.furniture) outFurniture[k] = furniture[k];
+  const outDecor = {
+    ...(disk.decor ?? {}),
+    floors: { ...(disk.decor?.floors ?? {}) },
+    walls: { ...(disk.decor?.walls ?? {}) },
+  };
+  for (const k of touched.floors) outDecor.floors[k] = decor.floors[k];
+  for (const k of touched.walls) outDecor.walls[k] = decor.walls[k];
+  const outAvatars = { ...(disk.avatars ?? {}) };
+  for (const k of touched.avatars) outAvatars[k] = avatars[k];
   const manifest = {
+    ...disk,
     version: 1,
     tile: TILE,
     pixelRatio: PIXEL_RATIO,
-    furniture,
-    decor,
-    avatars,
+    furnitureBase: FURNITURE_BASE,
+    furniture: outFurniture,
+    decor: outDecor,
+    avatars: outAvatars,
   };
-  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  await writeFile(manifestPath, manifestText(manifest));
   await writeFile(path.join(OUT_DIR, 'CREDITS.md'), creditsMarkdown(credits));
-  await writeCatalogDraft();
+  await writeCatalogDraft(outFurniture);
 }
 
 /**
@@ -235,13 +340,55 @@ async function resolvePart(part, usage) {
   return out;
 }
 
+// Fait maison (générateurs d'iso_build.py et d'iso_furniture.py) : CC0 par
+// construction, rien n'est téléchargé.
+const IN_HOUSE_CREDIT = {
+  name: 'Fait maison, généré par tools/library-assets (iso_build.py, iso_furniture.py)',
+  authors: ['Women’s Library'],
+  url: null,
+  license: 'CC0 1.0',
+};
+
+/**
+ * Les meubles de sources.json et de sources-furniture.json, variantes
+ * dépliées. Une variante (`variantOf`) reprend la source de sa base et n'en
+ * change que ce qu'elle déclare (`recolor`, `tint`, paramètres de `generate`,
+ * graine de garnissage…) ; sa famille est la clé de la base.
+ */
+function expandFurniture(all) {
+  const out = {};
+  for (const [key, s] of Object.entries(all)) {
+    if (!s.variantOf) {
+      out[key] = { ...s, family: s.family ?? key };
+      continue;
+    }
+    const base = all[s.variantOf];
+    if (!base) throw new Error(`${key} : variantOf inconnu (${s.variantOf})`);
+    if (base.variantOf) throw new Error(`${key} : variante d'une variante`);
+    const { variantOf, ...over } = s;
+    const merged = { ...base, ...over, family: variantOf };
+    for (const f of ['generate', 'catalog', 'fill'])
+      if (base[f] && over[f]) merged[f] = { ...base[f], ...over[f] };
+    out[key] = merged;
+  }
+  return out;
+}
+const furnitureSources = expandFurniture(sources.furniture);
+
 /** Spec Blender d'un meuble (chemins résolus) et glTF principal éventuel. */
 async function resolveFurniture(key, source) {
   const spec = {};
   let gltf = null;
   if (source.generate) spec.generate = source.generate;
+  else if (source.books)
+    spec.books = {
+      ...source.books,
+      gltf: await model(source.books.model, key),
+    };
   else gltf = await model(source, key);
-  for (const field of ['rotate', 'scale', 'mount', 'tint'])
+  if (source.generate || source.books)
+    credits.push({ usage: key, ...IN_HOUSE_CREDIT });
+  for (const field of ['rotate', 'scale', 'mount', 'tint', 'recolor'])
     if (source[field] !== undefined) spec[field] = source[field];
   spec.textures = await resolveTextures(source.textures, key);
   if (source.fill) spec.fill = await resolveFill(source.fill, key);
@@ -255,20 +402,21 @@ async function resolveFurniture(key, source) {
 
 // --- Brouillon du catalogue de l'API ---------------------------------------
 
-async function writeCatalogDraft() {
+async function writeCatalogDraft(rendered) {
   const out = {};
-  for (const [key, source] of Object.entries(sources.furniture)) {
-    const rendered = furniture[key];
+  for (const [key, source] of Object.entries(furnitureSources)) {
     const c = source.catalog;
-    if (!rendered || !c) continue;
+    if (!rendered[key] || !c) continue;
+    const info = entryInfo(key, rendered[key]);
     out[key] = {
       category: c.category,
-      footprint: rendered.footprint,
-      heightM: rendered.height,
+      family: source.family,
+      footprint: info.footprint,
+      heightM: info.height,
       sittable: Boolean(c.sittable),
       stackable: Boolean(c.stackable),
       suggestedPrice: c.price,
-      ...(rendered.layer ? { layer: rendered.layer } : {}),
+      ...(info.layer ? { layer: info.layer } : {}),
     };
   }
   const draft = {
@@ -284,9 +432,29 @@ async function writeCatalogDraft() {
 // Un meuble en échec n'arrête pas le build : il garde son entrée précédente
 // et le build se termine en erreur, avec la liste.
 const failures = [];
-for (const [key, source] of Object.entries(sources.furniture)) {
-  const { gltf, spec } = await resolveFurniture(key, source);
+/** Déjà rendu : au manifeste (disque ou mémoire) et ses 4 images présentes. */
+async function alreadyRendered(key) {
+  const disk = await readDiskManifest();
+  const entry = disk.furniture?.[key] ?? furniture[key];
+  if (!entry) return false;
+  return entryInfo(key, compactEntry(key, entry)).files.every((f) =>
+    existsSync(path.join(furnitureDir, f))
+  );
+}
+for (const [key, source] of Object.entries(furnitureSources)) {
+  // Une source illisible (taille servie ≠ taille annoncée, modèle retiré…)
+  // compte comme un échec de ce meuble, sans arrêter les autres.
+  let resolved;
+  try {
+    resolved = await resolveFurniture(key, source);
+  } catch (err) {
+    console.error(`  ${key} : ${err.message}`);
+    failures.push(key);
+    continue;
+  }
+  const { gltf, spec } = resolved;
   if (!wants('furniture', key)) continue;
+  if (values.missing && (await alreadyRendered(key))) continue;
   const specPath = path.join(SPEC_DIR, `${key}.json`);
   await writeFile(specPath, JSON.stringify(spec));
   const started = Date.now();
@@ -316,7 +484,7 @@ for (const [key, source] of Object.entries(sources.furniture)) {
     continue;
   }
   const meta = await readMeta(furnitureDir, key);
-  furniture[key] = {
+  furniture[key] = compactEntry(key, {
     footprint: meta.footprint,
     height: meta.height,
     ...(source.layer ? { layer: source.layer } : {}),
@@ -324,23 +492,32 @@ for (const [key, source] of Object.entries(sources.furniture)) {
       src: `${URL_PREFIX}/furniture/${file}`,
       ...rest,
     })),
-  };
+  });
+  touched.furniture.add(key);
   await saveManifest();
   console.log(`  ${key} en ${Math.round((Date.now() - started) / 1000)} s`);
 }
 
-// Un meuble retiré de sources.json sort du manifeste (rendu complet et sans
+// Un meuble retiré des sources sort du manifeste (rendu complet et sans
 // échec seulement).
 if (
   !values.only &&
   !failures.length &&
   (values.kind === 'all' || values.kind === 'furniture')
 ) {
-  for (const key of Object.keys(furniture))
-    if (!Object.hasOwn(sources.furniture, key)) delete furniture[key];
+  const disk = await readDiskManifest();
+  const current = { ...furniture, ...(disk.furniture ?? {}) };
+  for (const key of Object.keys(current))
+    if (!Object.hasOwn(furnitureSources, key)) {
+      delete furniture[key];
+      delete current[key];
+      touched.furniture.delete(key);
+      touched.furnitureRemoved.add(key);
+    }
+  await saveManifest();
   const used = new Set(
-    Object.values(furniture).flatMap((f) =>
-      f.rotations.map((r) => path.posix.basename(r.src))
+    Object.entries(current).flatMap(
+      ([key, f]) => entryInfo(key, compactEntry(key, f)).files
     )
   );
   for (const file of readdirSync(furnitureDir))
@@ -390,6 +567,7 @@ if (
   for (const [key, f] of Object.entries(meta.floors)) {
     const { file, ...rest } = f;
     decor.floors[key] = { src: src(file), ...rest };
+    touched.floors.add(key);
   }
   for (const [key, w] of Object.entries(meta.walls)) {
     const sides = {};
@@ -405,6 +583,7 @@ if (
       thickness: w.thickness,
       ...sides,
     };
+    touched.walls.add(key);
   }
   await saveManifest();
   console.log(`  décor en ${Math.round((Date.now() - started) / 1000)} s`);
@@ -436,6 +615,7 @@ for (const spec of sources.avatars) {
   );
   const meta = await readMeta(avatarDir, spec.id);
   avatars[meta.id] = avatarEntry(meta);
+  touched.avatars.add(meta.id);
   await saveManifest();
   console.log(`  ${meta.id} en ${Math.round((Date.now() - started) / 1000)} s`);
 }
@@ -469,8 +649,10 @@ if (values.kind === 'avatars-repack') {
       ],
       'LIBRARY_REPACK_OK'
     );
-    for (const job of jobs)
+    for (const job of jobs) {
       avatars[job.id] = avatarEntry(await readMeta(avatarDir, job.id));
+      touched.avatars.add(job.id);
+    }
     await saveManifest();
   }
   console.log(`avatars convertis : ${jobs.length}`);

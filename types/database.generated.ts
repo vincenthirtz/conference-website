@@ -2816,6 +2816,51 @@ export type Database = {
           },
         ]
       }
+      library_room_kicks: {
+        Row: {
+          by_user_id: string | null
+          created_at: string
+          id: string
+          room_id: string
+          tenant_id: string
+          until: string
+          user_id: string
+        }
+        Insert: {
+          by_user_id?: string | null
+          created_at?: string
+          id?: string
+          room_id: string
+          tenant_id: string
+          until: string
+          user_id: string
+        }
+        Update: {
+          by_user_id?: string | null
+          created_at?: string
+          id?: string
+          room_id?: string
+          tenant_id?: string
+          until?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_room_kicks_room_fkey"
+            columns: ["room_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "library_rooms"
+            referencedColumns: ["id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "library_room_kicks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       library_rooms: {
         Row: {
           access: string
@@ -9708,6 +9753,29 @@ export type Database = {
           p_key: string
           p_price: number
           p_source_ref: string
+          p_tenant_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      library_can_join: { Args: { p_topic: string }; Returns: boolean }
+      library_lend_room_item: {
+        Args: {
+          p_expected_version: number
+          p_gx: number
+          p_gy: number
+          p_inventory_id: string
+          p_room_id: string
+          p_rotation: number
+          p_tenant_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      library_return_room_item: {
+        Args: {
+          p_inventory_id: string
+          p_room_id: string
           p_tenant_id: string
           p_user_id: string
         }

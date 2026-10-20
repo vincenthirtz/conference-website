@@ -188,6 +188,11 @@ import enOverlayTcg from './overlayTcg';
 import enPlayerErrors from './playerErrors';
 import enSafetyPage from './safetyPage';
 import enPlayerLibrary from './playerLibrary';
+import enPlayerLibrarySocial from './playerLibrarySocial';
+import enPlayerLibraryChat from './playerLibraryChat';
+import enPlayerLibraryHall from './playerLibraryHall';
+import enPlayerLibraryReadingRoom from './playerLibraryReadingRoom';
+import enPlayerLibraryTeamHq from './playerLibraryTeamHq';
 
 const enDict = {
   profileSummary: enProfileSummary,
@@ -365,6 +370,11 @@ const enDict = {
   playerErrors: enPlayerErrors,
   safetyPage: enSafetyPage,
   playerLibrary: enPlayerLibrary,
+  playerLibrarySocial: enPlayerLibrarySocial,
+  playerLibraryChat: enPlayerLibraryChat,
+  playerLibraryHall: enPlayerLibraryHall,
+  playerLibraryReadingRoom: enPlayerLibraryReadingRoom,
+  playerLibraryTeamHq: enPlayerLibraryTeamHq,
 };
 
 export default enDict;

@@ -275,6 +275,18 @@ export type StaffLogAction =
   | 'blacklist_expired'
   | 'entity_blacklist_expired'
   | 'support_ticket_convert_blacklist'
+  // --- Women's Library ---
+  // Bannir de la Library (ou lever) écarte une personne d'un lieu de
+  // rencontre : le journal dit QUI l'a décidé, quand, pour qui et pourquoi.
+  | 'library_ban_add'
+  | 'library_ban_lift'
+  // Chat de la Library (lot 6) : masquer un message, mettre en sourdine (ou
+  // lever), ouvrir ou fermer le chat de l'espace. Gestes du staff, depuis le
+  // hub de modération ou dans le monde.
+  | 'library_message_hide'
+  | 'library_mute_add'
+  | 'library_mute_lift'
+  | 'library_chat_settings'
   // --- TCG (cartes joueuses) ---
   // Relire la photo d'une personne réelle est un acte à tracer : on doit
   // pouvoir dire QUI a approuvé ou refusé, et quand.

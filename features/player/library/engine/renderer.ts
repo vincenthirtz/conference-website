@@ -8,9 +8,15 @@
 // placeholders.ts dessine une boîte ou une silhouette. Sol et murs viennent
 // du décor du manifeste (decorRenderer.ts) quand la salle en choisit un, sinon
 // ils sont procéduraux. L'ombre au sol des avatars est toujours dessinée ici
-// (elle n'est pas cuite dans les sprites).
+// (elle n'est pas cuite dans les sprites). Pseudos, repère « discrète » et
+// bulles passent en DERNIER, par-dessus tout (avatarOverlays.ts).
 
 import type { ImageCache, LibraryManifest, SpriteFrame } from './assets';
+import {
+  avatarOverlays,
+  drawAvatarOverlays,
+  ElideCache,
+} from './avatarOverlays';
 import {
   animationFor,
   avatarFrame,
@@ -31,6 +37,7 @@ import {
   GHOST_ALPHA,
   type GhostItem,
 } from './editOverlay';
+import { drawLookAvatar } from './lookCompositor';
 import { isWalking, tileCenter } from './motion';
 import {
   drawAvatarPlaceholder,
@@ -305,6 +312,9 @@ export class LibraryRenderer {
   /** Feuille d'avatar conforme à sa taille annoncée, par URL de feuille. */
   private sheetVerdict = new Map<string, boolean>();
   private patterns = new PatternCache();
+  private elide = new ElideCache();
+  /** Police des pseudos et bulles : celle de la page (Work Sans). */
+  private fontFamily: string;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -313,6 +323,11 @@ export class LibraryRenderer {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas 2D unavailable');
     this.ctx = ctx;
+    const family =
+      typeof getComputedStyle === 'function'
+        ? getComputedStyle(canvas).fontFamily
+        : '';
+    this.fontFamily = family || 'system-ui, sans-serif';
   }
 
   /** Taille CSS du canvas et densité d'écran → tampon HiDPI. */
@@ -505,7 +520,12 @@ export class LibraryRenderer {
       const a = d.avatar;
       const w = a.walker;
       drawAvatarShadow(ctx, w.x, w.y, a.id === this.playerId);
-      if (this.drawAvatarSprite(a, timeSec)) sprites++;
+      // Avatar composé (lot 13), sinon la feuille de son `avatarId`.
+      if (
+        drawLookAvatar(ctx, this.images, a, timeSec, phaseOffset(a.id)) ||
+        this.drawAvatarSprite(a, timeSec)
+      )
+        sprites++;
       else
         drawAvatarPlaceholder(ctx, w.x, w.y, {
           hue: a.hue,
@@ -527,6 +547,13 @@ export class LibraryRenderer {
         ctx,
         itemBox(selected, specOf(world.catalog, selected.key))
       );
+    drawAvatarOverlays(
+      ctx,
+      this.dpr,
+      avatarOverlays(world, cam),
+      this.fontFamily,
+      this.elide
+    );
     return {
       drawMs: performance.now() - t0,
       objects: drawables.length + flat.length,

@@ -17,9 +17,57 @@ export const CACHE_DIR =
   process.env.LIBRARY_ASSETS_CACHE ??
   path.join(os.homedir(), '.cache', 'womens-library-assets');
 
+// Le grand catalogue (lot 11) vit dans son propre fichier : meubles et
+// variantes de couleur, textures en plus, licences revérifiées. Il s'ajoute à
+// sources.json (décor, avatars, meubles du lot 3) sans en écraser une clé.
+const EXTRA_SOURCES = ['sources-furniture.json'];
+
 export async function readSources() {
   const raw = await readFile(path.join(HERE, 'sources.json'), 'utf8');
-  return JSON.parse(raw);
+  const sources = JSON.parse(raw);
+  for (const file of EXTRA_SOURCES) {
+    let extra;
+    try {
+      extra = JSON.parse(await readFile(path.join(HERE, file), 'utf8'));
+    } catch (err) {
+      if (err.code === 'ENOENT') continue;
+      throw err;
+    }
+    for (const section of ['textures', 'furniture']) {
+      for (const [key, value] of Object.entries(extra[section] ?? {})) {
+        sources[section] ??= {};
+        if (Object.hasOwn(sources[section], key))
+          throw new Error(`${file} : ${section}.${key} existe déjà`);
+        sources[section][key] = value;
+      }
+    }
+    sources.licenses = {
+      ...(sources.licenses ?? {}),
+      ...(extra.licenses ?? {}),
+    };
+  }
+  return sources;
+}
+
+// La licence de Poly Haven est revérifiée à chaque import (une fois par
+// build) : sa page doit toujours dire que TOUS ses assets sont en CC0. Sinon
+// rien n'est importé.
+let polyHavenLicense = null;
+export function verifyPolyHavenLicense() {
+  polyHavenLicense ??= (async () => {
+    const res = await fetch('https://polyhaven.com/license');
+    if (!res.ok)
+      throw new Error(`licence Poly Haven illisible (${res.status})`);
+    const text = (await res.text())
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ');
+    if (!/assets are all licensed as CC0/i.test(text))
+      throw new Error(
+        'la page https://polyhaven.com/license ne dit plus « all licensed as CC0 » : import arrêté'
+      );
+    return 'CC0 1.0';
+  })();
+  return polyHavenLicense;
 }
 
 async function getJson(url) {
@@ -62,15 +110,24 @@ async function download(url, dest, expectedSize) {
   await writeFile(dest, buf);
 }
 
+const creditCache = new Map();
 async function credit(id) {
-  const info = await getJson(`${API}/info/${encodeURIComponent(id)}`);
-  return {
-    id,
-    name: info.name,
-    authors: Object.keys(info.authors ?? {}),
-    url: `https://polyhaven.com/a/${id}`,
-    license: 'CC0 1.0',
-  };
+  if (!creditCache.has(id))
+    creditCache.set(
+      id,
+      (async () => {
+        const license = await verifyPolyHavenLicense();
+        const info = await getJson(`${API}/info/${encodeURIComponent(id)}`);
+        return {
+          id,
+          name: info.name,
+          authors: Object.keys(info.authors ?? {}),
+          url: `https://polyhaven.com/a/${id}`,
+          license,
+        };
+      })()
+    );
+  return creditCache.get(id);
 }
 
 export async function fetchModel({ provider, id, resolution }) {
@@ -171,7 +228,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const sources = await readSources();
   const hdri = await fetchHdri(sources.hdri);
   console.log(`hdri ${hdri.path}`);
+  // Modèles seuls : un meuble généré ou une variante n'a rien à télécharger.
   for (const [key, source] of Object.entries(sources.furniture)) {
+    if (source.provider !== 'polyhaven') continue;
     const model = await fetchModel(source);
     console.log(`${key} ${model.path}`);
   }

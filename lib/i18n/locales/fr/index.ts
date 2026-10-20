@@ -182,6 +182,11 @@ import nsOverlayTcg from './overlayTcg';
 import nsPlayerErrors from './playerErrors';
 import nsSafetyPage from './safetyPage';
 import nsPlayerLibrary from './playerLibrary';
+import nsPlayerLibrarySocial from './playerLibrarySocial';
+import nsPlayerLibraryChat from './playerLibraryChat';
+import nsPlayerLibraryHall from './playerLibraryHall';
+import nsPlayerLibraryReadingRoom from './playerLibraryReadingRoom';
+import nsPlayerLibraryTeamHq from './playerLibraryTeamHq';
 
 export const frDict = {
   profileSummary: nsProfileSummary.fr,
@@ -359,4 +364,9 @@ export const frDict = {
   playerErrors: nsPlayerErrors.fr,
   safetyPage: nsSafetyPage.fr,
   playerLibrary: nsPlayerLibrary.fr,
+  playerLibrarySocial: nsPlayerLibrarySocial.fr,
+  playerLibraryChat: nsPlayerLibraryChat.fr,
+  playerLibraryHall: nsPlayerLibraryHall.fr,
+  playerLibraryReadingRoom: nsPlayerLibraryReadingRoom.fr,
+  playerLibraryTeamHq: nsPlayerLibraryTeamHq.fr,
 };

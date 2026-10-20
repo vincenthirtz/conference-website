@@ -386,27 +386,54 @@ def carve(body, name, keep, material, offset, thickness=0.003, drape=0, fit=None
     return obj
 
 
-def dress(body, spec):
-    top = spec.get('top', {})
-    bottom = spec.get('bottom', {})
-    shoes = spec.get('shoes', {})
-    sleeve = {'none': 0.06, 'short': 0.32, 'long': 0.66}[top.get('sleeves', 'short')]
-    hem = {'trousers': 0.085, 'capri': 0.30, 'shorts': 0.62}[bottom.get('style', 'trousers')]
+# Longueur des manches (position le long du bras, 0 épaule → 1 bout des
+# doigts) et ourlet du bas (hauteur, m).
+SLEEVES = {'none': 0.06, 'short': 0.32, 'elbow': 0.45, 'three_quarter': 0.55, 'long': 0.66}
+HEMS = {'trousers': 0.085, 'capri': 0.30, 'shorts': 0.62}
+# Encolure ronde (devant, dos) : la plus basse des tenues.
+CREW_NECK = (1.325, 1.355)
+
+
+def ramp(value, start, end):
+    """0 à start, 1 à end (start et end dans n'importe quel ordre)."""
+    if start == end:
+        return 1.0
+    return max(0.0, min(1.0, (value - start) / (end - start)))
+
+
+def top_zone(sleeve, neck=CREW_NECK, hem=0.87):
+    """Sommets couverts par un haut : buste, manches jusqu'à `sleeve`, et les
+    cuisses au-dessus de `hem` (tunique, manteau)."""
+    neck_front, neck_back = neck
 
     def is_top(p):
         zone, t = classify(p)
         if zone == 'arm':
             return t < sleeve
-        if zone != 'torso' and not (zone == 'leg' and p.z > 0.87):
+        if zone != 'torso' and not (zone == 'leg' and p.z > hem):
             return False
-        neckline = 1.325 if p.y < -0.05 else 1.355
+        neckline = neck_front if p.y < -0.05 else neck_back
         return p.z < neckline
 
-    def ramp(value, start, end):
-        """0 à start, 1 à end (start et end dans n'importe quel ordre)."""
-        if start == end:
-            return 1.0
-        return max(0.0, min(1.0, (value - start) / (end - start)))
+    return is_top
+
+
+def bottom_zone(hem):
+    def is_bottom(p):
+        zone, _ = classify(p)
+        return zone in ('leg', 'torso') and hem < p.z < 0.955
+
+    return is_bottom
+
+
+def is_shoe(p):
+    zone, _ = classify(p)
+    return zone == 'leg' and p.z < 0.105
+
+
+def carve_top(body, name, mat, sleeves='short', neck=CREW_NECK, hem=0.87,
+              offset=0.012, drape=10):
+    sleeve = SLEEVES[sleeves] if isinstance(sleeves, str) else sleeves
 
     def top_fit(p):
         zone, t = classify(p)
@@ -414,26 +441,43 @@ def dress(body, spec):
             # L'ourlet de la manche serre le bras.
             return 0.35 + 0.65 * ramp(t, sleeve, sleeve - 0.08)
         # Le col serre le cou, le reste tombe librement.
-        return 0.3 + 0.7 * ramp(p.z, 1.33, 1.24)
+        return 0.3 + 0.7 * ramp(p.z, neck[0] + 0.005, neck[0] - 0.085)
+
+    return carve(body, name, top_zone(sleeve, neck, hem), mat, offset,
+                 drape=drape, fit=top_fit)
+
+
+def carve_bottom(body, name, mat, hem=HEMS['trousers'], flare=0.0, cuff=False):
+    """Pantalon : la ceinture serre la taille ; `flare` (m) élargit vers la
+    cheville (jambe large), `cuff` resserre la cheville (jogging)."""
+    base = 0.007
+    offset = base + flare
 
     def bottom_fit(p):
         # La ceinture serre la taille, sous le bas du t-shirt.
-        return 0.45 + 0.55 * ramp(p.z, 0.95, 0.88)
+        want = base * (0.45 + 0.55 * ramp(p.z, 0.95, 0.88))
+        want += flare * ramp(p.z, 0.55, 0.15)
+        if cuff:
+            want = min(want, 0.0035 + 0.006 * ramp(p.z, 0.11, 0.2))
+        return want / offset
 
-    def is_bottom(p):
-        zone, _ = classify(p)
-        return zone in ('leg', 'torso') and hem < p.z < 0.955
+    return carve(body, name, bottom_zone(hem), mat, offset, drape=6, fit=bottom_fit)
 
-    def is_shoe(p):
-        zone, _ = classify(p)
-        return zone == 'leg' and p.z < 0.105
 
+def carve_shoes(body, mat, name='Shoes'):
+    return carve(body, name, is_shoe, mat, 0.009, thickness=0.004)
+
+
+def dress(body, spec):
+    top = spec.get('top', {})
+    bottom = spec.get('bottom', {})
+    shoes = spec.get('shoes', {})
     top_mat = principled('Top', srgb(top.get('color', (230, 230, 225))), 0.85, sheen=0.4)
     bottom_mat = principled('Bottom', srgb(bottom.get('color', (40, 55, 90))), 0.8, sheen=0.3)
     shoe_mat = principled('Shoes', srgb(shoes.get('color', (30, 30, 32))), 0.45, coat=0.2)
-    carve(body, 'Bottom', is_bottom, bottom_mat, 0.007, drape=6, fit=bottom_fit)
-    carve(body, 'Top', is_top, top_mat, 0.012, drape=10, fit=top_fit)
-    carve(body, 'Shoes', is_shoe, shoe_mat, 0.009, thickness=0.004)
+    carve_bottom(body, 'Bottom', bottom_mat, hem=HEMS[bottom.get('style', 'trousers')])
+    carve_top(body, 'Top', top_mat, sleeves=top.get('sleeves', 'short'))
+    carve_shoes(body, shoe_mat)
 
 
 # ---------------------------------------------------------------- cheveux
@@ -537,39 +581,79 @@ def attach_to_head(obj, arm):
     obj.matrix_world = mw
 
 
+def is_headscarf(p):
+    """Foulard : toute la tête sauf l'ovale du visage, le cou, puis un pan sur
+    les épaules et le haut de la poitrine."""
+    zone, t = classify(p)
+    if zone == 'arm':
+        return t < 0.1 and p.z > 1.2
+    if p.z > 1.43:
+        v = head_local(p)
+        face = v.y < -0.03 and abs(v.x) < 0.064 and -0.085 < v.z < 0.075
+        return not face
+    return zone == 'torso' and p.z > (1.21 if p.y < -0.05 else 1.18)
+
+
+def curls(cap, name, scale, strength, mid_level):
+    tex = bpy.data.textures.new(name, 'VORONOI')
+    tex.noise_scale = scale
+    cap.modifiers['Offset'].texture = tex
+    # Coordonnées UV : les boucles suivent la tête au lieu de glisser
+    # d'une image de marche à l'autre.
+    cap.modifiers['Offset'].texture_coords = 'UV'
+    cap.modifiers['Offset'].mid_level = mid_level
+    cap.modifiers['Offset'].strength = strength
+    cap.modifiers['Smooth'].levels = 2
+    cap.modifiers['Smooth'].render_levels = 2
+
+
+def build_hair(body, arm, style, mat, prefix='Hair'):
+    """Les volumes d'une coiffure ; renvoie ses objets."""
+    if style == 'headscarf':
+        def scarf_fit(p):
+            # Serré autour du visage, ample sur le cou et les épaules.
+            if p.z > 1.43:
+                return 0.55 + 0.45 * ramp(head_local(p).y, -0.03, 0.03)
+            return 1.0
+        return [carve(body, f'{prefix}Scarf', is_headscarf, mat, 0.02,
+                      thickness=0.004, drape=8, fit=scarf_fit)]
+    low_back = {'short': -0.07, 'twin_buns': -0.09, 'afro': -0.09}.get(style, -0.11)
+    offset = {'curly': 0.035, 'afro': 0.06}.get(style, 0.011)
+    cap = carve(body, f'{prefix}Cap', lambda p: is_scalp(p, low_back), mat, offset,
+                thickness=0.006)
+    out = [cap]
+    if style == 'curly':
+        curls(cap, f'{prefix}Curls', 0.018, 0.03, -0.6)
+    elif style == 'afro':
+        curls(cap, f'{prefix}Curls', 0.022, 0.045, -0.5)
+    if style == 'bob':
+        out.append(add_shell(f'{prefix}Bob', mat, arm, 1.60, 1.43, 1.41, 0.098, 0.112, 0.18, 120))
+    elif style == 'long':
+        out.append(add_shell(f'{prefix}Long', mat, arm, 1.60, 1.40, 1.17, 0.098, 0.118, 0.32, 130))
+    elif style == 'bun':
+        out.append(add_blob(f'{prefix}Bun', mat, arm, (0.0, 0.075, 1.6), 0.048))
+    elif style == 'ponytail':
+        out.append(add_blob(f'{prefix}Tie', mat, arm, (0.0, 0.085, 1.565), 0.03))
+        out.append(add_blob(f'{prefix}Tail', mat, arm, (0.0, 0.12, 1.44), 0.034,
+                            scale=(0.9, 0.8, 3.2)))
+    elif style == 'braid':
+        # Une natte : des mailles de plus en plus fines le long du dos.
+        for k in range(6):
+            out.append(add_blob(f'{prefix}Braid{k}', mat, arm,
+                                (0.0, 0.088 + 0.008 * k, 1.5 - 0.052 * k),
+                                0.03 - 0.0025 * k, scale=(1.0, 0.9, 1.3)))
+        out.append(add_blob(f'{prefix}BraidEnd', mat, arm, (0.0, 0.135, 1.165), 0.014,
+                            scale=(1.0, 1.0, 1.8)))
+    elif style == 'twin_buns':
+        for s in (1, -1):
+            out.append(add_blob(f'{prefix}Bun{s}', mat, arm, (0.068 * s, 0.015, 1.618), 0.04))
+    return out
+
+
 def style_hair(body, arm, spec):
     hair = spec.get('hair', {})
-    style = hair.get('style', 'bob')
     mat = hair_material(hair.get('color', (60, 40, 30)))
-    curly = style == 'curly'
-    cap = carve(
-        body,
-        'HairCap',
-        lambda p: is_scalp(p, -0.11 if style != 'short' else -0.07),
-        mat,
-        0.035 if curly else 0.011,
-        thickness=0.006,
-    )
-    if curly:
-        tex = bpy.data.textures.new('Curls', 'VORONOI')
-        tex.noise_scale = 0.018
-        cap.modifiers['Offset'].texture = tex
-        # Coordonnées UV : les boucles suivent la tête au lieu de glisser
-        # d'une image de marche à l'autre.
-        cap.modifiers['Offset'].texture_coords = 'UV'
-        cap.modifiers['Offset'].mid_level = -0.6
-        cap.modifiers['Offset'].strength = 0.03
-        cap.modifiers['Smooth'].levels = 2
-        cap.modifiers['Smooth'].render_levels = 2
-    if style == 'bob':
-        add_shell('HairBob', mat, arm, 1.60, 1.43, 1.41, 0.098, 0.112, 0.18, 120)
-    elif style == 'long':
-        add_shell('HairLong', mat, arm, 1.60, 1.40, 1.17, 0.098, 0.118, 0.32, 130)
-    elif style == 'bun':
-        add_blob('HairBun', mat, arm, (0.0, 0.075, 1.6), 0.048)
-    elif style == 'ponytail':
-        add_blob('HairTie', mat, arm, (0.0, 0.085, 1.565), 0.03)
-        add_blob('HairTail', mat, arm, (0.0, 0.12, 1.44), 0.034, scale=(0.9, 0.8, 3.2))
+    build_hair(body, arm, hair.get('style', 'bob'), mat)
 
 
 # ---------------------------------------------------------------- poses
@@ -775,4 +859,8 @@ def main():
           f"{meta['sheetWidth']}x{meta['sheetHeight']}")
 
 
-main()
+# render_avatar_layers.py importe ce module pour ses briques (corps,
+# squelette, vêtements, cheveux, poses) : le rendu d'un avatar entier ne part
+# que lancé directement par Blender.
+if __name__ == '__main__':
+    main()

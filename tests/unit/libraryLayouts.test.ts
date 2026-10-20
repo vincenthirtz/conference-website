@@ -65,21 +65,16 @@ function reachable(
 describe('manifeste rendu', () => {
   it('se lit, avec un décor (sols, style de mur « library »)', () => {
     expect(manifest).not.toBeNull();
-    expect(Object.keys(manifest.decor.floors).sort()).toEqual([
-      'carpet',
-      'marble',
-      'parquet',
-      'tiles',
-    ]);
-    expect(Object.keys(manifest.decor.walls)).toEqual(['library']);
+    // Les noms du lot 3 (ceux des salles fixes) restent ; le lot 12 en ajoute
+    // d'autres (sols, habillages, fenêtres et portes : libraryDecorRoom.test.ts).
+    expect(Object.keys(manifest.decor.floors)).toEqual(
+      expect.arrayContaining(['carpet', 'marble', 'parquet', 'tiles'])
+    );
+    expect(Object.keys(manifest.decor.walls)).toContain('library');
     for (const side of ['left', 'right'] as const)
-      expect(Object.keys(manifest.decor.walls.library[side]).sort()).toEqual([
-        'bookshelf',
-        'door',
-        'end',
-        'plain',
-        'window',
-      ]);
+      expect(Object.keys(manifest.decor.walls.library[side])).toEqual(
+        expect.arrayContaining(['bookshelf', 'door', 'end', 'plain', 'window'])
+      );
   });
 
   it('chaque meuble a ses 4 rotations', () => {

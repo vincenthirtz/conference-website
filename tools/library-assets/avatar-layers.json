@@ -1,0 +1,126 @@
+{
+  "note": "Calques de l'avatar personnalisable (lot 13) : rendus par render_avatar_layers.py via render_layers.mjs. Les identifiants suivent config/library/avatarLook.ts (conference-api, synchronisé) ; tests/unit/libraryAvatarLayersParity.test.ts vérifie la parité. Toutes les tenues couvrent du cou aux chevilles.",
+  "skins": {
+    "s1": [236, 200, 178],
+    "s2": [222, 180, 150],
+    "s3": [198, 150, 118],
+    "s4": [168, 118, 84],
+    "s5": [128, 84, 58],
+    "s6": [88, 56, 40]
+  },
+  "shortestOutfit": "tee",
+  "outfits": {
+    "tee": {
+      "top": {
+        "sleeves": "short"
+      },
+      "bottom": {}
+    },
+    "longsleeve": {
+      "top": {
+        "sleeves": "long"
+      },
+      "bottom": {}
+    },
+    "turtleneck": {
+      "top": {
+        "sleeves": "long",
+        "neck": [1.415, 1.425]
+      },
+      "bottom": {}
+    },
+    "tunic": {
+      "top": {
+        "sleeves": "three_quarter",
+        "hem": 0.68,
+        "drape": 16
+      },
+      "bottom": {}
+    },
+    "sweater": {
+      "top": {
+        "sleeves": "long",
+        "offset": 0.02,
+        "drape": 22
+      },
+      "bottom": {}
+    },
+    "blouse": {
+      "top": {
+        "sleeves": "elbow",
+        "neck": [1.36, 1.38]
+      },
+      "bottom": {
+        "flare": 0.05
+      }
+    },
+    "coat": {
+      "top": {
+        "sleeves": "long",
+        "neck": [1.4, 1.42],
+        "hem": 0.5,
+        "offset": 0.016,
+        "drape": 30
+      },
+      "bottom": {}
+    },
+    "kurta": {
+      "top": {
+        "sleeves": "three_quarter",
+        "hem": 0.55,
+        "offset": 0.014,
+        "drape": 20
+      },
+      "bottom": {
+        "flare": 0.02
+      }
+    },
+    "joggers": {
+      "top": {
+        "sleeves": "short"
+      },
+      "bottom": {
+        "cuff": true
+      }
+    },
+    "track": {
+      "top": {
+        "sleeves": "long",
+        "neck": [1.4, 1.415]
+      },
+      "bottom": {
+        "cuff": true
+      }
+    }
+  },
+  "hairs": [
+    "short",
+    "bob",
+    "long",
+    "bun",
+    "ponytail",
+    "curly",
+    "braid",
+    "afro",
+    "twin_buns",
+    "headscarf"
+  ],
+  "renderFirst": [
+    "body.s1",
+    "body.s2",
+    "body.s3",
+    "body.s4",
+    "body.s5",
+    "body.s6",
+    "top.tee",
+    "bottom.tee",
+    "top.longsleeve",
+    "bottom.longsleeve",
+    "hair.short",
+    "hair.bob",
+    "hair.long",
+    "hair.bun",
+    "hair.ponytail",
+    "hair.curly"
+  ]
+}

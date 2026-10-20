@@ -1,5 +1,6 @@
 // features/player/library/ui/apartment/ApartmentSettings.tsx — réglages de
-// l'appartement : nom, accès, liste du hall, sol et murs (lot 4).
+// l'appartement : nom, accès, liste du hall (lot 4), décor — sol, murs,
+// fenêtres, porte, avec aperçu (lot 12, ./decor/DecorPicker).
 // Présentationnel : l'enregistrement (`PATCH apartment`) arrive par les props.
 //
 // N'envoie que ce qui a CHANGÉ ; un nom vidé repart au nom par défaut
@@ -7,19 +8,31 @@
 // désactive (et se décoche) quand l'accès repasse à « moi seule », comme le
 // fait la base. Les choix de décor sont la liste de config/library/decor.ts,
 // la même que celle que l'API accepte.
+//
+// Appartement OUVERT (enregistré comme tel) : « Copier le lien de mon
+// appartement » (`/player/library?room=<id>`, lot 5 phase B) — en attendant
+// le hall, c'est ainsi qu'on invite. Copie impossible : le lien s'affiche,
+// sélectionnable.
 
+import Link from 'next/link';
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import nsPlayerLibrary from '@/lib/i18n/locales/fr/playerLibrary';
-import { LIBRARY_FLOORS, LIBRARY_WALLS } from '@/config/library/decor';
+import nsHall from '@/lib/i18n/locales/fr/playerLibraryHall';
+import { libraryWallOf } from '@/config/library/decor';
 import { Button } from '@/features/ruban';
+import type { LibraryManifest } from '../../engine/assets';
 import type { ActionResult } from '../../hooks/useLibraryActions';
 import { apartmentSettingsPatch, libraryErrorCode } from '../../model';
+import { placeHref, roomShareUrl } from '../../roomStageModel';
 import type {
   LibraryApartmentRoom,
   LibraryApartmentSettingsResponse,
 } from '../../responses';
 import type { UpdateApartmentInput } from '../../schemas';
+import { LINK } from '../social/shared';
+import DecorPicker from './decor/DecorPicker';
+import { decorChoiceOf } from './decor/decorPickerModel';
 
 type SettingsErrorKey = keyof typeof nsPlayerLibrary.fr.settingsErrors;
 
@@ -31,37 +44,64 @@ export default function ApartmentSettings({
   room,
   saving,
   onSave,
+  manifest = null,
 }: {
   room: LibraryApartmentRoom;
   saving: boolean;
   onSave: (
     input: UpdateApartmentInput
   ) => Promise<ActionResult<LibraryApartmentSettingsResponse>>;
+  /** Sprites (vignettes et aperçu du décor) ; null = pastilles et aplats. */
+  manifest?: LibraryManifest | null;
 }) {
   const t = useT(nsPlayerLibrary);
+  const th = useT(nsHall);
   const ids = useId();
+  const saved = decorChoiceOf(room.decor);
   const initial = () => ({
     name: room.name ?? '',
     access: room.access,
     listed: room.listed,
-    floor: room.decor.floor as string,
-    wall: room.decor.wall as string,
+    ...saved,
+    wall: libraryWallOf(saved.window) as string,
   });
   const [form, setForm] = useState(initial);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(
     null
   );
+  const [share, setShare] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const shareUrl =
+    typeof window === 'undefined'
+      ? ''
+      : roomShareUrl(window.location.origin, room.id);
+
+  const copyLink = async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('no clipboard');
+      await navigator.clipboard.writeText(shareUrl);
+      setShare('copied');
+    } catch {
+      setShare('failed');
+    }
+  };
 
   // La salle enregistrée change (réponse, autre onglet) : le formulaire suit.
   // biome-ignore lint/correctness/useExhaustiveDependencies: on suit la salle, champ par champ.
   useEffect(() => {
     setForm(initial());
-  }, [room.name, room.access, room.listed, room.decor.floor, room.decor.wall]);
+  }, [
+    room.name,
+    room.access,
+    room.listed,
+    room.decor.floor,
+    room.decor.wall,
+    room.decor.finish,
+    room.decor.window,
+    room.decor.door,
+  ]);
 
   const patch = apartmentSettingsPatch(room, form);
   const dirty = Object.keys(patch).length > 0;
-  const floors = t.floors as Record<string, string>;
-  const walls = t.walls as Record<string, string>;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -159,46 +199,36 @@ export default function ApartmentSettings({
           >
             {t.listedHint}
           </p>
+          {/* Lot 7 — listé (enregistré) : la liste du hall le montre. */}
+          {room.access === 'open' && room.listed && (
+            <p
+              className="text-xs text-[var(--lf,#7fca65)]"
+              data-testid="library-listed"
+            >
+              {th.settings.listedOn}{' '}
+              <Link prefetch={false} href={placeHref('hall')} className={LINK}>
+                {th.settings.seeHall}
+              </Link>
+            </p>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <label htmlFor={`${ids}-floor`} className={LABEL}>
-              {t.floorLabel}
-            </label>
-            <select
-              id={`${ids}-floor`}
-              value={form.floor}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, floor: e.target.value }))
-              }
-              className={FIELD}
-            >
-              {LIBRARY_FLOORS.map((floor) => (
-                <option key={floor} value={floor}>
-                  {floors[floor] ?? floor}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor={`${ids}-wall`} className={LABEL}>
-              {t.wallLabel}
-            </label>
-            <select
-              id={`${ids}-wall`}
-              value={form.wall}
-              onChange={(e) => setForm((f) => ({ ...f, wall: e.target.value }))}
-              className={FIELD}
-            >
-              {LIBRARY_WALLS.map((wall) => (
-                <option key={wall} value={wall}>
-                  {walls[wall] ?? wall}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <DecorPicker
+          value={{
+            floor: form.floor,
+            finish: form.finish,
+            window: form.window,
+            door: form.door,
+          }}
+          saved={saved}
+          onChange={(c) =>
+            setForm((f) => ({ ...f, ...c, wall: libraryWallOf(c.window) }))
+          }
+          width={room.width}
+          depth={room.depth}
+          manifest={manifest}
+          disabled={saving}
+        />
 
         <div className="flex flex-wrap items-center gap-3">
           <Button
@@ -219,6 +249,54 @@ export default function ApartmentSettings({
           </p>
         </div>
       </form>
+
+      {room.access === 'open' && (
+        <div
+          data-testid="library-share"
+          className="flex max-w-xl flex-col gap-2 border-t border-[var(--line,rgba(194,196,201,.12))] pt-4"
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              aria-describedby={`${ids}-share-hint`}
+              onClick={() => void copyLink()}
+            >
+              {t.shareLink}
+            </Button>
+            <p
+              role="status"
+              aria-live="polite"
+              className="text-sm text-[var(--lf,#7fca65)]"
+            >
+              {share === 'copied' ? t.shareCopied : ''}
+            </p>
+          </div>
+          <p
+            id={`${ids}-share-hint`}
+            className="text-xs text-[var(--t3,#a39ba6)]"
+          >
+            {t.shareHint}
+          </p>
+          {share === 'failed' && (
+            <div className="flex flex-col gap-1">
+              <p role="alert" className="text-sm text-[var(--err,#ff6b6b)]">
+                {t.shareFailed}
+              </p>
+              <label htmlFor={`${ids}-share-url`} className={LABEL}>
+                {t.shareLinkLabel}
+              </label>
+              <input
+                id={`${ids}-share-url`}
+                readOnly
+                value={shareUrl}
+                onFocus={(e) => e.currentTarget.select()}
+                className={FIELD}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }

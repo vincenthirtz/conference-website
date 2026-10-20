@@ -1,0 +1,1501 @@
+{
+  "note": "Grand catalogue (lot 11, docs/PLAN-womens-library.md). S'ajoute à sources.json (fetch.mjs, readSources). Une variante de couleur (`variantOf`) reprend la source de sa base et n'en change que `recolor`, `tint`, les paramètres de `generate` ou la graine de `fill` : sa clé est une clé du catalogue à part entière. Toutes les sources sont en CC0 : Poly Haven (licence revérifiée à chaque build) ou fait maison (iso_build.py, iso_furniture.py).",
+  "licenses": {
+    "polyhaven": {
+      "license": "CC0 1.0",
+      "url": "https://polyhaven.com/license",
+      "check": "La page doit dire « Our assets are all licensed as CC0 » (fetch.mjs, verifyPolyHavenLicense) ; vérifié le 2026-10-20."
+    },
+    "in-house": {
+      "license": "CC0 1.0",
+      "note": "Meubles générés dans Blender par tools/library-assets (iso_build.py, iso_furniture.py) : aucun fichier téléchargé."
+    }
+  },
+  "textures": {},
+  "furniture": {
+    "sofa_blue": {
+      "variantOf": "sofa",
+      "recolor": [{ "rgb": [58, 92, 156], "key": "auto" }]
+    },
+    "sofa_green": {
+      "variantOf": "sofa",
+      "recolor": [{ "rgb": [70, 122, 84], "key": "auto" }]
+    },
+    "sofa_pink": {
+      "variantOf": "sofa",
+      "recolor": [{ "rgb": [226, 126, 162], "key": "auto" }]
+    },
+    "sofa_charcoal": {
+      "variantOf": "sofa",
+      "recolor": [{ "rgb": [62, 62, 68], "key": "auto" }]
+    },
+    "sofa_mustard": {
+      "variantOf": "sofa",
+      "recolor": [{ "rgb": [214, 162, 54], "key": "auto" }]
+    },
+    "armchair_blue": {
+      "variantOf": "armchair",
+      "recolor": [{ "rgb": [58, 92, 156], "key": "auto" }]
+    },
+    "armchair_pink": {
+      "variantOf": "armchair",
+      "recolor": [{ "rgb": [226, 126, 162], "key": "auto" }]
+    },
+    "armchair_mustard": {
+      "variantOf": "armchair",
+      "recolor": [{ "rgb": [214, 162, 54], "key": "auto" }]
+    },
+    "armchair_teal": {
+      "variantOf": "armchair",
+      "recolor": [{ "rgb": [40, 122, 124], "key": "auto" }]
+    },
+    "armchair_club_burgundy": {
+      "variantOf": "armchair_green",
+      "recolor": [{ "rgb": [132, 36, 52], "key": "auto" }]
+    },
+    "armchair_club_navy": {
+      "variantOf": "armchair_green",
+      "recolor": [{ "rgb": [40, 54, 96], "key": "auto" }]
+    },
+    "armchair_club_ochre": {
+      "variantOf": "armchair_green",
+      "recolor": [{ "rgb": [190, 132, 50], "key": "auto" }]
+    },
+    "ottoman_cognac": {
+      "variantOf": "ottoman",
+      "recolor": [{ "rgb": [156, 88, 44], "key": null }]
+    },
+    "ottoman_black": {
+      "variantOf": "ottoman",
+      "recolor": [{ "rgb": [34, 34, 36], "key": null }]
+    },
+    "ottoman_teal": {
+      "variantOf": "ottoman",
+      "recolor": [{ "rgb": [40, 122, 124], "key": null }]
+    },
+    "ottoman_pink": {
+      "variantOf": "ottoman",
+      "recolor": [{ "rgb": [226, 126, 162], "key": null }]
+    },
+    "lounge_chair_black": {
+      "variantOf": "lounge_chair",
+      "recolor": [
+        { "rgb": [32, 32, 34], "key": "auto", "tolerance": [0.35, 0.7] }
+      ]
+    },
+    "lounge_chair_cream": {
+      "variantOf": "lounge_chair",
+      "recolor": [
+        { "rgb": [226, 214, 190], "key": "auto", "tolerance": [0.35, 0.7] }
+      ]
+    },
+    "chair_painted_blue": {
+      "variantOf": "chair_painted",
+      "recolor": [{ "rgb": [84, 124, 180], "key": "auto" }]
+    },
+    "chair_painted_green": {
+      "variantOf": "chair_painted",
+      "recolor": [{ "rgb": [110, 150, 104], "key": "auto" }]
+    },
+    "chair_painted_pink": {
+      "variantOf": "chair_painted",
+      "recolor": [{ "rgb": [232, 150, 176], "key": "auto" }]
+    },
+    "chair_painted_yellow": {
+      "variantOf": "chair_painted",
+      "recolor": [{ "rgb": [236, 202, 82], "key": "auto" }]
+    },
+    "bench_blue": {
+      "variantOf": "bench",
+      "recolor": [{ "rgb": [70, 104, 156], "key": null }]
+    },
+    "bench_green": {
+      "variantOf": "bench",
+      "recolor": [{ "rgb": [88, 128, 90], "key": null }]
+    },
+    "bench_cream": {
+      "variantOf": "bench",
+      "recolor": [{ "rgb": [232, 222, 198], "key": null }]
+    },
+    "cabinet_blue": {
+      "variantOf": "cabinet",
+      "recolor": [{ "rgb": [84, 124, 180], "key": "auto" }]
+    },
+    "cabinet_green": {
+      "variantOf": "cabinet",
+      "recolor": [{ "rgb": [120, 150, 110], "key": "auto" }]
+    },
+    "cabinet_pink": {
+      "variantOf": "cabinet",
+      "recolor": [{ "rgb": [232, 150, 176], "key": "auto" }]
+    },
+    "wardrobe_green": {
+      "variantOf": "wardrobe",
+      "recolor": [{ "rgb": [86, 120, 84], "key": "auto" }]
+    },
+    "wardrobe_white": {
+      "variantOf": "wardrobe",
+      "recolor": [{ "rgb": [230, 226, 216], "key": "auto" }]
+    },
+    "wardrobe_pink": {
+      "variantOf": "wardrobe",
+      "recolor": [{ "rgb": [214, 140, 162], "key": "auto" }]
+    },
+    "shelf_small_blue": {
+      "variantOf": "shelf_small",
+      "recolor": [
+        {
+          "rgb": [70, 104, 156],
+          "key": null,
+          "materials": ["painted_wooden_shelves"]
+        }
+      ]
+    },
+    "shelf_small_green": {
+      "variantOf": "shelf_small",
+      "recolor": [
+        {
+          "rgb": [88, 128, 90],
+          "key": null,
+          "materials": ["painted_wooden_shelves"]
+        }
+      ]
+    },
+    "shelf_small_white": {
+      "variantOf": "shelf_small",
+      "recolor": [
+        {
+          "rgb": [232, 228, 218],
+          "key": null,
+          "materials": ["painted_wooden_shelves"]
+        }
+      ]
+    },
+    "bookshelf_filled_oak": {
+      "variantOf": "bookshelf_filled",
+      "fill": { "seed": 21 },
+      "recolor": [
+        {
+          "rgb": [200, 156, 104],
+          "key": null,
+          "materials": ["wooden_bookshelf_worn"]
+        }
+      ]
+    },
+    "bookshelf_filled_black": {
+      "variantOf": "bookshelf_filled",
+      "fill": { "seed": 22 },
+      "recolor": [
+        {
+          "rgb": [44, 40, 38],
+          "key": null,
+          "materials": ["wooden_bookshelf_worn"]
+        }
+      ]
+    },
+    "bookshelf_filled_white": {
+      "variantOf": "bookshelf_filled",
+      "fill": { "seed": 23 },
+      "recolor": [
+        {
+          "rgb": [232, 228, 220],
+          "key": null,
+          "materials": ["wooden_bookshelf_worn"]
+        }
+      ]
+    },
+    "bankers_lamp_red": {
+      "variantOf": "bankers_lamp",
+      "recolor": [{ "rgb": [150, 24, 30], "materials": ["green_glass"] }]
+    },
+    "bankers_lamp_blue": {
+      "variantOf": "bankers_lamp",
+      "recolor": [{ "rgb": [24, 54, 130], "materials": ["green_glass"] }]
+    },
+    "floor_lamp_pink": {
+      "variantOf": "floor_lamp",
+      "recolor": [{ "rgb": [236, 160, 186], "materials": ["lamp_fabric"] }]
+    },
+    "floor_lamp_blue": {
+      "variantOf": "floor_lamp",
+      "recolor": [{ "rgb": [120, 156, 210], "materials": ["lamp_fabric"] }]
+    },
+    "floor_lamp_green": {
+      "variantOf": "floor_lamp",
+      "recolor": [{ "rgb": [130, 168, 120], "materials": ["lamp_fabric"] }]
+    },
+    "rug_round_blue": {
+      "variantOf": "rug_round",
+      "generate": {
+        "tint": [120, 150, 214],
+        "edgeTint": [60, 80, 136],
+        "band": [222, 214, 190]
+      }
+    },
+    "rug_round_pink": {
+      "variantOf": "rug_round",
+      "generate": {
+        "tint": [236, 156, 184],
+        "edgeTint": [150, 70, 100],
+        "band": [240, 222, 210]
+      }
+    },
+    "rug_round_green": {
+      "variantOf": "rug_round",
+      "generate": {
+        "tint": [140, 186, 140],
+        "edgeTint": [60, 100, 70],
+        "band": [222, 210, 170]
+      }
+    },
+    "rug_round_grey": {
+      "variantOf": "rug_round",
+      "generate": {
+        "tint": [176, 176, 180],
+        "edgeTint": [80, 80, 86],
+        "band": [214, 214, 210]
+      }
+    },
+    "rug_blue": {
+      "variantOf": "rug_red",
+      "generate": {
+        "tint": [110, 140, 210],
+        "edgeTint": [80, 96, 150],
+        "band": [214, 200, 160],
+        "medallionColor": [30, 44, 86]
+      }
+    },
+    "rug_ochre": {
+      "variantOf": "rug_red",
+      "generate": {
+        "tint": [230, 180, 90],
+        "edgeTint": [150, 110, 60],
+        "band": [240, 222, 170],
+        "medallionColor": [110, 64, 30]
+      }
+    },
+    "rug_purple": {
+      "variantOf": "rug_red",
+      "generate": {
+        "tint": [160, 120, 210],
+        "edgeTint": [110, 80, 140],
+        "band": [222, 206, 170],
+        "medallionColor": [56, 34, 80]
+      }
+    },
+    "rug_large_burgundy": {
+      "variantOf": "rug_green",
+      "generate": {
+        "tint": [176, 84, 96],
+        "edgeTint": [160, 110, 110],
+        "medallionColor": [72, 28, 40]
+      }
+    },
+    "rug_large_navy": {
+      "variantOf": "rug_green",
+      "generate": {
+        "tint": [96, 116, 170],
+        "edgeTint": [110, 130, 170],
+        "medallionColor": [30, 40, 72]
+      }
+    },
+    "stool_black": {
+      "variantOf": "stool",
+      "recolor": [{ "rgb": [40, 38, 38], "key": null }]
+    },
+    "stool_white": {
+      "variantOf": "stool",
+      "recolor": [{ "rgb": [230, 226, 218], "key": null }]
+    },
+    "stool_red": {
+      "variantOf": "stool",
+      "recolor": [{ "rgb": [176, 52, 48], "key": null }]
+    },
+    "chair_black": {
+      "variantOf": "chair",
+      "recolor": [{ "rgb": [40, 38, 38], "key": null }]
+    },
+    "chair_white": {
+      "variantOf": "chair",
+      "recolor": [{ "rgb": [230, 226, 218], "key": null }]
+    },
+    "desk_white": {
+      "variantOf": "desk",
+      "recolor": [{ "rgb": [230, 226, 218], "key": null }]
+    },
+    "desk_black": {
+      "variantOf": "desk",
+      "recolor": [{ "rgb": [44, 40, 38], "key": null }]
+    },
+    "coffee_table_white": {
+      "variantOf": "coffee_table",
+      "recolor": [{ "rgb": [230, 226, 218], "key": null }]
+    },
+    "coffee_table_black": {
+      "variantOf": "coffee_table",
+      "recolor": [{ "rgb": [44, 40, 38], "key": null }]
+    },
+    "side_table_white": {
+      "variantOf": "side_table",
+      "recolor": [{ "rgb": [230, 226, 218], "key": null }]
+    },
+    "side_table_black": {
+      "variantOf": "side_table",
+      "recolor": [{ "rgb": [44, 40, 38], "key": null }]
+    },
+    "round_table_white": {
+      "variantOf": "round_table",
+      "recolor": [{ "rgb": [230, 226, 218], "key": null }]
+    },
+    "round_table_black": {
+      "variantOf": "round_table",
+      "recolor": [{ "rgb": [44, 40, 38], "key": null }]
+    },
+    "vase_blue": {
+      "variantOf": "vase",
+      "recolor": [{ "rgb": [70, 110, 176], "key": null }]
+    },
+    "vase_pink": {
+      "variantOf": "vase",
+      "recolor": [{ "rgb": [226, 140, 170], "key": null }]
+    },
+    "vase_green": {
+      "variantOf": "vase",
+      "recolor": [{ "rgb": [96, 140, 100], "key": null }]
+    },
+    "daybed_pink": {
+      "variantOf": "daybed",
+      "recolor": [{ "rgb": [236, 172, 192], "key": "auto" }]
+    },
+    "daybed_blue": {
+      "variantOf": "daybed",
+      "recolor": [{ "rgb": [150, 178, 220], "key": "auto" }]
+    },
+    "bed_blue": {
+      "variantOf": "bed",
+      "recolor": [{ "rgb": [140, 168, 214], "key": [205, 205, 205] }]
+    },
+    "bed_pink": {
+      "variantOf": "bed",
+      "recolor": [{ "rgb": [236, 172, 192], "key": [205, 205, 205] }]
+    },
+    "rocking_chair_white": {
+      "variantOf": "rocking_chair",
+      "recolor": [{ "rgb": [230, 226, 218], "key": null }]
+    },
+    "rocking_chair_black": {
+      "variantOf": "rocking_chair",
+      "recolor": [{ "rgb": [44, 40, 38], "key": null }]
+    },
+    "plant_tall_white": {
+      "variantOf": "plant_tall",
+      "recolor": [
+        {
+          "rgb": [232, 230, 224],
+          "key": null,
+          "materials": ["potted_plant_01_pot"]
+        }
+      ]
+    },
+    "plant_tall_terracotta": {
+      "variantOf": "plant_tall",
+      "recolor": [
+        {
+          "rgb": [190, 98, 60],
+          "key": null,
+          "materials": ["potted_plant_01_pot"]
+        }
+      ]
+    },
+    "plant_medium_white": {
+      "variantOf": "plant_medium",
+      "recolor": [
+        {
+          "rgb": [232, 230, 224],
+          "key": null,
+          "materials": ["potted_plant_02_pot"]
+        }
+      ]
+    },
+    "plant_medium_blue": {
+      "variantOf": "plant_medium",
+      "recolor": [
+        {
+          "rgb": [60, 96, 160],
+          "key": null,
+          "materials": ["potted_plant_02_pot"]
+        }
+      ]
+    },
+    "drawer_cabinet_white": {
+      "variantOf": "drawer_cabinet",
+      "recolor": [{ "rgb": [230, 226, 218], "key": null }]
+    },
+    "drawer_cabinet_blue": {
+      "variantOf": "drawer_cabinet",
+      "recolor": [{ "rgb": [70, 104, 156], "key": null }]
+    },
+    "sideboard_white": {
+      "variantOf": "sideboard",
+      "recolor": [{ "rgb": [230, 226, 218], "key": null }]
+    },
+    "sideboard_black": {
+      "variantOf": "sideboard",
+      "recolor": [{ "rgb": [44, 40, 38], "key": null }]
+    },
+    "nightstand_white": {
+      "variantOf": "nightstand",
+      "recolor": [{ "rgb": [230, 226, 218], "key": null }]
+    },
+
+    "tv_retro": {
+      "provider": "polyhaven",
+      "id": "Television_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 150,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "game_console": {
+      "provider": "polyhaven",
+      "id": "gaming_console",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 120,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "chess_set": {
+      "provider": "polyhaven",
+      "id": "chess_set",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 120,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "boombox": {
+      "provider": "polyhaven",
+      "id": "boombox",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 90,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "dartboard": {
+      "provider": "polyhaven",
+      "id": "dartboard",
+      "resolution": "1k",
+      "mount": { "wall": true, "elevation": 1.45 },
+      "layer": "wall",
+      "catalog": {
+        "category": "decor",
+        "price": 100,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "projector_screen": {
+      "provider": "polyhaven",
+      "id": "projector_screen",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 350,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "shelf_tall": {
+      "provider": "polyhaven",
+      "id": "Shelf_01",
+      "resolution": "1k",
+      "fill": { "books": "book_encyclopedia_set_01", "seed": 33 },
+      "catalog": {
+        "category": "storage",
+        "price": 400,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "mantel_clock": {
+      "provider": "polyhaven",
+      "id": "mantel_clock_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 120,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "card_catalog": {
+      "provider": "polyhaven",
+      "id": "vintage_wooden_drawer_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "storage",
+        "price": 500,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "chalkboard": {
+      "provider": "polyhaven",
+      "id": "standing_chalkboard_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 250,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "school_desk": {
+      "provider": "polyhaven",
+      "id": "SchoolDesk_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 150,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "school_chair": {
+      "provider": "polyhaven",
+      "id": "SchoolChair_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 90,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "oil_lamp": {
+      "provider": "polyhaven",
+      "id": "vintage_oil_lamp",
+      "resolution": "1k",
+      "catalog": {
+        "category": "lighting",
+        "price": 120,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "candlestick": {
+      "provider": "polyhaven",
+      "id": "wooden_candlestick",
+      "resolution": "1k",
+      "catalog": {
+        "category": "lighting",
+        "price": 50,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "gothic_cabinet": {
+      "provider": "polyhaven",
+      "id": "GothicCabinet_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "storage",
+        "price": 950,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "gothic_commode": {
+      "provider": "polyhaven",
+      "id": "GothicCommode_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "storage",
+        "price": 450,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "carved_chair": {
+      "provider": "polyhaven",
+      "id": "gallinera_chair",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 200,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "carved_chest": {
+      "provider": "polyhaven",
+      "id": "gallinera_table",
+      "resolution": "1k",
+      "catalog": {
+        "category": "storage",
+        "price": 300,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "shelf_industrial": {
+      "provider": "polyhaven",
+      "id": "steel_frame_shelves_02",
+      "resolution": "1k",
+      "fill": { "books": "book_encyclopedia_set_01", "seed": 31 },
+      "catalog": {
+        "category": "storage",
+        "price": 350,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "hutch": {
+      "provider": "polyhaven",
+      "id": "vintage_cabinet_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "storage",
+        "price": 900,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "sofa_chesterfield": {
+      "provider": "polyhaven",
+      "id": "sofa_02",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 550,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "sofa_chesterfield_oxblood": {
+      "variantOf": "sofa_chesterfield",
+      "recolor": [
+        { "rgb": [110, 30, 34], "key": "auto", "tolerance": [0.5, 1.0] }
+      ]
+    },
+    "sofa_chesterfield_green": {
+      "variantOf": "sofa_chesterfield",
+      "recolor": [
+        { "rgb": [36, 78, 54], "key": "auto", "tolerance": [0.5, 1.0] }
+      ]
+    },
+    "sofa_painted": {
+      "provider": "polyhaven",
+      "id": "painted_wooden_sofa",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 650,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "armchair_scandi": {
+      "provider": "polyhaven",
+      "id": "modern_arm_chair_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 300,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "armchair_scandi_cognac": {
+      "variantOf": "armchair_scandi",
+      "recolor": [
+        { "rgb": [150, 84, 42], "key": "auto", "tolerance": [0.5, 1.0] }
+      ]
+    },
+    "armchair_scandi_grey": {
+      "variantOf": "armchair_scandi",
+      "recolor": [
+        { "rgb": [150, 150, 156], "key": "auto", "tolerance": [0.5, 1.0] }
+      ]
+    },
+    "throw_pillows": {
+      "provider": "polyhaven",
+      "id": "throw_pillows_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 80,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "tea_set": {
+      "provider": "polyhaven",
+      "id": "tea_set_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 90,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "wicker_basket": {
+      "provider": "polyhaven",
+      "id": "wicker_basket_02",
+      "resolution": "1k",
+      "catalog": {
+        "category": "storage",
+        "price": 50,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "coffee_table_gothic": {
+      "provider": "polyhaven",
+      "id": "gothic_coffee_table",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 280,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "coffee_table_industrial": {
+      "provider": "polyhaven",
+      "id": "industrial_coffee_table",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 180,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "coffee_table_modern": {
+      "provider": "polyhaven",
+      "id": "modern_coffee_table_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 200,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "coffee_table_square": {
+      "provider": "polyhaven",
+      "id": "modern_coffee_table_02",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 250,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "nightstand_painted": {
+      "provider": "polyhaven",
+      "id": "painted_wooden_nightstand",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 100,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "stool_painted": {
+      "provider": "polyhaven",
+      "id": "painted_wooden_stool",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 60,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "stool_folding": {
+      "provider": "polyhaven",
+      "id": "folding_wooden_stool",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 50,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "bar_stool": {
+      "provider": "polyhaven",
+      "id": "bar_chair_round_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 90,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "folding_screen": {
+      "provider": "polyhaven",
+      "id": "chinese_screen_panels",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 350,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "spinning_wheel": {
+      "provider": "polyhaven",
+      "id": "spinning_wheel_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 300,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "tea_table": {
+      "provider": "polyhaven",
+      "id": "chinese_tea_table",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 200,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "stool_lacquer": {
+      "provider": "polyhaven",
+      "id": "chinese_stool",
+      "resolution": "1k",
+      "catalog": {
+        "category": "seating",
+        "price": 80,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "bed_iron": {
+      "provider": "polyhaven",
+      "id": "old_bed_frame",
+      "resolution": "1k",
+      "catalog": {
+        "category": "bed",
+        "price": 500,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "planter_box": {
+      "provider": "polyhaven",
+      "id": "planter_box_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "plant",
+        "price": 150,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "planter_box_long": {
+      "provider": "polyhaven",
+      "id": "planter_box_02",
+      "resolution": "1k",
+      "catalog": {
+        "category": "plant",
+        "price": 200,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "planter_box_tall": {
+      "provider": "polyhaven",
+      "id": "planter_box_03",
+      "resolution": "1k",
+      "catalog": {
+        "category": "plant",
+        "price": 250,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "garden_set": {
+      "provider": "polyhaven",
+      "id": "outdoor_table_chair_set_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "table",
+        "price": 500,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "garden_gnome": {
+      "provider": "polyhaven",
+      "id": "garden_gnome",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 80,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "cat_statue": {
+      "provider": "polyhaven",
+      "id": "concrete_cat_statue",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 100,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "watering_can": {
+      "provider": "polyhaven",
+      "id": "watering_can_metal_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 50,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "lantern": {
+      "provider": "polyhaven",
+      "id": "wooden_lantern_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "lighting",
+        "price": 90,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "garden_lamp": {
+      "provider": "polyhaven",
+      "id": "street_lamp_02",
+      "resolution": "1k",
+      "mount": { "wall": true, "elevation": 0.9 },
+      "layer": "wall",
+      "catalog": {
+        "category": "lighting",
+        "price": 300,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "fire_pit": {
+      "provider": "polyhaven",
+      "id": "stone_fire_pit",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 400,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "wine_barrel": {
+      "provider": "polyhaven",
+      "id": "wine_barrel_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "storage",
+        "price": 200,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "treasure_chest": {
+      "provider": "polyhaven",
+      "id": "treasure_chest",
+      "resolution": "1k",
+      "catalog": {
+        "category": "storage",
+        "price": 400,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "wooden_crate": {
+      "provider": "polyhaven",
+      "id": "wooden_crate_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "storage",
+        "price": 60,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "vase_tall": {
+      "provider": "polyhaven",
+      "id": "ceramic_vase_03",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 60,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "vase_round": {
+      "provider": "polyhaven",
+      "id": "ceramic_vase_02",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 60,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "vase_brass": {
+      "provider": "polyhaven",
+      "id": "brass_vase_01",
+      "resolution": "1k",
+      "catalog": {
+        "category": "decor",
+        "price": 120,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "frame_small": {
+      "provider": "polyhaven",
+      "id": "hanging_picture_frame_03",
+      "resolution": "1k",
+      "mount": { "wall": true, "elevation": 1.45 },
+      "layer": "wall",
+      "catalog": {
+        "category": "decor",
+        "price": 90,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "frame_landscape": {
+      "provider": "polyhaven",
+      "id": "fancy_picture_frame_01",
+      "resolution": "1k",
+      "mount": { "wall": true, "elevation": 1.35 },
+      "layer": "wall",
+      "catalog": {
+        "category": "decor",
+        "price": 220,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "phone_clock": {
+      "provider": "polyhaven",
+      "id": "vintage_telephone_wall_clock",
+      "resolution": "1k",
+      "mount": { "wall": true, "elevation": 1.4 },
+      "layer": "wall",
+      "catalog": {
+        "category": "decor",
+        "price": 150,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "desk_lamp_pipe": {
+      "provider": "polyhaven",
+      "id": "industrial_pipe_lamp",
+      "resolution": "1k",
+      "catalog": {
+        "category": "lighting",
+        "price": 80,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+
+    "gaming_desk": {
+      "generate": { "kind": "gaming_desk", "accent": [255, 60, 170] },
+      "catalog": {
+        "category": "table",
+        "price": 600,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "gaming_desk_cyan": {
+      "variantOf": "gaming_desk",
+      "generate": { "accent": [40, 210, 255] }
+    },
+    "pc_tower": {
+      "generate": { "kind": "pc_tower", "accent": [255, 60, 170] },
+      "catalog": {
+        "category": "decor",
+        "price": 150,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "pc_tower_cyan": {
+      "variantOf": "pc_tower",
+      "generate": { "accent": [40, 210, 255] }
+    },
+    "arcade_cabinet": {
+      "generate": { "kind": "arcade_cabinet", "color": [44, 34, 100] },
+      "catalog": {
+        "category": "decor",
+        "price": 750,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "arcade_cabinet_pink": {
+      "variantOf": "arcade_cabinet",
+      "generate": { "color": [214, 70, 140], "screen": [60, 220, 255] }
+    },
+    "arcade_cabinet_teal": {
+      "variantOf": "arcade_cabinet",
+      "generate": { "color": [30, 120, 124], "marquee": [255, 120, 200] }
+    },
+    "neon_heart": {
+      "generate": { "kind": "neon", "shape": "heart", "color": [255, 70, 180] },
+      "mount": { "wall": true, "elevation": 1.35 },
+      "layer": "wall",
+      "catalog": {
+        "category": "lighting",
+        "price": 150,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "neon_heart_blue": {
+      "variantOf": "neon_heart",
+      "generate": { "color": [60, 170, 255] }
+    },
+    "neon_heart_green": {
+      "variantOf": "neon_heart",
+      "generate": { "color": [90, 255, 140] }
+    },
+    "neon_bolt": {
+      "generate": { "kind": "neon", "shape": "bolt", "color": [255, 220, 60] },
+      "mount": { "wall": true, "elevation": 1.35 },
+      "layer": "wall",
+      "catalog": {
+        "category": "lighting",
+        "price": 150,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "neon_bolt_purple": {
+      "variantOf": "neon_bolt",
+      "generate": { "color": [170, 90, 255] }
+    },
+    "bean_bag": {
+      "generate": { "kind": "bean_bag", "color": [56, 56, 64] },
+      "catalog": {
+        "category": "seating",
+        "price": 150,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "bean_bag_pink": {
+      "variantOf": "bean_bag",
+      "generate": { "color": [226, 120, 160] }
+    },
+    "bean_bag_blue": {
+      "variantOf": "bean_bag",
+      "generate": { "color": [56, 96, 170] }
+    },
+    "bean_bag_green": {
+      "variantOf": "bean_bag",
+      "generate": { "color": [74, 130, 86] }
+    },
+    "bean_bag_mustard": {
+      "variantOf": "bean_bag",
+      "generate": { "color": [214, 160, 50] }
+    },
+    "trophy": {
+      "generate": { "kind": "trophy" },
+      "textures": { "wood": "dark_wood" },
+      "catalog": {
+        "category": "decor",
+        "price": 200,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "trophy_silver": {
+      "variantOf": "trophy",
+      "generate": { "color": [200, 204, 210] }
+    },
+    "trophy_pedestal": {
+      "generate": { "kind": "pedestal", "height": 1.0 },
+      "textures": { "stone": "marble_01", "wood": "dark_wood" },
+      "parts": [
+        {
+          "generate": { "kind": "trophy", "scale": 1.5 },
+          "at": [0.5, 0.5],
+          "on": "surface"
+        }
+      ],
+      "catalog": {
+        "category": "decor",
+        "price": 600,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "lectern": {
+      "generate": { "kind": "lectern" },
+      "textures": { "wood": "dark_wood" },
+      "catalog": {
+        "category": "decor",
+        "price": 250,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "book_stack": {
+      "books": {
+        "model": "book_encyclopedia_set_01",
+        "count": 6,
+        "first": 1,
+        "cover": 2
+      },
+      "catalog": {
+        "category": "decor",
+        "price": 60,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "book_tower": {
+      "books": {
+        "model": "book_encyclopedia_set_01",
+        "count": 11,
+        "first": 4,
+        "cover": 7
+      },
+      "parts": [
+        {
+          "books": {
+            "model": "book_encyclopedia_set_01",
+            "count": 5,
+            "first": 9,
+            "cover": 1
+          },
+          "location": [0.26, -0.05, 0],
+          "rotation": 14
+        }
+      ],
+      "catalog": {
+        "category": "decor",
+        "price": 90,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "floor_cushion": {
+      "generate": { "kind": "floor_cushion", "color": [188, 120, 88] },
+      "catalog": {
+        "category": "seating",
+        "price": 60,
+        "sittable": true,
+        "stackable": false
+      }
+    },
+    "floor_cushion_pink": {
+      "variantOf": "floor_cushion",
+      "generate": { "color": [226, 126, 162] }
+    },
+    "floor_cushion_blue": {
+      "variantOf": "floor_cushion",
+      "generate": { "color": [64, 98, 164] }
+    },
+    "floor_cushion_green": {
+      "variantOf": "floor_cushion",
+      "generate": { "color": [86, 130, 92] }
+    },
+    "floor_cushion_mustard": {
+      "variantOf": "floor_cushion",
+      "generate": { "color": [214, 160, 50] }
+    },
+    "candles": {
+      "generate": { "kind": "candles" },
+      "catalog": {
+        "category": "lighting",
+        "price": 70,
+        "sittable": false,
+        "stackable": true
+      }
+    },
+    "fireplace": {
+      "generate": { "kind": "fireplace" },
+      "textures": { "stone": "marble_01", "wood": "dark_wood" },
+      "catalog": {
+        "category": "decor",
+        "price": 900,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+
+    "pumpkin": {
+      "generate": { "kind": "pumpkin" },
+      "catalog": {
+        "category": "decor",
+        "price": 60,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "jack_o_lantern": {
+      "generate": { "kind": "pumpkin", "carved": true, "size": 1.1 },
+      "catalog": {
+        "category": "lighting",
+        "price": 120,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "pumpkin_pile": {
+      "generate": { "kind": "pumpkin", "size": 1.35 },
+      "parts": [
+        {
+          "generate": {
+            "kind": "pumpkin",
+            "size": 0.85,
+            "color": [236, 150, 40]
+          },
+          "location": [0.3, -0.12, 0]
+        },
+        {
+          "generate": { "kind": "pumpkin", "size": 0.7, "carved": true },
+          "location": [-0.12, -0.3, 0]
+        }
+      ],
+      "catalog": {
+        "category": "decor",
+        "price": 180,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "cauldron": {
+      "generate": { "kind": "cauldron" },
+      "catalog": {
+        "category": "decor",
+        "price": 250,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "gravestone": {
+      "generate": { "kind": "gravestone" },
+      "textures": { "stone": "marble_01" },
+      "catalog": {
+        "category": "decor",
+        "price": 150,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "ghost": {
+      "generate": { "kind": "ghost" },
+      "catalog": {
+        "category": "decor",
+        "price": 200,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "bat_garland": {
+      "generate": { "kind": "bat_garland" },
+      "mount": { "wall": true, "elevation": 1.6 },
+      "layer": "wall",
+      "catalog": {
+        "category": "decor",
+        "price": 100,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "rug_halloween": {
+      "variantOf": "rug_red",
+      "generate": {
+        "tint": [236, 120, 40],
+        "edgeTint": [60, 40, 70],
+        "band": [40, 30, 44],
+        "medallionColor": [70, 30, 90]
+      }
+    },
+    "sofa_pumpkin": {
+      "variantOf": "sofa",
+      "recolor": [{ "rgb": [214, 104, 36], "key": "auto" }]
+    },
+
+    "pink_ribbon": {
+      "generate": { "kind": "pink_ribbon" },
+      "textures": { "stone": "marble_01" },
+      "catalog": {
+        "category": "decor",
+        "price": 250,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "neon_ribbon": {
+      "generate": {
+        "kind": "neon",
+        "shape": "ribbon",
+        "color": [255, 90, 170]
+      },
+      "mount": { "wall": true, "elevation": 1.3 },
+      "layer": "wall",
+      "catalog": {
+        "category": "lighting",
+        "price": 150,
+        "sittable": false,
+        "stackable": false
+      }
+    },
+    "rug_rose": {
+      "variantOf": "rug_round",
+      "generate": {
+        "tint": [240, 150, 186],
+        "edgeTint": [214, 90, 140],
+        "band": [250, 236, 240]
+      }
+    },
+    "bean_bag_rose": {
+      "variantOf": "bean_bag",
+      "generate": { "color": [240, 140, 180] }
+    },
+    "bankers_lamp_rose": {
+      "variantOf": "bankers_lamp",
+      "recolor": [{ "rgb": [214, 80, 140], "materials": ["green_glass"] }]
+    }
+  }
+}

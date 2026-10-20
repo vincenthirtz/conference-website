@@ -4,14 +4,19 @@
 //
 // SOUS L'HISTORIQUE DES PIÈCES : c'est là qu'on se demande à quoi elles
 // servent, et la boutique de meubles est leur nouveau débouché.
+//
+// RIEN tant que `NEXT_PUBLIC_LIBRARY_ENTRY` ne vaut pas `1` (bêta fermée,
+// features/player/library/entry.ts).
 
 import Link from 'next/link';
 import { useT } from '@/lib/i18n/useT';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 import { Card } from '@/features/ruban';
+import { isLibraryEntryEnabled } from '@/features/player/library/entry';
 
 export default function TcgLibraryTile() {
   const t = useT(nsPlayerTcg);
+  if (!isLibraryEntryEnabled()) return null;
   return (
     <Card as="section" padding="sm" aria-labelledby="tcg-library-tile">
       <h2

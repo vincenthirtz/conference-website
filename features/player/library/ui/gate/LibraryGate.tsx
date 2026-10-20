@@ -7,6 +7,9 @@
 //   - `minor`  : une adhérente dont la date de naissance connue la rend
 //     mineure. Refus bienveillant, et le même lien vers /securite.
 //   - `banned` : message neutre, sans motif ; un lien vers l'équipe.
+//   - `closed` : bêta fermée (`LIBRARY_CLOSED`) — « pas encore ouverte »,
+//     calme, un lien vers l'espace joueuse ; pas de réessai, la réponse ne
+//     changera pas dans la minute.
 //   - `unavailable` / `error` : la Library ne répond pas ; on peut réessayer.
 // Présentationnel : l'attestation et la relecture arrivent par les props.
 
@@ -103,11 +106,17 @@ export default function LibraryGate({
             body: t.bannedBody,
             link: { href: '/support', label: t.supportLink },
           }
-        : {
-            title: t.title,
-            body: gate === 'unavailable' ? t.unavailable : t.loadError,
-            link: null,
-          };
+        : gate === 'closed'
+          ? {
+              title: t.closedTitle,
+              body: t.closedBody,
+              link: { href: '/player', label: t.closedBackLink },
+            }
+          : {
+              title: t.title,
+              body: gate === 'unavailable' ? t.unavailable : t.loadError,
+              link: null,
+            };
 
   return (
     <Card

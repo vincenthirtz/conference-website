@@ -37,10 +37,24 @@ export const BuyFurnitureBody = z.object({
 });
 export type BuyFurnitureInput = z.infer<typeof BuyFurnitureBody>;
 
-/** PUT /api/player/library/avatar — l'un des deux au moins. */
+/**
+ * PUT /api/player/library/avatar — l'un des trois au moins. `look` (lot 13) :
+ * l'apparence composée, `null` la retire (retour à l'avatar `avatarId`). Sa
+ * FORME est bornée ici ; ses valeurs (listes fermées de
+ * `config/library/avatarLook.ts`) sont une règle du service, qui répond
+ * `look_invalid`.
+ */
 export const UpdateAvatarBody = z.object({
   nickname: z.string({ error: 'Pseudo invalide.' }).max(64).optional(),
   avatarId: z.string({ error: 'Avatar invalide.' }).max(16).optional(),
+  look: z
+    .record(
+      z.string().max(16),
+      z.union([z.string().max(32), z.number().int().min(0).max(99)]),
+      { error: 'Apparence invalide.' }
+    )
+    .nullable()
+    .optional(),
 });
 export type UpdateAvatarInput = z.infer<typeof UpdateAvatarBody>;
 
@@ -103,6 +117,9 @@ export const UpdateApartmentBody = z.object({
     .object({
       floor: z.string({ error: 'Sol invalide.' }).max(32).optional(),
       wall: z.string({ error: 'Murs invalides.' }).max(32).optional(),
+      finish: z.string({ error: 'Murs invalides.' }).max(32).optional(),
+      window: z.string({ error: 'Fenêtres invalides.' }).max(32).optional(),
+      door: z.string({ error: 'Porte invalide.' }).max(32).optional(),
     })
     .optional(),
 });

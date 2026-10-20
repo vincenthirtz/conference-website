@@ -3,6 +3,7 @@
 // montrer, quel message pour quel `code`, quel nom pour quel meuble, quels
 // meubles sont posés ou rangés. Sans réseau ni React : testé seul.
 
+import { resolveApartmentDecor } from '@/config/library/decor';
 import { placementLayerOf, type PlacementSpec } from './placement';
 import type {
   LibraryApartmentAccess,
@@ -19,6 +20,8 @@ import type { UpdateApartmentInput } from './schemas';
  *   - `attest`  : 403 `LIBRARY_ADULT_REQUIRED` → la case « 18 ans ou plus » ;
  *   - `minor`   : 403 `LIBRARY_MINOR` → refus bienveillant, lien vers /securite ;
  *   - `banned`  : 403 `LIBRARY_BANNED` → message neutre ;
+ *   - `closed`  : 403 `LIBRARY_CLOSED` → « pas encore ouverte » (bêta
+ *     fermée, `LIBRARY_ACCESS` côté API), sans réessai ;
  *   - `unavailable` : 503 (migration absente, panne passagère) ;
  *   - `error`   : toute autre panne (jamais une Library vide inventée).
  */
@@ -27,6 +30,7 @@ export type LibraryGate =
   | 'attest'
   | 'minor'
   | 'banned'
+  | 'closed'
   | 'unavailable'
   | 'error'
   | 'ready';
@@ -76,6 +80,8 @@ export function libraryGateOf(state: {
         return 'minor';
       case 'LIBRARY_BANNED':
         return 'banned';
+      case 'LIBRARY_CLOSED':
+        return 'closed';
       default:
         return asHttpError(state.error)?.status === 503
           ? 'unavailable'
@@ -170,7 +176,9 @@ export function applyPurchase(
 /**
  * Le corps du `PATCH apartment` : seulement ce qui diffère de la salle
  * enregistrée. Un nom vidé = `null` (nom par défaut) ; « listé » suppose
- * « ouvert », comme en base.
+ * « ouvert », comme en base. Décor (lot 12) : comparé au décor COMPLET de la
+ * salle (`resolveApartmentDecor`) ; quand le formulaire porte `window`, c'est
+ * lui qui part (l'API en déduit `wall`), sinon `wall` comme au lot 4.
  */
 export function apartmentSettingsPatch(
   room: LibraryApartmentRoom,
@@ -180,6 +188,9 @@ export function apartmentSettingsPatch(
     listed: boolean;
     floor: string;
     wall: string;
+    finish?: string;
+    window?: string;
+    door?: string;
   }
 ): UpdateApartmentInput {
   const out: UpdateApartmentInput = {};
@@ -188,10 +199,17 @@ export function apartmentSettingsPatch(
   if (form.access !== room.access) out.access = form.access;
   const listed = form.access === 'open' && form.listed;
   if (listed !== room.listed) out.listed = listed;
-  const decor: { floor?: string; wall?: string } = {};
-  if (form.floor !== room.decor.floor) decor.floor = form.floor;
-  if (form.wall !== room.decor.wall) decor.wall = form.wall;
-  if (decor.floor !== undefined || decor.wall !== undefined) out.decor = decor;
+  const saved = resolveApartmentDecor(room.decor);
+  const decor: NonNullable<UpdateApartmentInput['decor']> = {};
+  if (form.floor !== saved.floor) decor.floor = form.floor;
+  if (form.window !== undefined) {
+    if (form.window !== saved.window) decor.window = form.window;
+  } else if (form.wall !== saved.wall) decor.wall = form.wall;
+  if (form.finish !== undefined && form.finish !== saved.finish)
+    decor.finish = form.finish;
+  if (form.door !== undefined && form.door !== saved.door)
+    decor.door = form.door;
+  if (Object.keys(decor).length > 0) out.decor = decor;
   return out;
 }
 

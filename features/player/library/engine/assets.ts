@@ -14,6 +14,13 @@
 //   (écran(gx0, gy0) − anchor / pixelRatio), taille (width, height) / pixelRatio.
 //   `layer` facultatif : 'floor' (tapis) ou 'wall' (décor mural), voir room.ts.
 //   Décor (sols, murs) — voir decor.ts. Avatars — voir avatarSprites.ts.
+//
+// Meubles COMPACTS (lot 11, grand catalogue) : `{ f: [w, d], h, l?, r: [[largeur,
+// hauteur, ax, ay] × 4] }`, l'image de la rotation i étant toujours
+// `<furnitureBase><clé>_r<i>.webp`. Six fois moins d'octets par meuble, pour un
+// manifeste qui reste léger à 200 meubles et plus ; le format verbeux du lot 3
+// (`footprint`, `height`, `rotations[].src`) reste lu. En mémoire, les deux
+// donnent la même `ManifestFurniture`.
 
 import { type AvatarSheet, parseAvatarSheet } from './avatarSprites';
 import { decorSources, type ManifestDecor, parseDecor } from './decor';
@@ -53,6 +60,36 @@ export type LibraryManifest = {
 
 export const SPIKE_MANIFEST_URL = '/library/spike/manifest.json';
 
+/** Dossier des sprites de meubles quand le manifeste n'en déclare pas. */
+export const DEFAULT_FURNITURE_BASE = '/library/spike/furniture/';
+
+/** Clé de meuble utilisable dans un nom de fichier (celle du catalogue). */
+const SPRITE_KEY_RE = /^[a-z][a-z0-9_]{0,63}$/;
+
+/**
+ * L'URL d'un sprite de meuble selon la règle du pipeline, ou null pour une clé
+ * qui ne peut pas être un nom de fichier. Sert aussi aux vignettes de la
+ * boutique, sans attendre le manifeste.
+ */
+export function furnitureSpriteUrl(
+  key: string,
+  rotation = 0,
+  base: string = DEFAULT_FURNITURE_BASE
+): string | null {
+  if (!SPRITE_KEY_RE.test(key) || rotation < 0 || rotation > 3) return null;
+  return `${base}${key}_r${rotation}.webp`;
+}
+
+/** Un dossier d'URL même origine (`/…/`), sans remontée ni protocole. */
+function safeBase(v: unknown): string | null {
+  return typeof v === 'string' &&
+    /^\/[a-z0-9/_-]*\/$/i.test(v) &&
+    !v.includes('//') &&
+    !v.includes('..')
+    ? v
+    : null;
+}
+
 /**
  * Meubles de remplacement (cases × mètres), quand le manifeste manque ou ne
  * connaît pas la clé. Le manifeste, lui, l'emporte toujours (mergeCatalog).
@@ -84,7 +121,44 @@ function parseFrame(v: unknown): SpriteFrame | null {
   };
 }
 
-function parseFurniture(v: unknown): ManifestFurniture | null {
+/** Entrée compacte (lot 11) : `{ f, h, l?, r }`, images déduites de la clé. */
+function parseCompactFurniture(
+  key: string,
+  v: Record<string, unknown>,
+  base: string
+): ManifestFurniture | null {
+  if (!Array.isArray(v.f) || v.f.length !== 2) return null;
+  const [w, d] = v.f;
+  if (!isPositiveInt(w) || !isPositiveInt(d)) return null;
+  if (!isNum(v.h) || v.h <= 0) return null;
+  if (!Array.isArray(v.r) || v.r.length !== 4) return null;
+  if (v.l !== undefined && v.l !== 'floor' && v.l !== 'wall') return null;
+  const rotations: SpriteFrame[] = [];
+  for (let i = 0; i < 4; i++) {
+    const r = v.r[i];
+    const src = furnitureSpriteUrl(key, i, base);
+    if (!src || !Array.isArray(r) || r.length !== 4 || !r.every(isNum))
+      return null;
+    const [width, height, x, y] = r as number[];
+    if (width <= 0 || height <= 0) return null;
+    rotations.push({ src, width, height, anchor: { x, y } });
+  }
+  const out: ManifestFurniture = {
+    footprint: { w, d },
+    height: v.h,
+    rotations,
+  };
+  if (v.l) out.layer = v.l;
+  return out;
+}
+
+function parseFurniture(
+  key: string,
+  v: unknown,
+  base: string
+): ManifestFurniture | null {
+  if (isObj(v) && Array.isArray(v.r))
+    return parseCompactFurniture(key, v, base);
   if (!isObj(v) || !isObj(v.footprint)) return null;
   const { w, d } = v.footprint;
   if (!isPositiveInt(w) || !isPositiveInt(d)) return null;
@@ -123,9 +197,16 @@ export function parseManifest(json: unknown): LibraryManifest | null {
   if (!isObj(json) || json.version !== 1 || !sameTile(json.tile)) return null;
   if (!isNum(json.pixelRatio) || json.pixelRatio <= 0) return null;
   if (!isObj(json.furniture)) return null;
+  const base =
+    json.furnitureBase === undefined
+      ? DEFAULT_FURNITURE_BASE
+      : safeBase(json.furnitureBase);
+  // Un dossier de sprites suspect (autre origine, remontée) : on rejette
+  // le manifeste plutôt que de charger des images d'ailleurs.
+  if (base === null) return null;
   const furniture: Record<string, ManifestFurniture> = {};
   for (const [key, raw] of Object.entries(json.furniture)) {
-    const f = parseFurniture(raw);
+    const f = parseFurniture(key, raw, base);
     if (f) furniture[key] = f;
   }
   const avatars: Record<string, AvatarSheet> = {};

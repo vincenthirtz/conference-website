@@ -42,10 +42,18 @@ vi.mock('next/dynamic', async () => {
         room: { version: number };
         items: Array<{ inventoryId: string; gx: number; gy: number }>;
         avatarId: string;
+        look?: string | null;
         mode?: string;
         ghost?: { inventoryId: string; valid: boolean } | null;
         selectedId?: string | null;
+        code?: string;
       }) {
+        // L'aperçu de l'éditeur d'avatar (lot 13) passe aussi par next/dynamic.
+        if (!props.room)
+          return React.createElement('div', {
+            'data-testid': 'look-preview',
+            'data-code': props.code,
+          });
         return React.createElement('div', {
           'data-testid': 'apartment-view',
           'data-version': props.room.version,
@@ -54,6 +62,7 @@ vi.mock('next/dynamic', async () => {
             .map((i) => `${i.inventoryId}@${i.gx},${i.gy}`)
             .join(' '),
           'data-avatar': props.avatarId,
+          'data-look': props.look ?? '',
           'data-mode': props.mode,
           'data-ghost': props.ghost
             ? `${props.ghost.inventoryId}:${props.ghost.valid}`
@@ -65,6 +74,10 @@ vi.mock('next/dynamic', async () => {
 });
 
 import ApartmentScreen from '../../features/player/library/ui/apartment/ApartmentScreen';
+import {
+  encodeLibraryLook,
+  LIBRARY_AVATAR_PRESETS,
+} from '../../config/library/avatarLook';
 import { PlayerQueryProvider } from '../../features/player/_shared/query';
 import nsPlayerLibrary from '../../lib/i18n/locales/fr/playerLibrary';
 import { format } from '../../lib/i18n/useT';
@@ -368,28 +381,29 @@ describe('avatar et réglages', () => {
     expect(put.body).toEqual({ nickname: 'Etoile' });
   });
 
-  it('changer d’avatar envoie son identifiant seul', async () => {
+  it('partir d’un avatar d’origine envoie son look seul (lot 13)', async () => {
+    const a01 = LIBRARY_AVATAR_PRESETS.a01;
     replies['PUT /api/player/library/avatar'] = {
       status: 200,
-      body: { avatar: { nickname: 'Lune', avatarId: 'a01', look: {} } },
+      body: { avatar: { nickname: 'Lune', avatarId: 'a01', look: a01 } },
     };
     renderScreen();
     fireEvent.click(await screen.findByRole('tab', { name: t.tabAvatar }));
     fireEvent.click(
-      await screen.findByRole('radio', {
-        name: format(t.avatarOption, { n: 1 }),
+      await screen.findByRole('button', {
+        name: format(t.look.presetOption, { n: 1 }),
       })
     );
     fireEvent.click(screen.getByRole('button', { name: t.avatarSave }));
     expect(await screen.findByText(t.avatarSaved)).toBeTruthy();
     expect(sent('PUT', '/api/player/library/avatar')[0].body).toEqual({
-      avatarId: 'a01',
+      look: a01,
     });
-    await waitFor(() =>
-      expect(
-        screen.getByTestId('apartment-view').getAttribute('data-avatar')
-      ).toBe('a01')
-    );
+    await waitFor(() => {
+      const view = screen.getByTestId('apartment-view');
+      expect(view.getAttribute('data-avatar')).toBe('a01');
+      expect(view.getAttribute('data-look')).toBe(encodeLibraryLook(a01));
+    });
   });
 
   it('réglages : la liste du hall suppose l’ouverture ; le PATCH ne porte que les changements', async () => {
@@ -414,9 +428,8 @@ describe('avatar et réglages', () => {
     fireEvent.click(screen.getByRole('radio', { name: t.accessOpen }));
     expect(listed.disabled).toBe(false);
     fireEvent.click(listed);
-    fireEvent.change(screen.getByLabelText(t.floorLabel), {
-      target: { value: 'tiles' },
-    });
+    // Le sol se choisit dans le décor (lot 12 : onglet « Sol », par défaut).
+    fireEvent.click(screen.getByRole('radio', { name: t.decor.floors.tiles }));
     fireEvent.click(screen.getByRole('button', { name: t.settingsSave }));
 
     expect(await screen.findByText(t.settingsSaved)).toBeTruthy();

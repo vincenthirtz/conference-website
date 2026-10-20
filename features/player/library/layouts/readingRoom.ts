@@ -11,9 +11,17 @@
 //     et des plantes.
 // Positions pensées pour les empreintes du manifeste (test :
 // tests/unit/libraryLayouts.test.ts).
+//
+// SALLE VIVANTE (lot 7) : les dimensions sont celles que l'API donne à la
+// salle (`config/library/commonRooms.ts`, copie synchronisée). Le guichet
+// (`reception_desk`, près de la porte) et les épis portent les zones du lot 8
+// (`readingRoom/hotspots.ts`) ; la porte du hall porte `READING_HALL_DOOR`.
 
+import { LIBRARY_COMMON_ROOMS } from '@/config/library/commonRooms';
+import type { HotspotDecl } from '../engine/hotspots';
 import type { Tile } from '../engine/projection';
 import type { Rotation, RoomItem, RoomModel } from '../engine/room';
+import { DOOR_HEIGHT_M, DOOR_SPAN } from './hall';
 
 const items: RoomItem[] = [];
 const put = (id: string, key: string, gx: number, gy: number, r: Rotation) =>
@@ -21,6 +29,21 @@ const put = (id: string, key: string, gx: number, gy: number, r: Rotation) =>
 
 /** Porte vers le hall (mur droit). */
 export const READING_DOOR = { side: 'right', at: 2 } as const;
+
+/** La zone de la porte du hall (`labelKey` : `playerLibraryHall.spots`). */
+export const READING_HALL_DOOR: HotspotDecl = {
+  id: 'hall',
+  labelKey: 'hall',
+  shape: {
+    kind: 'wall',
+    ...READING_DOOR,
+    span: DOOR_SPAN,
+    heightM: DOOR_HEIGHT_M,
+  },
+};
+
+// Le guichet, à l'accueil : entre la porte du hall et le premier épi.
+put('guichet', 'reception_desk', 1, 4, 0);
 
 // Épis : rayonnages doubles tournés d'un quart (2 × 3 cases), trois par épi.
 const STACK_COLUMNS = [6, 11, 16, 21, 26, 31];
@@ -76,8 +99,8 @@ put('ladder-wall-r', 'library_ladder', 15, 0, 0);
 put('ladder-wall-l', 'library_ladder', 0, 9, 1);
 
 export const READING_ROOM: RoomModel = {
-  w: 40,
-  d: 30,
+  w: LIBRARY_COMMON_ROOMS.reading_room.width,
+  d: LIBRARY_COMMON_ROOMS.reading_room.depth,
   wallHeight: 2.8,
   items,
   decor: {

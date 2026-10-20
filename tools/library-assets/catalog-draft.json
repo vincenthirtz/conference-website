@@ -8,6 +8,7 @@
   "furniture": {
     "bookshelf": {
       "category": "storage",
+      "family": "bookshelf",
       "footprint": {
         "w": 3,
         "d": 1
@@ -19,6 +20,7 @@
     },
     "armchair": {
       "category": "seating",
+      "family": "armchair",
       "footprint": {
         "w": 2,
         "d": 2
@@ -30,6 +32,7 @@
     },
     "lamp": {
       "category": "lighting",
+      "family": "lamp",
       "footprint": {
         "w": 1,
         "d": 2
@@ -41,6 +44,7 @@
     },
     "bookshelf_filled": {
       "category": "storage",
+      "family": "bookshelf_filled",
       "footprint": {
         "w": 3,
         "d": 1
@@ -52,6 +56,7 @@
     },
     "bookshelf_double": {
       "category": "storage",
+      "family": "bookshelf_double",
       "footprint": {
         "w": 3,
         "d": 2
@@ -63,6 +68,7 @@
     },
     "shelf_small": {
       "category": "storage",
+      "family": "shelf_small",
       "footprint": {
         "w": 1,
         "d": 1
@@ -74,6 +80,7 @@
     },
     "display_shelves": {
       "category": "storage",
+      "family": "display_shelves",
       "footprint": {
         "w": 2,
         "d": 1
@@ -85,6 +92,7 @@
     },
     "wardrobe": {
       "category": "storage",
+      "family": "wardrobe",
       "footprint": {
         "w": 2,
         "d": 2
@@ -96,6 +104,7 @@
     },
     "cabinet": {
       "category": "storage",
+      "family": "cabinet",
       "footprint": {
         "w": 3,
         "d": 1
@@ -107,6 +116,7 @@
     },
     "drawer_cabinet": {
       "category": "storage",
+      "family": "drawer_cabinet",
       "footprint": {
         "w": 3,
         "d": 1
@@ -118,6 +128,7 @@
     },
     "sideboard": {
       "category": "storage",
+      "family": "sideboard",
       "footprint": {
         "w": 5,
         "d": 1
@@ -129,6 +140,7 @@
     },
     "armchair_green": {
       "category": "seating",
+      "family": "armchair_green",
       "footprint": {
         "w": 2,
         "d": 2
@@ -140,6 +152,7 @@
     },
     "chair": {
       "category": "seating",
+      "family": "chair",
       "footprint": {
         "w": 1,
         "d": 1
@@ -151,6 +164,7 @@
     },
     "chair_painted": {
       "category": "seating",
+      "family": "chair_painted",
       "footprint": {
         "w": 1,
         "d": 1
@@ -162,6 +176,7 @@
     },
     "sofa": {
       "category": "seating",
+      "family": "sofa",
       "footprint": {
         "w": 3,
         "d": 2
@@ -173,6 +188,7 @@
     },
     "sofa_large": {
       "category": "seating",
+      "family": "sofa_large",
       "footprint": {
         "w": 6,
         "d": 2
@@ -184,6 +200,7 @@
     },
     "bench": {
       "category": "seating",
+      "family": "bench",
       "footprint": {
         "w": 3,
         "d": 1
@@ -195,6 +212,7 @@
     },
     "ottoman": {
       "category": "seating",
+      "family": "ottoman",
       "footprint": {
         "w": 2,
         "d": 2
@@ -206,6 +224,7 @@
     },
     "lounge_chair": {
       "category": "seating",
+      "family": "lounge_chair",
       "footprint": {
         "w": 2,
         "d": 3
@@ -217,6 +236,7 @@
     },
     "rocking_chair": {
       "category": "seating",
+      "family": "rocking_chair",
       "footprint": {
         "w": 2,
         "d": 2
@@ -228,6 +248,7 @@
     },
     "stool": {
       "category": "seating",
+      "family": "stool",
       "footprint": {
         "w": 1,
         "d": 1
@@ -239,6 +260,7 @@
     },
     "reading_table": {
       "category": "table",
+      "family": "reading_table",
       "footprint": {
         "w": 5,
         "d": 2
@@ -250,6 +272,7 @@
     },
     "desk": {
       "category": "table",
+      "family": "desk",
       "footprint": {
         "w": 3,
         "d": 1
@@ -261,6 +284,7 @@
     },
     "coffee_table": {
       "category": "table",
+      "family": "coffee_table",
       "footprint": {
         "w": 3,
         "d": 2
@@ -272,6 +296,7 @@
     },
     "coffee_table_round": {
       "category": "table",
+      "family": "coffee_table_round",
       "footprint": {
         "w": 3,
         "d": 3
@@ -283,6 +308,7 @@
     },
     "side_table": {
       "category": "table",
+      "family": "side_table",
       "footprint": {
         "w": 1,
         "d": 1
@@ -294,6 +320,7 @@
     },
     "nightstand": {
       "category": "table",
+      "family": "nightstand",
       "footprint": {
         "w": 1,
         "d": 1
@@ -305,6 +332,7 @@
     },
     "round_table": {
       "category": "table",
+      "family": "round_table",
       "footprint": {
         "w": 2,
         "d": 2
@@ -316,6 +344,7 @@
     },
     "console_table": {
       "category": "table",
+      "family": "console_table",
       "footprint": {
         "w": 3,
         "d": 1
@@ -327,6 +356,7 @@
     },
     "reception_desk": {
       "category": "table",
+      "family": "reception_desk",
       "footprint": {
         "w": 5,
         "d": 2
@@ -338,6 +368,7 @@
     },
     "bankers_lamp": {
       "category": "lighting",
+      "family": "bankers_lamp",
       "footprint": {
         "w": 1,
         "d": 1
@@ -349,6 +380,7 @@
     },
     "floor_lamp": {
       "category": "lighting",
+      "family": "floor_lamp",
       "footprint": {
         "w": 1,
         "d": 1
@@ -360,6 +392,7 @@
     },
     "bed": {
       "category": "bed",
+      "family": "bed",
       "footprint": {
         "w": 3,
         "d": 4
@@ -371,6 +404,7 @@
     },
     "daybed": {
       "category": "bed",
+      "family": "daybed",
       "footprint": {
         "w": 4,
         "d": 2
@@ -382,6 +416,7 @@
     },
     "plant_tall": {
       "category": "plant",
+      "family": "plant_tall",
       "footprint": {
         "w": 1,
         "d": 1
@@ -393,6 +428,7 @@
     },
     "plant_medium": {
       "category": "plant",
+      "family": "plant_medium",
       "footprint": {
         "w": 1,
         "d": 1
@@ -404,6 +440,7 @@
     },
     "cactus": {
       "category": "plant",
+      "family": "cactus",
       "footprint": {
         "w": 1,
         "d": 1
@@ -415,6 +452,7 @@
     },
     "rug_red": {
       "category": "rug",
+      "family": "rug_red",
       "footprint": {
         "w": 6,
         "d": 4
@@ -427,6 +465,7 @@
     },
     "rug_green": {
       "category": "rug",
+      "family": "rug_green",
       "footprint": {
         "w": 8,
         "d": 6
@@ -439,6 +478,7 @@
     },
     "rug_round": {
       "category": "rug",
+      "family": "rug_round",
       "footprint": {
         "w": 4,
         "d": 4
@@ -451,6 +491,7 @@
     },
     "globe": {
       "category": "decor",
+      "family": "globe",
       "footprint": {
         "w": 1,
         "d": 1
@@ -462,6 +503,7 @@
     },
     "library_ladder": {
       "category": "decor",
+      "family": "library_ladder",
       "footprint": {
         "w": 1,
         "d": 1
@@ -473,6 +515,7 @@
     },
     "notice_board": {
       "category": "decor",
+      "family": "notice_board",
       "footprint": {
         "w": 3,
         "d": 1
@@ -484,6 +527,7 @@
     },
     "bust_pedestal": {
       "category": "decor",
+      "family": "bust_pedestal",
       "footprint": {
         "w": 1,
         "d": 1
@@ -495,6 +539,7 @@
     },
     "vase": {
       "category": "decor",
+      "family": "vase",
       "footprint": {
         "w": 1,
         "d": 1
@@ -506,6 +551,7 @@
     },
     "frame_painting": {
       "category": "decor",
+      "family": "frame_painting",
       "footprint": {
         "w": 2,
         "d": 1
@@ -518,6 +564,7 @@
     },
     "frame_modern": {
       "category": "decor",
+      "family": "frame_modern",
       "footprint": {
         "w": 2,
         "d": 1
@@ -530,6 +577,7 @@
     },
     "mirror": {
       "category": "decor",
+      "family": "mirror",
       "footprint": {
         "w": 1,
         "d": 1
@@ -542,6 +590,7 @@
     },
     "wall_clock": {
       "category": "decor",
+      "family": "wall_clock",
       "footprint": {
         "w": 1,
         "d": 1
@@ -551,6 +600,2297 @@
       "stackable": false,
       "suggestedPrice": 100,
       "layer": "wall"
+    },
+    "sofa_blue": {
+      "category": "seating",
+      "family": "sofa",
+      "footprint": {
+        "w": 3,
+        "d": 2
+      },
+      "heightM": 0.8,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "sofa_green": {
+      "category": "seating",
+      "family": "sofa",
+      "footprint": {
+        "w": 3,
+        "d": 2
+      },
+      "heightM": 0.8,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "sofa_pink": {
+      "category": "seating",
+      "family": "sofa",
+      "footprint": {
+        "w": 3,
+        "d": 2
+      },
+      "heightM": 0.8,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "sofa_charcoal": {
+      "category": "seating",
+      "family": "sofa",
+      "footprint": {
+        "w": 3,
+        "d": 2
+      },
+      "heightM": 0.8,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "sofa_mustard": {
+      "category": "seating",
+      "family": "sofa",
+      "footprint": {
+        "w": 3,
+        "d": 2
+      },
+      "heightM": 0.8,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "armchair_blue": {
+      "category": "seating",
+      "family": "armchair",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.07,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "armchair_pink": {
+      "category": "seating",
+      "family": "armchair",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.07,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "armchair_mustard": {
+      "category": "seating",
+      "family": "armchair",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.07,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "armchair_teal": {
+      "category": "seating",
+      "family": "armchair",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.07,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "armchair_club_burgundy": {
+      "category": "seating",
+      "family": "armchair_green",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.06,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "armchair_club_navy": {
+      "category": "seating",
+      "family": "armchair_green",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.06,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "armchair_club_ochre": {
+      "category": "seating",
+      "family": "armchair_green",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.06,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "ottoman_cognac": {
+      "category": "seating",
+      "family": "ottoman",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.62,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 100
+    },
+    "ottoman_black": {
+      "category": "seating",
+      "family": "ottoman",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.62,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 100
+    },
+    "ottoman_teal": {
+      "category": "seating",
+      "family": "ottoman",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.62,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 100
+    },
+    "ottoman_pink": {
+      "category": "seating",
+      "family": "ottoman",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.62,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 100
+    },
+    "lounge_chair_black": {
+      "category": "seating",
+      "family": "lounge_chair",
+      "footprint": {
+        "w": 2,
+        "d": 3
+      },
+      "heightM": 1.17,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 600
+    },
+    "lounge_chair_cream": {
+      "category": "seating",
+      "family": "lounge_chair",
+      "footprint": {
+        "w": 2,
+        "d": 3
+      },
+      "heightM": 1.17,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 600
+    },
+    "chair_painted_blue": {
+      "category": "seating",
+      "family": "chair_painted",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.96,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 70
+    },
+    "chair_painted_green": {
+      "category": "seating",
+      "family": "chair_painted",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.96,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 70
+    },
+    "chair_painted_pink": {
+      "category": "seating",
+      "family": "chair_painted",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.96,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 70
+    },
+    "chair_painted_yellow": {
+      "category": "seating",
+      "family": "chair_painted",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.96,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 70
+    },
+    "bench_blue": {
+      "category": "seating",
+      "family": "bench",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 0.89,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "bench_green": {
+      "category": "seating",
+      "family": "bench",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 0.89,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "bench_cream": {
+      "category": "seating",
+      "family": "bench",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 0.89,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "cabinet_blue": {
+      "category": "storage",
+      "family": "cabinet",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 1.13,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "cabinet_green": {
+      "category": "storage",
+      "family": "cabinet",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 1.13,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "cabinet_pink": {
+      "category": "storage",
+      "family": "cabinet",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 1.13,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "wardrobe_green": {
+      "category": "storage",
+      "family": "wardrobe",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 2.57,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "wardrobe_white": {
+      "category": "storage",
+      "family": "wardrobe",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 2.57,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "wardrobe_pink": {
+      "category": "storage",
+      "family": "wardrobe",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 2.57,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "shelf_small_blue": {
+      "category": "storage",
+      "family": "shelf_small",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.13,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "shelf_small_green": {
+      "category": "storage",
+      "family": "shelf_small",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.13,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "shelf_small_white": {
+      "category": "storage",
+      "family": "shelf_small",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.13,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "bookshelf_filled_oak": {
+      "category": "storage",
+      "family": "bookshelf_filled",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 2.06,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 450
+    },
+    "bookshelf_filled_black": {
+      "category": "storage",
+      "family": "bookshelf_filled",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 2.06,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 450
+    },
+    "bookshelf_filled_white": {
+      "category": "storage",
+      "family": "bookshelf_filled",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 2.06,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 450
+    },
+    "bankers_lamp_red": {
+      "category": "lighting",
+      "family": "bankers_lamp",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.38,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 120
+    },
+    "bankers_lamp_blue": {
+      "category": "lighting",
+      "family": "bankers_lamp",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.38,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 120
+    },
+    "floor_lamp_pink": {
+      "category": "lighting",
+      "family": "floor_lamp",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.65,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "floor_lamp_blue": {
+      "category": "lighting",
+      "family": "floor_lamp",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.65,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "floor_lamp_green": {
+      "category": "lighting",
+      "family": "floor_lamp",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.65,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "rug_round_blue": {
+      "category": "rug",
+      "family": "rug_round",
+      "footprint": {
+        "w": 4,
+        "d": 4
+      },
+      "heightM": 0.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 300,
+      "layer": "floor"
+    },
+    "rug_round_pink": {
+      "category": "rug",
+      "family": "rug_round",
+      "footprint": {
+        "w": 4,
+        "d": 4
+      },
+      "heightM": 0.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 300,
+      "layer": "floor"
+    },
+    "rug_round_green": {
+      "category": "rug",
+      "family": "rug_round",
+      "footprint": {
+        "w": 4,
+        "d": 4
+      },
+      "heightM": 0.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 300,
+      "layer": "floor"
+    },
+    "rug_round_grey": {
+      "category": "rug",
+      "family": "rug_round",
+      "footprint": {
+        "w": 4,
+        "d": 4
+      },
+      "heightM": 0.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 300,
+      "layer": "floor"
+    },
+    "rug_blue": {
+      "category": "rug",
+      "family": "rug_red",
+      "footprint": {
+        "w": 6,
+        "d": 4
+      },
+      "heightM": 0.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 400,
+      "layer": "floor"
+    },
+    "rug_ochre": {
+      "category": "rug",
+      "family": "rug_red",
+      "footprint": {
+        "w": 6,
+        "d": 4
+      },
+      "heightM": 0.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 400,
+      "layer": "floor"
+    },
+    "rug_purple": {
+      "category": "rug",
+      "family": "rug_red",
+      "footprint": {
+        "w": 6,
+        "d": 4
+      },
+      "heightM": 0.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 400,
+      "layer": "floor"
+    },
+    "rug_large_burgundy": {
+      "category": "rug",
+      "family": "rug_green",
+      "footprint": {
+        "w": 8,
+        "d": 6
+      },
+      "heightM": 0.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 450,
+      "layer": "floor"
+    },
+    "rug_large_navy": {
+      "category": "rug",
+      "family": "rug_green",
+      "footprint": {
+        "w": 8,
+        "d": 6
+      },
+      "heightM": 0.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 450,
+      "layer": "floor"
+    },
+    "stool_black": {
+      "category": "seating",
+      "family": "stool",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.44,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 50
+    },
+    "stool_white": {
+      "category": "seating",
+      "family": "stool",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.44,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 50
+    },
+    "stool_red": {
+      "category": "seating",
+      "family": "stool",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.44,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 50
+    },
+    "chair_black": {
+      "category": "seating",
+      "family": "chair",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.97,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 80
+    },
+    "chair_white": {
+      "category": "seating",
+      "family": "chair",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.97,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 80
+    },
+    "desk_white": {
+      "category": "table",
+      "family": "desk",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 0.83,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "desk_black": {
+      "category": "table",
+      "family": "desk",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 0.83,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "coffee_table_white": {
+      "category": "table",
+      "family": "coffee_table",
+      "footprint": {
+        "w": 3,
+        "d": 2
+      },
+      "heightM": 0.52,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 200
+    },
+    "coffee_table_black": {
+      "category": "table",
+      "family": "coffee_table",
+      "footprint": {
+        "w": 3,
+        "d": 2
+      },
+      "heightM": 0.52,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 200
+    },
+    "side_table_white": {
+      "category": "table",
+      "family": "side_table",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.55,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 90
+    },
+    "side_table_black": {
+      "category": "table",
+      "family": "side_table",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.55,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 90
+    },
+    "round_table_white": {
+      "category": "table",
+      "family": "round_table",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.75,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 180
+    },
+    "round_table_black": {
+      "category": "table",
+      "family": "round_table",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.75,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 180
+    },
+    "vase_blue": {
+      "category": "decor",
+      "family": "vase",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.44,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 80
+    },
+    "vase_pink": {
+      "category": "decor",
+      "family": "vase",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.44,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 80
+    },
+    "vase_green": {
+      "category": "decor",
+      "family": "vase",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.44,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 80
+    },
+    "daybed_pink": {
+      "category": "bed",
+      "family": "daybed",
+      "footprint": {
+        "w": 4,
+        "d": 2
+      },
+      "heightM": 1.13,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 600
+    },
+    "daybed_blue": {
+      "category": "bed",
+      "family": "daybed",
+      "footprint": {
+        "w": 4,
+        "d": 2
+      },
+      "heightM": 1.13,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 600
+    },
+    "bed_blue": {
+      "category": "bed",
+      "family": "bed",
+      "footprint": {
+        "w": 3,
+        "d": 4
+      },
+      "heightM": 1.53,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 800
+    },
+    "bed_pink": {
+      "category": "bed",
+      "family": "bed",
+      "footprint": {
+        "w": 3,
+        "d": 4
+      },
+      "heightM": 1.53,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 800
+    },
+    "rocking_chair_white": {
+      "category": "seating",
+      "family": "rocking_chair",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.99,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 350
+    },
+    "rocking_chair_black": {
+      "category": "seating",
+      "family": "rocking_chair",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.99,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 350
+    },
+    "plant_tall_white": {
+      "category": "plant",
+      "family": "plant_tall",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.22,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "plant_tall_terracotta": {
+      "category": "plant",
+      "family": "plant_tall",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.22,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "plant_medium_white": {
+      "category": "plant",
+      "family": "plant_medium",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.67,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 100
+    },
+    "plant_medium_blue": {
+      "category": "plant",
+      "family": "plant_medium",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.67,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 100
+    },
+    "drawer_cabinet_white": {
+      "category": "storage",
+      "family": "drawer_cabinet",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 1.88,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "drawer_cabinet_blue": {
+      "category": "storage",
+      "family": "drawer_cabinet",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 1.88,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "sideboard_white": {
+      "category": "storage",
+      "family": "sideboard",
+      "footprint": {
+        "w": 5,
+        "d": 1
+      },
+      "heightM": 0.68,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 350
+    },
+    "sideboard_black": {
+      "category": "storage",
+      "family": "sideboard",
+      "footprint": {
+        "w": 5,
+        "d": 1
+      },
+      "heightM": 0.68,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 350
+    },
+    "nightstand_white": {
+      "category": "table",
+      "family": "nightstand",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.7,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 100
+    },
+    "tv_retro": {
+      "category": "decor",
+      "family": "tv_retro",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.46,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 150
+    },
+    "game_console": {
+      "category": "decor",
+      "family": "game_console",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.1,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 120
+    },
+    "chess_set": {
+      "category": "decor",
+      "family": "chess_set",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.11,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 120
+    },
+    "boombox": {
+      "category": "decor",
+      "family": "boombox",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 0.47,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 90
+    },
+    "dartboard": {
+      "category": "decor",
+      "family": "dartboard",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.9,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 100,
+      "layer": "wall"
+    },
+    "projector_screen": {
+      "category": "decor",
+      "family": "projector_screen",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.8,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 350
+    },
+    "shelf_tall": {
+      "category": "storage",
+      "family": "shelf_tall",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 2.08,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 400
+    },
+    "mantel_clock": {
+      "category": "decor",
+      "family": "mantel_clock",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.16,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 120
+    },
+    "card_catalog": {
+      "category": "storage",
+      "family": "card_catalog",
+      "footprint": {
+        "w": 4,
+        "d": 2
+      },
+      "heightM": 1.09,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "chalkboard": {
+      "category": "decor",
+      "family": "chalkboard",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.51,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "school_desk": {
+      "category": "table",
+      "family": "school_desk",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 0.88,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "school_chair": {
+      "category": "seating",
+      "family": "school_chair",
+      "footprint": {
+        "w": 1,
+        "d": 2
+      },
+      "heightM": 1.01,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 90
+    },
+    "oil_lamp": {
+      "category": "lighting",
+      "family": "oil_lamp",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.8,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 120
+    },
+    "candlestick": {
+      "category": "lighting",
+      "family": "candlestick",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.22,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 50
+    },
+    "gothic_cabinet": {
+      "category": "storage",
+      "family": "gothic_cabinet",
+      "footprint": {
+        "w": 4,
+        "d": 3
+      },
+      "heightM": 2.36,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 950
+    },
+    "gothic_commode": {
+      "category": "storage",
+      "family": "gothic_commode",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 1.21,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 450
+    },
+    "carved_chair": {
+      "category": "seating",
+      "family": "carved_chair",
+      "footprint": {
+        "w": 1,
+        "d": 2
+      },
+      "heightM": 1.03,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 200
+    },
+    "carved_chest": {
+      "category": "storage",
+      "family": "carved_chest",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 0.49,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "shelf_industrial": {
+      "category": "storage",
+      "family": "shelf_industrial",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 2.14,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 350
+    },
+    "hutch": {
+      "category": "storage",
+      "family": "hutch",
+      "footprint": {
+        "w": 4,
+        "d": 2
+      },
+      "heightM": 2.24,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 900
+    },
+    "sofa_chesterfield": {
+      "category": "seating",
+      "family": "sofa_chesterfield",
+      "footprint": {
+        "w": 4,
+        "d": 2
+      },
+      "heightM": 0.71,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 550
+    },
+    "sofa_chesterfield_oxblood": {
+      "category": "seating",
+      "family": "sofa_chesterfield",
+      "footprint": {
+        "w": 4,
+        "d": 2
+      },
+      "heightM": 0.71,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 550
+    },
+    "sofa_chesterfield_green": {
+      "category": "seating",
+      "family": "sofa_chesterfield",
+      "footprint": {
+        "w": 4,
+        "d": 2
+      },
+      "heightM": 0.71,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 550
+    },
+    "sofa_painted": {
+      "category": "seating",
+      "family": "sofa_painted",
+      "footprint": {
+        "w": 5,
+        "d": 2
+      },
+      "heightM": 1.28,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 650
+    },
+    "armchair_scandi": {
+      "category": "seating",
+      "family": "armchair_scandi",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.02,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "armchair_scandi_cognac": {
+      "category": "seating",
+      "family": "armchair_scandi",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.02,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "armchair_scandi_grey": {
+      "category": "seating",
+      "family": "armchair_scandi",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.02,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "throw_pillows": {
+      "category": "decor",
+      "family": "throw_pillows",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.45,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 80
+    },
+    "tea_set": {
+      "category": "decor",
+      "family": "tea_set",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 0.16,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 90
+    },
+    "wicker_basket": {
+      "category": "storage",
+      "family": "wicker_basket",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.22,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 50
+    },
+    "coffee_table_gothic": {
+      "category": "table",
+      "family": "coffee_table_gothic",
+      "footprint": {
+        "w": 3,
+        "d": 3
+      },
+      "heightM": 0.56,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 280
+    },
+    "coffee_table_industrial": {
+      "category": "table",
+      "family": "coffee_table_industrial",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.64,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 180
+    },
+    "coffee_table_modern": {
+      "category": "table",
+      "family": "coffee_table_modern",
+      "footprint": {
+        "w": 2,
+        "d": 3
+      },
+      "heightM": 0.39,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 200
+    },
+    "coffee_table_square": {
+      "category": "table",
+      "family": "coffee_table_square",
+      "footprint": {
+        "w": 3,
+        "d": 3
+      },
+      "heightM": 0.37,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "nightstand_painted": {
+      "category": "table",
+      "family": "nightstand_painted",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.62,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 100
+    },
+    "stool_painted": {
+      "category": "seating",
+      "family": "stool_painted",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.58,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 60
+    },
+    "stool_folding": {
+      "category": "seating",
+      "family": "stool_folding",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.44,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 50
+    },
+    "bar_stool": {
+      "category": "seating",
+      "family": "bar_stool",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.75,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 90
+    },
+    "folding_screen": {
+      "category": "decor",
+      "family": "folding_screen",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 1.6,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 350
+    },
+    "spinning_wheel": {
+      "category": "decor",
+      "family": "spinning_wheel",
+      "footprint": {
+        "w": 1,
+        "d": 2
+      },
+      "heightM": 0.97,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 300
+    },
+    "tea_table": {
+      "category": "table",
+      "family": "tea_table",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.5,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 200
+    },
+    "stool_lacquer": {
+      "category": "seating",
+      "family": "stool_lacquer",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.63,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 80
+    },
+    "bed_iron": {
+      "category": "bed",
+      "family": "bed_iron",
+      "footprint": {
+        "w": 2,
+        "d": 4
+      },
+      "heightM": 1.2,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "planter_box": {
+      "category": "plant",
+      "family": "planter_box",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 0.42,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "planter_box_long": {
+      "category": "plant",
+      "family": "planter_box_long",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 0.45,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 200
+    },
+    "planter_box_tall": {
+      "category": "plant",
+      "family": "planter_box_tall",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.86,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "garden_set": {
+      "category": "table",
+      "family": "garden_set",
+      "footprint": {
+        "w": 2,
+        "d": 4
+      },
+      "heightM": 0.86,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "garden_gnome": {
+      "category": "decor",
+      "family": "garden_gnome",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.6,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 80
+    },
+    "cat_statue": {
+      "category": "decor",
+      "family": "cat_statue",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.28,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 100
+    },
+    "watering_can": {
+      "category": "decor",
+      "family": "watering_can",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.2,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 50
+    },
+    "lantern": {
+      "category": "lighting",
+      "family": "lantern",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.53,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 90
+    },
+    "garden_lamp": {
+      "category": "lighting",
+      "family": "garden_lamp",
+      "footprint": {
+        "w": 1,
+        "d": 2
+      },
+      "heightM": 2.58,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 300,
+      "layer": "wall"
+    },
+    "fire_pit": {
+      "category": "decor",
+      "family": "fire_pit",
+      "footprint": {
+        "w": 3,
+        "d": 3
+      },
+      "heightM": 0.39,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 400
+    },
+    "wine_barrel": {
+      "category": "storage",
+      "family": "wine_barrel",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.87,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 200
+    },
+    "treasure_chest": {
+      "category": "storage",
+      "family": "treasure_chest",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 0.62,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 400
+    },
+    "wooden_crate": {
+      "category": "storage",
+      "family": "wooden_crate",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 0.35,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 60
+    },
+    "vase_tall": {
+      "category": "decor",
+      "family": "vase_tall",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.41,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 60
+    },
+    "vase_round": {
+      "category": "decor",
+      "family": "vase_round",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.31,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 60
+    },
+    "vase_brass": {
+      "category": "decor",
+      "family": "vase_brass",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.69,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 120
+    },
+    "frame_small": {
+      "category": "decor",
+      "family": "frame_small",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.95,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 90,
+      "layer": "wall"
+    },
+    "frame_landscape": {
+      "category": "decor",
+      "family": "frame_landscape",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 1.81,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 220,
+      "layer": "wall"
+    },
+    "phone_clock": {
+      "category": "decor",
+      "family": "phone_clock",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.9,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150,
+      "layer": "wall"
+    },
+    "desk_lamp_pipe": {
+      "category": "lighting",
+      "family": "desk_lamp_pipe",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.36,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 80
+    },
+    "gaming_desk": {
+      "category": "table",
+      "family": "gaming_desk",
+      "footprint": {
+        "w": 3,
+        "d": 2
+      },
+      "heightM": 1.19,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 600
+    },
+    "gaming_desk_cyan": {
+      "category": "table",
+      "family": "gaming_desk",
+      "footprint": {
+        "w": 3,
+        "d": 2
+      },
+      "heightM": 1.19,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 600
+    },
+    "pc_tower": {
+      "category": "decor",
+      "family": "pc_tower",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.49,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "pc_tower_cyan": {
+      "category": "decor",
+      "family": "pc_tower",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.49,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "arcade_cabinet": {
+      "category": "decor",
+      "family": "arcade_cabinet",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.75,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 750
+    },
+    "arcade_cabinet_pink": {
+      "category": "decor",
+      "family": "arcade_cabinet",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.75,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 750
+    },
+    "arcade_cabinet_teal": {
+      "category": "decor",
+      "family": "arcade_cabinet",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 1.75,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 750
+    },
+    "neon_heart": {
+      "category": "lighting",
+      "family": "neon_heart",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 1.9,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150,
+      "layer": "wall"
+    },
+    "neon_heart_blue": {
+      "category": "lighting",
+      "family": "neon_heart",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 1.9,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150,
+      "layer": "wall"
+    },
+    "neon_heart_green": {
+      "category": "lighting",
+      "family": "neon_heart",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 1.9,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150,
+      "layer": "wall"
+    },
+    "neon_bolt": {
+      "category": "lighting",
+      "family": "neon_bolt",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.95,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150,
+      "layer": "wall"
+    },
+    "neon_bolt_purple": {
+      "category": "lighting",
+      "family": "neon_bolt",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.95,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150,
+      "layer": "wall"
+    },
+    "bean_bag": {
+      "category": "seating",
+      "family": "bean_bag",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.36,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "bean_bag_pink": {
+      "category": "seating",
+      "family": "bean_bag",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.36,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "bean_bag_blue": {
+      "category": "seating",
+      "family": "bean_bag",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.36,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "bean_bag_green": {
+      "category": "seating",
+      "family": "bean_bag",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.36,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "bean_bag_mustard": {
+      "category": "seating",
+      "family": "bean_bag",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.36,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "trophy": {
+      "category": "decor",
+      "family": "trophy",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.39,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 200
+    },
+    "trophy_silver": {
+      "category": "decor",
+      "family": "trophy",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.39,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 200
+    },
+    "trophy_pedestal": {
+      "category": "decor",
+      "family": "trophy_pedestal",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.59,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 600
+    },
+    "lectern": {
+      "category": "decor",
+      "family": "lectern",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.1,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "book_stack": {
+      "category": "decor",
+      "family": "book_stack",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.16,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 60
+    },
+    "book_tower": {
+      "category": "decor",
+      "family": "book_tower",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.3,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 90
+    },
+    "floor_cushion": {
+      "category": "seating",
+      "family": "floor_cushion",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.14,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 60
+    },
+    "floor_cushion_pink": {
+      "category": "seating",
+      "family": "floor_cushion",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.14,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 60
+    },
+    "floor_cushion_blue": {
+      "category": "seating",
+      "family": "floor_cushion",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.14,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 60
+    },
+    "floor_cushion_green": {
+      "category": "seating",
+      "family": "floor_cushion",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.14,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 60
+    },
+    "floor_cushion_mustard": {
+      "category": "seating",
+      "family": "floor_cushion",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.14,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 60
+    },
+    "candles": {
+      "category": "lighting",
+      "family": "candles",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.22,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 70
+    },
+    "fireplace": {
+      "category": "decor",
+      "family": "fireplace",
+      "footprint": {
+        "w": 3,
+        "d": 1
+      },
+      "heightM": 1.12,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 900
+    },
+    "pumpkin": {
+      "category": "decor",
+      "family": "pumpkin",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.28,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 60
+    },
+    "jack_o_lantern": {
+      "category": "lighting",
+      "family": "jack_o_lantern",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.31,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 120
+    },
+    "pumpkin_pile": {
+      "category": "decor",
+      "family": "pumpkin_pile",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.38,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 180
+    },
+    "cauldron": {
+      "category": "decor",
+      "family": "cauldron",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.47,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "gravestone": {
+      "category": "decor",
+      "family": "gravestone",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.67,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "ghost": {
+      "category": "decor",
+      "family": "ghost",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.97,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 200
+    },
+    "bat_garland": {
+      "category": "decor",
+      "family": "bat_garland",
+      "footprint": {
+        "w": 2,
+        "d": 1
+      },
+      "heightM": 1.89,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 100,
+      "layer": "wall"
+    },
+    "rug_halloween": {
+      "category": "rug",
+      "family": "rug_red",
+      "footprint": {
+        "w": 6,
+        "d": 4
+      },
+      "heightM": 0.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 400,
+      "layer": "floor"
+    },
+    "sofa_pumpkin": {
+      "category": "seating",
+      "family": "sofa",
+      "footprint": {
+        "w": 3,
+        "d": 2
+      },
+      "heightM": 0.8,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 500
+    },
+    "pink_ribbon": {
+      "category": "decor",
+      "family": "pink_ribbon",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.7,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 250
+    },
+    "neon_ribbon": {
+      "category": "lighting",
+      "family": "neon_ribbon",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 1.9,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 150,
+      "layer": "wall"
+    },
+    "rug_rose": {
+      "category": "rug",
+      "family": "rug_round",
+      "footprint": {
+        "w": 4,
+        "d": 4
+      },
+      "heightM": 0.02,
+      "sittable": false,
+      "stackable": false,
+      "suggestedPrice": 300,
+      "layer": "floor"
+    },
+    "bean_bag_rose": {
+      "category": "seating",
+      "family": "bean_bag",
+      "footprint": {
+        "w": 2,
+        "d": 2
+      },
+      "heightM": 0.36,
+      "sittable": true,
+      "stackable": false,
+      "suggestedPrice": 150
+    },
+    "bankers_lamp_rose": {
+      "category": "lighting",
+      "family": "bankers_lamp",
+      "footprint": {
+        "w": 1,
+        "d": 1
+      },
+      "heightM": 0.38,
+      "sittable": false,
+      "stackable": true,
+      "suggestedPrice": 120
     }
   }
 }

@@ -10,7 +10,14 @@
 //     plantes, deux lampadaires et un buste.
 // Positions pensées pour les empreintes du manifeste (test :
 // tests/unit/libraryLayouts.test.ts).
+//
+// SALLE VIVANTE (lot 7) : les dimensions sont celles que l'API donne à la
+// salle (`config/library/commonRooms.ts`, copie synchronisée) ; les ZONES
+// (`HALL_HOTSPOTS`, engine/hotspots.ts) sont le panneau d'annonces et les
+// trois portes, routées par `ui/places/useRoomHotspots.ts`.
 
+import { LIBRARY_COMMON_ROOMS } from '@/config/library/commonRooms';
+import type { HotspotDecl } from '../engine/hotspots';
 import type { RoomItem, RoomModel } from '../engine/room';
 
 /** Portes du hall (case de départ de la variante `door` sur son mur). */
@@ -20,6 +27,46 @@ export const HALL_DOORS = {
   teamHq: { side: 'right', at: 22 },
 } as const;
 
+/** Largeur (cases) et hauteur (m) d'une porte du manifeste (`walls.library`). */
+export const DOOR_SPAN = 2;
+export const DOOR_HEIGHT_M = 2.2;
+
+/** Les zones du hall : leur `id` est ce que reçoit l'écran du hall. */
+export const HALL_SPOT_IDS = [
+  'board',
+  'reading_room',
+  'apartments',
+  'team_hq',
+] as const;
+export type HallSpotId = (typeof HALL_SPOT_IDS)[number];
+
+const door = (d: { side: 'left' | 'right'; at: number }) =>
+  ({ kind: 'wall', ...d, span: DOOR_SPAN, heightM: DOOR_HEIGHT_M }) as const;
+
+/**
+ * Le panneau d'annonces (son image), la porte de la Grande salle de lecture,
+ * celle des appartements (l'entrée, côté rue) et celle des QG d'équipe.
+ * `labelKey` : clé de `playerLibraryHall.spots`.
+ */
+export const HALL_HOTSPOTS: readonly (HotspotDecl & { id: HallSpotId })[] = [
+  {
+    id: 'board',
+    labelKey: 'board',
+    shape: { kind: 'item', itemId: 'notice-board' },
+  },
+  {
+    id: 'reading_room',
+    labelKey: 'readingRoom',
+    shape: door(HALL_DOORS.readingRoom),
+  },
+  {
+    id: 'apartments',
+    labelKey: 'apartments',
+    shape: door(HALL_DOORS.entrance),
+  },
+  { id: 'team_hq', labelKey: 'teamHq', shape: door(HALL_DOORS.teamHq) },
+];
+
 const items: RoomItem[] = [
   // Accueil, devant le rayonnage encastré.
   { id: 'reception', key: 'reception_desk', gx: 11, gy: 5, r: 0 },
@@ -27,7 +74,9 @@ const items: RoomItem[] = [
   { id: 'reception-plant-l', key: 'plant_medium', gx: 9, gy: 5, r: 0 },
   { id: 'reception-plant-r', key: 'plant_medium', gx: 17, gy: 5, r: 0 },
   // Panneau d'annonces, entre la porte de la salle de lecture et la fenêtre.
-  { id: 'notice-board', key: 'notice_board', gx: 5, gy: 1, r: 0 },
+  // Une case de plus vers la fenêtre (lot 7) : posé en gx 5, son image
+  // couvrait le bas de la porte, qui ne se visait plus.
+  { id: 'notice-board', key: 'notice_board', gx: 6, gy: 1, r: 0 },
   // Salon.
   { id: 'lounge-rug', key: 'rug_red', gx: 10, gy: 12, r: 0 },
   { id: 'lounge-sofa', key: 'sofa', gx: 11, gy: 10, r: 0 },
@@ -64,8 +113,8 @@ const items: RoomItem[] = [
 ];
 
 export const HALL_ROOM: RoomModel = {
-  w: 28,
-  d: 22,
+  w: LIBRARY_COMMON_ROOMS.hall.width,
+  d: LIBRARY_COMMON_ROOMS.hall.depth,
   wallHeight: 2.8,
   items,
   decor: {

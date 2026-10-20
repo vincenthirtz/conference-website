@@ -3,15 +3,21 @@
 // engine/room.ts). Pur, testé seul ; n'importe du moteur que des TYPES (le
 // moteur reste dans son chunk `next/dynamic`).
 //
-// LE DÉCOR. L'API garde deux noms (config/library/decor.ts) :
-//   - `floor` : le sol, qui EST la clé d'un sol du manifeste (`decor.floors`) ;
-//   - `wall`  : `plain` (murs pleins) ou `window` (des fenêtres). Le manifeste,
-//     lui, connaît un STYLE de mur et ses VARIANTES posées case par case : on
-//     traduit ici `window` en fenêtres régulièrement espacées sur les deux
-//     murs du fond. Le style et la largeur d'une fenêtre sont ceux du
-//     manifeste du lot 3 (`walls.library`, variante `window` sur 2 cases) ; une
-//     variante absente ou plus large est ignorée par le moteur (mur plein).
+// LE DÉCOR (config/library/decor.ts, lots 4 et 12), lu par
+// `resolveApartmentDecor` (un décor du lot 4, ou d'une API plus ancienne, se lit
+// à l'identique) :
+//   - `floor`  : le sol, qui EST la clé d'un sol du manifeste (`decor.floors`) ;
+//   - `finish` : l'habillage des murs, qui EST un STYLE de mur du manifeste
+//     (`decor.walls`, `library` au lot 3) ;
+//   - `window` et `door` : des VARIANTES posées case par case sur les deux
+//     murs du fond, aux places que donne `apartmentOpenings` (la porte sur le
+//     mur gauche, les fenêtres au rythme du lot 4). Une variante absente du
+//     manifeste est ignorée par le moteur (mur plein).
 
+import {
+  apartmentOpenings,
+  resolveApartmentDecor,
+} from '@/config/library/decor';
 import type { RoomDecor, WallSlot } from './engine/decor';
 import type { Tile } from './engine/projection';
 import type { RoomItem, RoomModel, Rotation } from './engine/room';
@@ -20,9 +26,24 @@ import {
   placementTiles,
   type PlacementSpec,
 } from './placement';
-import type { LibraryApartmentResponse } from './responses';
+import type {
+  LibraryApartmentItem,
+  LibraryApartmentResponse,
+  LibraryApartmentRoom,
+} from './responses';
 
-/** Style de mur du manifeste utilisé pour les appartements. */
+/**
+ * Ce que ces fonctions lisent d'une salle : l'appartement (`GET apartment`)
+ * comme une salle où l'on entre (`POST rooms/:id/enter`, lot 5) en ont la
+ * forme.
+ */
+export type RoomShape = Pick<LibraryApartmentRoom, 'width' | 'depth' | 'decor'>;
+export type RoomWithItems = {
+  room: RoomShape;
+  items: readonly LibraryApartmentItem[];
+};
+
+/** Style de mur du manifeste d'un appartement du lot 4 (habillage par défaut). */
 export const APARTMENT_WALL_STYLE = 'library';
 /** Hauteur des murs (m) pour cadrer la vue ; le style porte la sienne. */
 export const APARTMENT_WALL_HEIGHT_M = 2.6;
@@ -39,14 +60,14 @@ export function wallSlots(wall: string, length: number): WallSlot[] {
   return out;
 }
 
-export function apartmentDecor(
-  room: LibraryApartmentResponse['room']
-): RoomDecor {
+export function apartmentDecor(room: RoomShape): RoomDecor {
+  const decor = resolveApartmentDecor(room.decor);
+  const openings = apartmentOpenings(room.width, room.depth, decor);
   return {
-    floor: room.decor.floor,
-    wallStyle: APARTMENT_WALL_STYLE,
-    right: wallSlots(room.decor.wall, room.width),
-    left: wallSlots(room.decor.wall, room.depth),
+    floor: decor.floor,
+    wallStyle: decor.finish,
+    right: openings.right,
+    left: openings.left,
   };
 }
 
@@ -70,9 +91,7 @@ export function toRoomItems(
 }
 
 /** La salle du moteur : dimensions, meubles posés (id = ligne d'inventaire), décor. */
-export function apartmentRoomModel(
-  apartment: LibraryApartmentResponse
-): RoomModel {
+export function apartmentRoomModel(apartment: RoomWithItems): RoomModel {
   const { room, items } = apartment;
   return {
     w: room.width,
@@ -95,7 +114,7 @@ export function apartmentRoomModel(
  * le centre quand même.
  */
 export function apartmentStartTile(
-  apartment: LibraryApartmentResponse,
+  apartment: RoomWithItems,
   specs: ReadonlyMap<string, PlacementSpec>
 ): Tile {
   const { width, depth } = apartment.room;

@@ -7,11 +7,17 @@
 // meuble inconnu, en double ou mal placé (400 `placement_invalid`, géométrie
 // de `placement.ts`). Rien ne quitte le navigateur.
 
+import {
+  libraryDecorProblem,
+  mergeApartmentDecor,
+  resolveApartmentDecor,
+} from '@/config/library/decor';
 import { getFurniture, LIBRARY_FURNITURE } from '@/config/library/furniture';
 import { PlayerHttpError } from '@/utils/player/playerHttp';
 import type { LibraryClient } from '../clientContext';
 import { placementIssues, placementLayerOf } from '../placement';
 import type {
+  LibraryApartmentItem,
   LibraryApartmentResponse,
   LibraryMeResponse,
   LibraryPlacementIssue,
@@ -42,6 +48,22 @@ const FIXTURES: Array<{
 ];
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+
+/** Les meubles POSÉS de la démo, tels que l'API les rend (visiteuse simulée comprise). */
+export const DEV_APARTMENT_ITEMS: LibraryApartmentItem[] = FIXTURES.flatMap(
+  (f) =>
+    f.at
+      ? [
+          {
+            inventoryId: f.id,
+            key: f.key,
+            gx: f.at[0],
+            gy: f.at[1],
+            rotation: f.at[2],
+          },
+        ]
+      : []
+);
 
 function refuse(status: number, code: string, extra: object = {}): never {
   throw new PlayerHttpError('refus (démo)', status, {
@@ -81,19 +103,7 @@ export function createFakeLibraryClient(
       decor: { floor: 'parquet', wall: 'window' },
       version: 1,
     },
-    items: FIXTURES.flatMap((f) =>
-      f.at
-        ? [
-            {
-              inventoryId: f.id,
-              key: f.key,
-              gx: f.at[0],
-              gy: f.at[1],
-              rotation: f.at[2],
-            },
-          ]
-        : []
-    ),
+    items: clone(DEV_APARTMENT_ITEMS),
   };
   let bought = 0;
 
@@ -111,6 +121,11 @@ export function createFakeLibraryClient(
           sittable: f.sittable,
           stackable: f.stackable,
           layer: placementLayerOf(f),
+          // Grand catalogue (lot 11), comme l'API.
+          family: f.family,
+          variant: f.variant ?? null,
+          sets: [...f.sets],
+          window: f.window ?? null,
         })),
         avatars: AVATARS,
       }),
@@ -144,7 +159,10 @@ export function createFakeLibraryClient(
     updateAvatar: (input) => {
       if (input.nickname !== undefined) me.avatar.nickname = input.nickname;
       if (input.avatarId !== undefined) me.avatar.avatarId = input.avatarId;
-      return wait({ avatar: me.avatar });
+      // Lot 13 : comme l'API, un look remplace l'apparence, `null` la retire.
+      if (input.look !== undefined) me.avatar.look = input.look ?? {};
+      else if (input.avatarId !== undefined) me.avatar.look = {};
+      return wait({ avatar: { ...me.avatar } });
     },
     apartment: () => wait(apartment),
     updateApartment: (input) => {
@@ -152,10 +170,18 @@ export function createFakeLibraryClient(
       if (input.name !== undefined) room.name = input.name;
       if (input.access !== undefined) room.access = input.access;
       room.listed = room.access === 'open' && (input.listed ?? room.listed);
-      if (input.decor?.floor)
-        room.decor.floor = input.decor.floor as typeof room.decor.floor;
-      if (input.decor?.wall)
-        room.decor.wall = input.decor.wall as typeof room.decor.wall;
+      // Décor : mêmes règles que l'API (config/library/decor.ts, lot 12).
+      if (input.decor) {
+        if (libraryDecorProblem(input.decor))
+          throw new PlayerHttpError('Ce décor n’existe pas.', 400, {
+            error: 'Ce décor n’existe pas.',
+            code: 'decor_invalid',
+          });
+        room.decor = mergeApartmentDecor(
+          resolveApartmentDecor(room.decor),
+          input.decor
+        );
+      }
       return wait({ room });
     },
     saveItems: async (body) => {

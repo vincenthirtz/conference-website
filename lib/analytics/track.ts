@@ -9,6 +9,7 @@
 
 import { readAnalyticsConfig } from './config';
 import { hasAnalyticsConsent } from './consent';
+import { pageviewPath } from './pagePath';
 
 /**
  * Étapes de l'entonnoir. Liste fermée : un nom d'événement mal orthographié
@@ -131,7 +132,10 @@ export function trackPageview(url?: string): void {
   const config = readAnalyticsConfig();
   if (!config) return;
 
-  const path = url ?? window.location.pathname + window.location.search;
+  // La Women's Library compte pour UNE page, jamais par salle (./pagePath).
+  const path = pageviewPath(
+    url ?? window.location.pathname + window.location.search
+  );
   const absolute = new URL(path, window.location.origin).toString();
 
   dispatch(() => {

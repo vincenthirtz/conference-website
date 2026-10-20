@@ -6,7 +6,12 @@
 // services importent leurs types de réponse d'ici ; une forme qui change ici
 // change là-bas, à la synchro suivante.
 
-import type { FurnitureCategory } from '../../../config/library/furniture';
+import type {
+  FurnitureCategory,
+  FurnitureColor,
+  FurnitureSetId,
+  FurnitureWindow,
+} from '../../../config/library/furniture';
 import type { LibraryApartmentDecor } from '../../../config/library/decor';
 
 /**
@@ -20,6 +25,11 @@ export const LIBRARY_ACCESS_CODES = {
   banned: 'LIBRARY_BANNED',
   /** Adhérente dont la date de naissance connue la rend mineure. */
   minor: 'LIBRARY_MINOR',
+  /**
+   * La Library n'est pas encore ouverte à cette joueuse (bêta fermée,
+   * `LIBRARY_ACCESS`) : l'écran « pas encore ouverte », sans réessai.
+   */
+  closed: 'LIBRARY_CLOSED',
 } as const;
 export type LibraryAccessCode =
   (typeof LIBRARY_ACCESS_CODES)[keyof typeof LIBRARY_ACCESS_CODES];
@@ -46,6 +56,29 @@ export type LibraryCatalogItem = {
    * avec un autre objet), `floor` (tapis), `wall` (accroché au mur du fond).
    */
   layer: 'object' | 'floor' | 'wall';
+  // Lot 11 (grand catalogue). L'API les rend TOUJOURS ; ils sont facultatifs
+  // côté type pour qu'un site déployé avant elle (ou l'inverse) lise encore
+  // une réponse sans eux : chaque meuble est alors sa propre famille, sans
+  // set ni fenêtre.
+  /**
+   * Famille : la clé de la base dont cette entrée est une variante de couleur
+   * (une base est sa propre famille). La boutique regroupe par famille et
+   * propose la teinte.
+   */
+  family?: string;
+  /** Clé de teinte (`blue`, `linen`…), ou null si la famille n'a qu'une teinte. */
+  variant?: FurnitureColor | null;
+  /** Sets du meuble (bibliothèque, esport…), ceux de sa famille compris. */
+  sets?: FurnitureSetId[];
+  /** Meuble d'événement : fenêtre de vente [from, until[ ; null sinon. */
+  window?: FurnitureWindow | null;
+};
+
+/** Un set du catalogue (lot 11) : thématique, ou d'événement avec sa fenêtre. */
+export type LibraryCatalogSet = {
+  id: FurnitureSetId;
+  kind: 'theme' | 'event';
+  window: FurnitureWindow | null;
 };
 
 /** `GET /api/player/library/catalog`. */
@@ -53,8 +86,16 @@ export type LibraryCatalogResponse = {
   tileSizeM: number;
   rotations: number;
   furniture: LibraryCatalogItem[];
+  /** Lot 11 : les sets, dans l'ordre d'affichage (toujours rendus). */
+  sets?: LibraryCatalogSet[];
   avatars: string[];
 };
+
+/**
+ * Lot 11 — achat d'un meuble d'événement hors de sa fenêtre : 409, la fenêtre
+ * est rappelée (`window`). Un meuble déjà acheté se garde et se pose toujours.
+ */
+export const LIBRARY_FURNITURE_NOT_ON_SALE = 'furniture_not_on_sale';
 
 /** `POST /api/player/library/attest-adult`. */
 export type LibraryAttestResponse = {

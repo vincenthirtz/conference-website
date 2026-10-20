@@ -26,6 +26,11 @@ import { supabaseClient } from '@/utils/supabaseBrowser';
 import { PlayerHttpError } from '@/utils/player/playerHttp';
 import type { LibraryEnterResponse } from '../socialResponses';
 import {
+  clearLibraryChat,
+  publishLibraryChatContext,
+  publishLibraryChatEvent,
+} from './chatBus';
+import {
   createLibraryRoomConnection,
   type LibraryChannel,
   type LibraryEviction,
@@ -74,13 +79,23 @@ export type LibraryRoomRefusal = {
 
 export type UseLibraryRoomChannelOptions = {
   enabled?: boolean;
-  /** Case de départ (lue à la connexion ; ensuite : `updatePosition`). */
-  position: LibraryPosition;
+  /**
+   * Case de départ, lue à la connexion (ensuite : `updatePosition`). Une
+   * fonction la calcule d'après l'entrée (meubles, dimensions de la salle).
+   */
+  position:
+    | LibraryPosition
+    | ((enter: LibraryEnterResponse) => LibraryPosition);
   realtime?: LibraryRealtimeClient;
   social?: Pick<LibrarySocialClient, 'enter'>;
   onEvicted?: (eviction: LibraryEviction) => void;
   /** Effacement des bulles échues (ms). */
   tickMs?: number;
+  /**
+   * Mon look composé (lot 13, forme compacte), annoncé dans ma présence ; un
+   * changement la renvoie. null : `avatarId` seul.
+   */
+  look?: string | null;
 };
 
 export type LibraryRoomChannel = {
@@ -135,6 +150,8 @@ export function useLibraryRoomChannel(
   // Lus à la connexion seulement : les changer ne recrée pas les canaux.
   const optionsRef = useRef(options);
   optionsRef.current = options;
+  /** Ma dernière case annoncée (lot 13 : un nouveau look la renvoie). */
+  const lastPositionRef = useRef<LibraryPosition | null>(null);
 
   useEffect(() => {
     if (!enabled || !roomId) {
@@ -154,13 +171,36 @@ export function useLibraryRoomChannel(
       .then((entered) => {
         if (cancelled) return;
         setEnter(entered);
+        // Lot 6 : le fil et les bulles du chat s'abonnent au relais de la
+        // salle (./chatBus.ts) — qui je suis, qui je ne vois pas.
+        const chatRoom = entered.room.id;
+        const selfId = entered.me.userId;
+        publishLibraryChatContext(chatRoom, {
+          selfId,
+          hiddenUserIds: entered.hiddenUserIds,
+        });
         const opts = optionsRef.current;
+        const start =
+          typeof opts.position === 'function'
+            ? opts.position(entered)
+            : opts.position;
+        lastPositionRef.current = start;
         connection = createLibraryRoomConnection({
           client: opts.realtime ?? browserRealtime(),
           enter: entered,
-          position: opts.position,
+          position: start,
+          look: () => optionsRef.current.look ?? null,
           onState: (state) => {
-            if (!cancelled) setAvatars(visibleAvatars(state));
+            if (cancelled) return;
+            setAvatars(visibleAvatars(state));
+            // Un blocage (dans un sens ou l'autre) masque aussi ses messages.
+            publishLibraryChatContext(chatRoom, {
+              selfId,
+              hiddenUserIds: state.hidden,
+            });
+          },
+          onChat: (event) => {
+            if (!cancelled) publishLibraryChatEvent(chatRoom, event);
           },
           onStatus: (status) => {
             if (cancelled) return;
@@ -189,6 +229,7 @@ export function useLibraryRoomChannel(
       cancelled = true;
       connectionRef.current = null;
       if (connection) void connection.close();
+      clearLibraryChat(roomId);
     };
   }, [roomId, enabled]);
 
@@ -209,8 +250,18 @@ export function useLibraryRoomChannel(
   }, []);
 
   const updatePosition = useCallback((position: LibraryPosition) => {
+    lastPositionRef.current = position;
     connectionRef.current?.updatePosition(position);
   }, []);
+
+  // Un nouveau look (enregistré pendant la visite) repart avec ma présence.
+  const look = options.look ?? null;
+  useEffect(() => {
+    const position = lastPositionRef.current;
+    // Le look (null compris) est relu par la présence renvoyée.
+    if (position && look !== undefined)
+      connectionRef.current?.updatePosition(position);
+  }, [look]);
   const sendMove = useCallback(
     (gx: number, gy: number): SendMoveResult =>
       connectionRef.current?.sendMove(gx, gy) ?? 'refused',

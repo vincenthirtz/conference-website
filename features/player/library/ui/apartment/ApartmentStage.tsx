@@ -3,6 +3,12 @@
 // la demande) et, en mode déco, les commandes (EditPanel). L'éditeur
 // (`useApartmentEditor`) applique chaque geste tout de suite et l'enregistre
 // en différé ; pointeur et clavier passent par les mêmes actions.
+//
+// VISITEUSES (lot 5 phase B) : ouvert à toutes, l'appartement est aussi une
+// salle. Sa propriétaire rejoint son canal et y voit qui entre — avatars dans
+// la vue, « Présentes dans la salle », signes, menu (bloquer, signaler,
+// expulser). Privé, aucune connexion. Une entrée refusée (Library
+// indisponible, 503…) : l'appartement reste solo, comme avant, sans message.
 
 import dynamic from 'next/dynamic';
 import { type KeyboardEvent, useCallback, useId, useMemo, useRef } from 'react';
@@ -13,12 +19,25 @@ import type { TilePointer } from '../../engine/controller';
 import { editorKeyAction, editorPointerActions } from '../../editing/editor';
 import type { Specs } from '../../editing/layout';
 import { useApartmentEditor } from '../../hooks/useApartmentEditor';
+import type { LibraryPosition } from '../../realtime/connection';
+import { LIBRARY_BUBBLE_MS } from '../../realtime/social';
+import { useLibraryRoomChannel } from '../../realtime/useLibraryRoomChannel';
 import type {
   LibraryApartmentResponse,
   LibraryInventoryItem,
 } from '../../responses';
+import { roomStartPosition } from '../../roomStageModel';
 import type { SaveApartmentItemsInput } from '../../schemas';
+import { useLibrarySocialDeps } from '../../socialContext';
+import { socialNoticeOf } from '../../socialModel';
+import LibraryChat from '../chat/LibraryChat';
+import { useChatBubbles } from '../chat/useChatBubbles';
+import RoomOverlays from '../room/RoomOverlays';
+import RoomSocialPanel from '../room/RoomSocialPanel';
+import { useRoomSocial } from '../room/useRoomSocial';
+import SocialNotice from '../social/SocialNotice';
 import EditPanel from './EditPanel';
+import type { RoomEngineHandle } from './ApartmentView';
 
 const ApartmentView = dynamic(() => import('./ApartmentView'), {
   ssr: false,
@@ -31,6 +50,7 @@ export default function ApartmentStage({
   apartment,
   specs,
   avatarId,
+  look = null,
   inventory,
   label,
   saveItems,
@@ -40,6 +60,8 @@ export default function ApartmentStage({
   apartment: LibraryApartmentResponse;
   specs: Specs;
   avatarId: string;
+  /** Mon look composé (lot 13, forme compacte) : la vue et ma présence. */
+  look?: string | null;
   inventory: readonly LibraryInventoryItem[];
   label: string;
   saveItems: (
@@ -59,6 +81,39 @@ export default function ApartmentStage({
     onConflict,
   });
   const { state, editing, dispatch, live } = editor;
+
+  // Les visiteuses : le canal de MA salle, seulement si elle est ouverte.
+  const deps = useLibrarySocialDeps();
+  const posRef = useRef<LibraryPosition | null>(null);
+  const startRef = useRef({ apartment, specs });
+  startRef.current = { apartment, specs };
+  const room = useLibraryRoomChannel(
+    apartment.room.access === 'open' ? apartment.room.id : null,
+    {
+      position: () =>
+        posRef.current ??
+        roomStartPosition(startRef.current.apartment, startRef.current.specs),
+      realtime: deps.realtime,
+      social: deps.enter,
+      look,
+    }
+  );
+  const frameRef = useRef<HTMLDivElement>(null);
+  const engineRef = useRef<RoomEngineHandle | null>(null);
+  const social = useRoomSocial({
+    room,
+    actionsClient: deps.actions,
+    frameRef,
+    engineRef,
+  });
+  // Lot 6 — le chat de MON appartement ouvert : ses messages en bulles.
+  const bubbles = useChatBubbles({
+    roomId: room.enter?.room.id ?? null,
+    remote: social.remote,
+    playerBubble: social.playerBubble,
+  });
+  const connected = room.phase === 'connected' && room.enter !== null;
+  const notice = room.phase === 'evicted' ? socialNoticeOf(room) : null;
 
   const onPointer = useCallback(
     (p: TilePointer) => {
@@ -96,6 +151,7 @@ export default function ApartmentStage({
 
   return (
     <div ref={stageRef} className="flex flex-col gap-3">
+      {notice && <SocialNotice notice={notice} autoFocus={false} />}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button
           variant={editing ? 'primary' : 'secondary'}
@@ -110,28 +166,42 @@ export default function ApartmentStage({
           {editing ? t.edit.done : t.edit.toggle}
         </Button>
       </div>
-      <ApartmentView
-        room={apartment.room}
-        items={state.items}
-        specs={specs}
-        avatarId={avatarId}
-        mode={editing ? 'edit' : 'walk'}
-        ghost={ghost}
-        selectedId={editing ? state.selectedId : null}
-        hiddenId={
-          editing && state.ghost?.source === 'move'
-            ? state.ghost.inventoryId
-            : null
-        }
-        onPointer={onPointer}
-        onKeyDown={onKeyDown}
-        describedBy={hintId}
-        labels={{
-          canvas: editing ? t.edit.canvasLabel : label,
-          loading: t.apartmentLoading,
-          resetView: t.apartmentResetView,
-        }}
-      />
+      <div ref={frameRef} tabIndex={-1} className="relative outline-none">
+        <ApartmentView
+          room={apartment.room}
+          items={state.items}
+          specs={specs}
+          avatarId={avatarId}
+          look={look}
+          mode={editing ? 'edit' : 'walk'}
+          ghost={ghost}
+          selectedId={editing ? state.selectedId : null}
+          hiddenId={
+            editing && state.ghost?.source === 'move'
+              ? state.ghost.inventoryId
+              : null
+          }
+          onPointer={onPointer}
+          onKeyDown={onKeyDown}
+          describedBy={hintId}
+          labels={{
+            canvas: editing ? t.edit.canvasLabel : label,
+            loading: t.apartmentLoading,
+            resetView: t.apartmentResetView,
+          }}
+          remote={connected ? bubbles.remote : undefined}
+          playerBubble={bubbles.playerBubble}
+          bubbleMs={LIBRARY_BUBBLE_MS}
+          onAvatarTap={connected ? social.onAvatarTap : undefined}
+          onPlayerWalk={(goal) => room.sendMove(goal.i, goal.j)}
+          onPlayerArrive={(tile, dir) => {
+            posRef.current = { gx: tile.i, gy: tile.j, dir };
+            room.updatePosition(posRef.current);
+          }}
+          engineRef={engineRef}
+        />
+        {room.enter && <RoomOverlays social={social} room={room.enter.room} />}
+      </div>
       {editing && (
         <EditPanel
           state={state}
@@ -144,6 +214,16 @@ export default function ApartmentStage({
           hintId={hintId}
           focusFrame={focusFrame}
         />
+      )}
+      {connected && !editing && room.enter && (
+        <RoomSocialPanel
+          room={room}
+          social={social}
+          kind={room.enter.room.kind}
+        />
+      )}
+      {connected && !editing && room.enter && (
+        <LibraryChat roomId={room.enter.room.id} kind={room.enter.room.kind} />
       )}
     </div>
   );

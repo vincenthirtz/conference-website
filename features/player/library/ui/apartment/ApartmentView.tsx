@@ -13,9 +13,21 @@
 // serveur et reste hors du premier chargement de la page. Le contrôleur est
 // créé UNE fois par salle ; meubles, décor, avatar et mode lui sont passés
 // en direct (caméra et images restent en place).
+//
+// MULTIJOUEUR (lot 5 phase B), facultatif : la même vue sert la visite d'une
+// salle (`ui/room/RoomStage`) et l'appartement de sa propriétaire quand des
+// visiteuses y entrent. Les autres joueuses (`remote`), ma bulle, mon repère
+// « discrète » et les rappels (`onAvatarTap`, `onPlayerWalk`,
+// `onPlayerArrive`) vont au contrôleur sans le remonter.
+//
+// SALLES COMMUNES (lot 7), facultatif : `fixed` remplace le décor
+// d'appartement par celui du décor fixe (`roomStageModel.sceneOf`), avec sa
+// hauteur de murs et l'arrivée ; `hotspots` / `onHotspotTap` sont les zones
+// interactives (engine/hotspots.ts).
 
 import {
   type KeyboardEvent,
+  type MutableRefObject,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -28,16 +40,22 @@ import {
   toRoomItems,
 } from '../../apartmentModel';
 import {
+  type AvatarTap,
   type ControllerMode,
   LibraryController,
   type TilePointer,
 } from '../../engine/controller';
 import type { GhostItem } from '../../engine/editOverlay';
+import type { HotspotTap, LibraryHotspot } from '../../engine/hotspots';
+import type { Direction } from '../../engine/motion';
+import type { ScreenPoint, Tile } from '../../engine/projection';
+import type { BubbleContent, RemoteAvatarInput } from '../../engine/remotes';
 import type { EditItem } from '../../editing/layout';
 import type { PlacementSpec } from '../../placement';
 import type { LibraryApartmentRoom } from '../../responses';
+import type { FixedScene } from '../../roomStageModel';
 
-/** Identifiant de la joueuse DANS le moteur (une seule avatar en solo). */
+/** Identifiant de la joueuse DANS le moteur (jamais un `userId` : ceux-là sont des UUID). */
 const PLAYER_ENTITY = 'me';
 
 export type ApartmentViewLabels = {
@@ -46,11 +64,23 @@ export type ApartmentViewLabels = {
   resetView: string;
 };
 
+/** Ce que l'écran peut demander au moteur monté. */
+export type RoomEngineHandle = {
+  /** Au-dessus de la tête d'une joueuse (px CSS du cadre) ; null si elle n'y est pas. */
+  avatarAnchor: (userId: string) => ScreenPoint | null;
+};
+
 export type ApartmentViewProps = {
-  room: LibraryApartmentRoom;
+  /** L'appartement, ou la salle où l'on entre (même forme). */
+  room: Pick<
+    LibraryApartmentRoom,
+    'id' | 'width' | 'depth' | 'decor' | 'version'
+  >;
   items: readonly EditItem[];
   specs: ReadonlyMap<string, PlacementSpec>;
   avatarId: string;
+  /** Mon look composé (lot 13, forme compacte) ; null : la feuille `avatarId`. */
+  look?: string | null;
   labels: ApartmentViewLabels;
   mode?: ControllerMode;
   ghost?: (EditItem & { valid: boolean }) | null;
@@ -61,7 +91,28 @@ export type ApartmentViewProps = {
   onKeyDown?: (e: KeyboardEvent<HTMLDivElement>) => void;
   /** Consignes clavier du mode déco (id d'un élément de la page). */
   describedBy?: string;
+  /** Les autres joueuses de la salle (textes déjà traduits). */
+  remote?: readonly RemoteAvatarInput[];
+  /** Ma bulle (un signe parti) : une nouvelle valeur la montre. */
+  playerBubble?: BubbleContent | null;
+  /** Mon repère (« discrète ») ; null : aucun. */
+  playerMarker?: string | null;
+  /** Durée d'une bulle (ms). */
+  bubbleMs?: number;
+  onAvatarTap?: (tap: AvatarTap) => void;
+  onPlayerWalk?: (goal: Tile) => void;
+  onPlayerArrive?: (tile: Tile, dir: Direction) => void;
+  /** Reçoit l'accès au moteur monté (null au démontage). */
+  engineRef?: MutableRefObject<RoomEngineHandle | null>;
+  /** Salle commune : décor fixe, hauteur des murs, arrivée (lot 7). */
+  fixed?: FixedScene | null;
+  /** Zones interactives (textes déjà traduits) et leur appui (lot 7). */
+  hotspots?: readonly LibraryHotspot[];
+  onHotspotTap?: (tap: HotspotTap) => void;
 };
+
+const NO_REMOTE: readonly RemoteAvatarInput[] = [];
+const NO_HOTSPOTS: readonly LibraryHotspot[] = [];
 
 function ghostOf(g: ApartmentViewProps['ghost']): GhostItem | null {
   if (!g) return null;
@@ -74,6 +125,7 @@ export default function ApartmentView({
   items,
   specs,
   avatarId,
+  look = null,
   labels,
   mode = 'walk',
   ghost = null,
@@ -82,14 +134,44 @@ export default function ApartmentView({
   onPointer,
   onKeyDown,
   describedBy,
+  remote = NO_REMOTE,
+  playerBubble = null,
+  playerMarker = null,
+  bubbleMs,
+  onAvatarTap,
+  onPlayerWalk,
+  onPlayerArrive,
+  engineRef,
+  fixed = null,
+  hotspots = NO_HOTSPOTS,
+  onHotspotTap,
 }: ApartmentViewProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ctrlRef = useRef<LibraryController | null>(null);
   const [sprites, setSprites] = useState<boolean | null>(null);
   // Valeurs du moment, lues à la création du contrôleur et par ses rappels.
-  const latest = useRef({ room, items, specs, avatarId, mode, onPointer });
-  latest.current = { room, items, specs, avatarId, mode, onPointer };
+  const now = {
+    room,
+    items,
+    specs,
+    avatarId,
+    look,
+    mode,
+    onPointer,
+    remote,
+    playerMarker,
+    bubbleMs,
+    onAvatarTap,
+    onPlayerWalk,
+    onPlayerArrive,
+    engineRef,
+    fixed,
+    hotspots,
+    onHotspotTap,
+  };
+  const latest = useRef(now);
+  latest.current = now;
 
   // UN contrôleur par salle (identité et dimensions) : le reste se met à jour.
   // Créé par salle ; le reste passe par `latest` et les effets ci-dessous.
@@ -97,21 +179,45 @@ export default function ApartmentView({
     const canvas = canvasRef.current;
     const wrap = wrapRef.current;
     if (!canvas || !wrap) return;
-    const now = latest.current;
-    const apartment = { room: now.room, items: [...now.items] };
+    const cur = latest.current;
+    const apartment = { room: cur.room, items: [...cur.items] };
+    const model = apartmentRoomModel(apartment);
+    const { fixed: scene } = cur;
     const ctrl = new LibraryController(canvas, wrap, {
-      room: apartmentRoomModel(apartment),
+      room: scene
+        ? { ...model, wallHeight: scene.wallHeight, decor: scene.decor }
+        : model,
       playerId: PLAYER_ENTITY,
-      playerStart: apartmentStartTile(apartment, now.specs),
-      playerAvatarId: now.avatarId,
-      mode: now.mode,
+      playerStart: scene?.start ?? apartmentStartTile(apartment, cur.specs),
+      hotspots: cur.hotspots,
+      onHotspotTap: (tap) => latest.current.onHotspotTap?.(tap),
+      playerAvatarId: cur.avatarId,
+      mode: cur.mode,
+      bubbleMs: cur.bubbleMs,
       onManifest: setSprites,
       onTilePointer: (p) => latest.current.onPointer?.(p),
+      // Sans rappel (solo), un appui sur une autre joueuse fait marcher.
+      onAvatarTap: (tap) => {
+        const handler = latest.current.onAvatarTap;
+        if (!handler) return false;
+        handler(tap);
+        return true;
+      },
+      onPlayerWalk: (goal) => latest.current.onPlayerWalk?.(goal),
+      onPlayerArrive: (tile, dir) => latest.current.onPlayerArrive?.(tile, dir),
     });
     ctrlRef.current = ctrl;
+    // Un contrôleur neuf (autre salle) reprend l'état du moment.
+    ctrl.syncRemoteAvatars(cur.remote);
+    ctrl.setPlayerMarker(cur.playerMarker);
+    ctrl.world.setLook(PLAYER_ENTITY, cur.look);
+    const handle = cur.engineRef;
+    if (handle)
+      handle.current = { avatarAnchor: (id) => ctrl.avatarAnchor(id) };
     return () => {
       ctrl.dispose();
       ctrlRef.current = null;
+      if (handle) handle.current = null;
     };
   }, [room.id, room.width, room.depth]);
 
@@ -119,11 +225,21 @@ export default function ApartmentView({
     ctrlRef.current?.setRoomItems(toRoomItems(items));
   }, [items]);
   useEffect(() => {
-    ctrlRef.current?.setDecor(apartmentDecor(room));
-  }, [room]);
+    ctrlRef.current?.setDecor(fixed?.decor ?? apartmentDecor(room));
+  }, [room, fixed]);
+  useEffect(() => {
+    ctrlRef.current?.hotspots.set(hotspots);
+  }, [hotspots]);
   useEffect(() => {
     ctrlRef.current?.setPlayerAvatar(avatarId);
   }, [avatarId]);
+  useEffect(() => {
+    // Lot 13 : mon look enregistré, posé sur mon avatar sans remonter le moteur.
+    const ctrl = ctrlRef.current;
+    if (!ctrl) return;
+    ctrl.world.setLook(PLAYER_ENTITY, look);
+    ctrl.redraw();
+  }, [look]);
   useEffect(() => {
     ctrlRef.current?.setMode(mode);
   }, [mode]);
@@ -136,6 +252,15 @@ export default function ApartmentView({
   useEffect(() => {
     ctrlRef.current?.setHiddenItem(hiddenId);
   }, [hiddenId]);
+  useEffect(() => {
+    ctrlRef.current?.syncRemoteAvatars(remote);
+  }, [remote]);
+  useEffect(() => {
+    if (playerBubble) ctrlRef.current?.showPlayerBubble(playerBubble);
+  }, [playerBubble]);
+  useEffect(() => {
+    ctrlRef.current?.setPlayerMarker(playerMarker);
+  }, [playerMarker]);
 
   const editing = mode === 'edit';
   return (

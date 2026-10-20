@@ -2,57 +2,128 @@
 
 Sprites rendus par `tools/library-assets` à partir de modèles 3D et de
 textures. Toutes les sources ci-dessous sont sous licence CC0 1.0 : aucune
-attribution n’est exigée, on la donne quand même.
+attribution n’est exigée, on la donne quand même. La licence de Poly Haven
+est revérifiée à chaque build (https://polyhaven.com/license).
 
 - [Brown Photostudio 02](https://polyhaven.com/a/brown_photostudio_02), Sergej Majboroda (CC0 1.0) — éclairage
-- [Wooden Bookshelf Worn](https://polyhaven.com/a/wooden_bookshelf_worn), Ulan Cabanilla (CC0 1.0) — bookshelf, bookshelf_filled, bookshelf_double
-- [Arm Chair 01](https://polyhaven.com/a/ArmChair_01), Kirill Sannikov (CC0 1.0) — armchair
+- [Wooden Bookshelf Worn](https://polyhaven.com/a/wooden_bookshelf_worn), Ulan Cabanilla (CC0 1.0) — bookshelf, bookshelf_filled, bookshelf_double, bookshelf_filled_oak, bookshelf_filled_black, bookshelf_filled_white
+- [Arm Chair 01](https://polyhaven.com/a/ArmChair_01), Kirill Sannikov (CC0 1.0) — armchair, armchair_blue, armchair_pink, armchair_mustard, armchair_teal
 - [Desk Lamp Arm 01](https://polyhaven.com/a/desk_lamp_arm_01), Yann Kervran, Kuutti Siitonen (CC0 1.0) — lamp
-- [Book Encyclopedia Set 01](https://polyhaven.com/a/book_encyclopedia_set_01), John Malcolm (CC0 1.0) — bookshelf_filled, bookshelf_double, shelf_small, display_shelves, reading_table, reception_desk, murs library
-- [Painted Wooden Shelves](https://polyhaven.com/a/painted_wooden_shelves), Kirill Sannikov (CC0 1.0) — shelf_small
+- [Book Encyclopedia Set 01](https://polyhaven.com/a/book_encyclopedia_set_01), John Malcolm (CC0 1.0) — bookshelf_filled, bookshelf_double, shelf_small, display_shelves, reading_table, reception_desk, shelf_small_blue, shelf_small_green, shelf_small_white, bookshelf_filled_oak, bookshelf_filled_black, bookshelf_filled_white, shelf_tall, shelf_industrial, book_stack, book_tower, murs library
+- [Painted Wooden Shelves](https://polyhaven.com/a/painted_wooden_shelves), Kirill Sannikov (CC0 1.0) — shelf_small, shelf_small_blue, shelf_small_green, shelf_small_white
 - [Wooden Display Shelves 01](https://polyhaven.com/a/wooden_display_shelves_01), James Ray Cock (CC0 1.0) — display_shelves
-- [Painted Wooden Cabinet 02](https://polyhaven.com/a/painted_wooden_cabinet_02), Kirill Sannikov (CC0 1.0) — wardrobe
-- [Painted Wooden Cabinet](https://polyhaven.com/a/painted_wooden_cabinet), Kirill Sannikov (CC0 1.0) — cabinet
-- [Drawer Cabinet](https://polyhaven.com/a/drawer_cabinet), Ulan Cabanilla (CC0 1.0) — drawer_cabinet
-- [Modern Wooden Cabinet](https://polyhaven.com/a/modern_wooden_cabinet), Patrik Pangerl (CC0 1.0) — sideboard
-- [Green Chair 01](https://polyhaven.com/a/GreenChair_01), Kirill Sannikov (CC0 1.0) — armchair_green
-- [Dining Chair 02](https://polyhaven.com/a/dining_chair_02), James Ray Cock (CC0 1.0) — chair
-- [Painted Wooden Chair 01](https://polyhaven.com/a/painted_wooden_chair_01), Kuutti Siitonen (CC0 1.0) — chair_painted
-- [Sofa 01](https://polyhaven.com/a/Sofa_01), Kirill Sannikov (CC0 1.0) — sofa
+- [Painted Wooden Cabinet 02](https://polyhaven.com/a/painted_wooden_cabinet_02), Kirill Sannikov (CC0 1.0) — wardrobe, wardrobe_green, wardrobe_white, wardrobe_pink
+- [Painted Wooden Cabinet](https://polyhaven.com/a/painted_wooden_cabinet), Kirill Sannikov (CC0 1.0) — cabinet, cabinet_blue, cabinet_green, cabinet_pink
+- [Drawer Cabinet](https://polyhaven.com/a/drawer_cabinet), Ulan Cabanilla (CC0 1.0) — drawer_cabinet, drawer_cabinet_white, drawer_cabinet_blue
+- [Modern Wooden Cabinet](https://polyhaven.com/a/modern_wooden_cabinet), Patrik Pangerl (CC0 1.0) — sideboard, sideboard_white, sideboard_black
+- [Green Chair 01](https://polyhaven.com/a/GreenChair_01), Kirill Sannikov (CC0 1.0) — armchair_green, armchair_club_burgundy, armchair_club_navy, armchair_club_ochre
+- [Dining Chair 02](https://polyhaven.com/a/dining_chair_02), James Ray Cock (CC0 1.0) — chair, chair_black, chair_white
+- [Painted Wooden Chair 01](https://polyhaven.com/a/painted_wooden_chair_01), Kuutti Siitonen (CC0 1.0) — chair_painted, chair_painted_blue, chair_painted_green, chair_painted_pink, chair_painted_yellow
+- [Sofa 01](https://polyhaven.com/a/Sofa_01), Kirill Sannikov (CC0 1.0) — sofa, sofa_blue, sofa_green, sofa_pink, sofa_charcoal, sofa_mustard, sofa_pumpkin
 - [Sofa 03](https://polyhaven.com/a/sofa_03), Fran Calvente (CC0 1.0) — sofa_large
-- [Painted Wooden Bench](https://polyhaven.com/a/painted_wooden_bench), Kirill Sannikov (CC0 1.0) — bench
-- [Ottoman 01](https://polyhaven.com/a/Ottoman_01), Caspian Fortune (CC0 1.0) — ottoman
-- [Mid Century Lounge Chair](https://polyhaven.com/a/mid_century_lounge_chair), Kuutti Siitonen (CC0 1.0) — lounge_chair
-- [Rockingchair 01](https://polyhaven.com/a/Rockingchair_01), Jorge Camacho (CC0 1.0) — rocking_chair
-- [Wooden Stool 01](https://polyhaven.com/a/wooden_stool_01), Kuutti Siitonen (CC0 1.0) — stool
-- [Dark Wood](https://polyhaven.com/a/dark_wood), Dario Barresi, Dimitrios Savva, Rico Cilliers (CC0 1.0) — reading_table, reception_desk, globe, notice_board, murs library
-- [Wooden Table 03](https://polyhaven.com/a/WoodenTable_03), Gabriel Radić (CC0 1.0) — desk
-- [Coffee Table 01](https://polyhaven.com/a/CoffeeTable_01), Fernando Quinn (CC0 1.0) — coffee_table
+- [Painted Wooden Bench](https://polyhaven.com/a/painted_wooden_bench), Kirill Sannikov (CC0 1.0) — bench, bench_blue, bench_green, bench_cream
+- [Ottoman 01](https://polyhaven.com/a/Ottoman_01), Caspian Fortune (CC0 1.0) — ottoman, ottoman_cognac, ottoman_black, ottoman_teal, ottoman_pink
+- [Mid Century Lounge Chair](https://polyhaven.com/a/mid_century_lounge_chair), Kuutti Siitonen (CC0 1.0) — lounge_chair, lounge_chair_black, lounge_chair_cream
+- [Rockingchair 01](https://polyhaven.com/a/Rockingchair_01), Jorge Camacho (CC0 1.0) — rocking_chair, rocking_chair_white, rocking_chair_black
+- [Wooden Stool 01](https://polyhaven.com/a/wooden_stool_01), Kuutti Siitonen (CC0 1.0) — stool, stool_black, stool_white, stool_red
+- Fait maison, généré par tools/library-assets (iso_build.py, iso_furniture.py), Women’s Library (CC0 1.0) — reading_table, reception_desk, bankers_lamp, floor_lamp, rug_red, rug_green, rug_round, globe, library_ladder, notice_board, bust_pedestal, bankers_lamp_red, bankers_lamp_blue, floor_lamp_pink, floor_lamp_blue, floor_lamp_green, rug_round_blue, rug_round_pink, rug_round_green, rug_round_grey, rug_blue, rug_ochre, rug_purple, rug_large_burgundy, rug_large_navy, gaming_desk, gaming_desk_cyan, pc_tower, pc_tower_cyan, arcade_cabinet, arcade_cabinet_pink, arcade_cabinet_teal, neon_heart, neon_heart_blue, neon_heart_green, neon_bolt, neon_bolt_purple, bean_bag, bean_bag_pink, bean_bag_blue, bean_bag_green, bean_bag_mustard, trophy, trophy_silver, trophy_pedestal, lectern, book_stack, book_tower, floor_cushion, floor_cushion_pink, floor_cushion_blue, floor_cushion_green, floor_cushion_mustard, candles, fireplace, pumpkin, jack_o_lantern, pumpkin_pile, cauldron, gravestone, ghost, bat_garland, rug_halloween, pink_ribbon, neon_ribbon, rug_rose, bean_bag_rose, bankers_lamp_rose
+- [Dark Wood](https://polyhaven.com/a/dark_wood), Dario Barresi, Dimitrios Savva, Rico Cilliers (CC0 1.0) — reading_table, reception_desk, globe, notice_board, trophy, trophy_silver, trophy_pedestal, lectern, fireplace, murs library, murs walnut_panels, murs paper_floral
+- [Wooden Table 03](https://polyhaven.com/a/WoodenTable_03), Gabriel Radić (CC0 1.0) — desk, desk_white, desk_black
+- [Coffee Table 01](https://polyhaven.com/a/CoffeeTable_01), Fernando Quinn (CC0 1.0) — coffee_table, coffee_table_white, coffee_table_black
 - [Coffee Table Round 01](https://polyhaven.com/a/coffee_table_round_01), Ulan Cabanilla (CC0 1.0) — coffee_table_round
-- [Side Table 01](https://polyhaven.com/a/side_table_01), James Ray Cock (CC0 1.0) — side_table
-- [Classic Nightstand 01](https://polyhaven.com/a/ClassicNightstand_01), Kirill Sannikov (CC0 1.0) — nightstand
-- [Round Wooden Table 02](https://polyhaven.com/a/round_wooden_table_02), Ulan Cabanilla (CC0 1.0) — round_table
+- [Side Table 01](https://polyhaven.com/a/side_table_01), James Ray Cock (CC0 1.0) — side_table, side_table_white, side_table_black
+- [Classic Nightstand 01](https://polyhaven.com/a/ClassicNightstand_01), Kirill Sannikov (CC0 1.0) — nightstand, nightstand_white
+- [Round Wooden Table 02](https://polyhaven.com/a/round_wooden_table_02), Ulan Cabanilla (CC0 1.0) — round_table, round_table_white, round_table_black
 - [Classic Console 01](https://polyhaven.com/a/ClassicConsole_01), Kirill Sannikov (CC0 1.0) — console_table
-- [Walnut Veneer](https://polyhaven.com/a/walnut_veneer), Jenelle van Heerden (CC0 1.0) — reception_desk, library_ladder, murs library
+- [Walnut Veneer](https://polyhaven.com/a/walnut_veneer), Jenelle van Heerden (CC0 1.0) — reception_desk, library_ladder, murs library, murs navy, murs oak_panels, murs walnut_panels, murs brick, murs paper_floral, murs paper_deco
 - [Potted Plant 04](https://polyhaven.com/a/potted_plant_04), James Ray Cock (CC0 1.0) — reception_desk, cactus
-- [Gothic Bed 01](https://polyhaven.com/a/GothicBed_01), Kirill Sannikov (CC0 1.0) — bed
-- [Vintage Day Bed](https://polyhaven.com/a/vintage_day_bed), Aron Łyczek (CC0 1.0) — daybed
-- [Potted Plant 01](https://polyhaven.com/a/potted_plant_01), Rico Cilliers (CC0 1.0) — plant_tall
-- [Potted Plant 02](https://polyhaven.com/a/potted_plant_02), Rico Cilliers (CC0 1.0) — plant_medium
-- [Quatrefoil Jacquard Fabric](https://polyhaven.com/a/quatrefoil_jacquard_fabric), colormass, Rico Cilliers (CC0 1.0) — rug_red, rug_green
-- [Velour Velvet](https://polyhaven.com/a/velour_velvet), colormass, Rico Cilliers (CC0 1.0) — rug_red, rug_round
-- [Poly Wool Herringbone](https://polyhaven.com/a/poly_wool_herringbone), colormass, Rico Cilliers (CC0 1.0) — rug_green, sol carpet
-- [Floral Jacquard](https://polyhaven.com/a/floral_jacquard), colormass, Rico Cilliers (CC0 1.0) — rug_round
+- [Gothic Bed 01](https://polyhaven.com/a/GothicBed_01), Kirill Sannikov (CC0 1.0) — bed, bed_blue, bed_pink
+- [Vintage Day Bed](https://polyhaven.com/a/vintage_day_bed), Aron Łyczek (CC0 1.0) — daybed, daybed_pink, daybed_blue
+- [Potted Plant 01](https://polyhaven.com/a/potted_plant_01), Rico Cilliers (CC0 1.0) — plant_tall, plant_tall_white, plant_tall_terracotta
+- [Potted Plant 02](https://polyhaven.com/a/potted_plant_02), Rico Cilliers (CC0 1.0) — plant_medium, plant_medium_white, plant_medium_blue
+- [Quatrefoil Jacquard Fabric](https://polyhaven.com/a/quatrefoil_jacquard_fabric), colormass, Rico Cilliers (CC0 1.0) — rug_red, rug_green, rug_blue, rug_ochre, rug_purple, rug_large_burgundy, rug_large_navy, rug_halloween
+- [Velour Velvet](https://polyhaven.com/a/velour_velvet), colormass, Rico Cilliers (CC0 1.0) — rug_red, rug_round, rug_round_blue, rug_round_pink, rug_round_green, rug_round_grey, rug_blue, rug_ochre, rug_purple, rug_halloween, rug_rose
+- [Poly Wool Herringbone](https://polyhaven.com/a/poly_wool_herringbone), colormass, Rico Cilliers (CC0 1.0) — rug_green, rug_large_burgundy, rug_large_navy, sol carpet, sol carpet_blue, sol carpet_rose
+- [Floral Jacquard](https://polyhaven.com/a/floral_jacquard), colormass, Rico Cilliers (CC0 1.0) — rug_round, rug_round_blue, rug_round_pink, rug_round_green, rug_round_grey, rug_rose
 - [Oriented Strand Board](https://polyhaven.com/a/oriented_strand_board), Dimitrios Savva (CC0 1.0) — notice_board
-- [Marble 01](https://polyhaven.com/a/marble_01), Rob Tuytel (CC0 1.0) — bust_pedestal
+- [Marble 01](https://polyhaven.com/a/marble_01), Rob Tuytel (CC0 1.0) — bust_pedestal, trophy_pedestal, fireplace, gravestone, pink_ribbon
 - [Marble Bust 01](https://polyhaven.com/a/marble_bust_01), Rico Cilliers (CC0 1.0) — bust_pedestal
-- [Antique Ceramic Vase 01](https://polyhaven.com/a/antique_ceramic_vase_01), James Ray Cock (CC0 1.0) — vase
+- [Antique Ceramic Vase 01](https://polyhaven.com/a/antique_ceramic_vase_01), James Ray Cock (CC0 1.0) — vase, vase_blue, vase_pink, vase_green
 - [Fancy Picture Frame 02](https://polyhaven.com/a/fancy_picture_frame_02), Rob Tuytel, Rico Cilliers (CC0 1.0) — frame_painting
 - [Hanging Picture Frame 02](https://polyhaven.com/a/hanging_picture_frame_02), James Ray Cock (CC0 1.0) — frame_modern
 - [Ornate Mirror 01](https://polyhaven.com/a/ornate_mirror_01), James Ray Cock (CC0 1.0) — mirror
 - [Wall Clock](https://polyhaven.com/a/wall_clock), PierreB3D (CC0 1.0) — wall_clock
+- [Television 01](https://polyhaven.com/a/Television_01), Gabriel Radić (CC0 1.0) — tv_retro
+- [Gaming Console](https://polyhaven.com/a/gaming_console), Sean Buckley (CC0 1.0) — game_console
+- [Chess Set](https://polyhaven.com/a/chess_set), Riley Queen (CC0 1.0) — chess_set
+- [Boombox](https://polyhaven.com/a/boombox), Thomas Paul Mouilleron (CC0 1.0) — boombox
+- [Dartboard](https://polyhaven.com/a/dartboard), Satyaki Mandal (CC0 1.0) — dartboard
+- [Projector Screen](https://polyhaven.com/a/projector_screen), PeterM (CC0 1.0) — projector_screen
+- [Shelf 01](https://polyhaven.com/a/Shelf_01), Gabriel Radić (CC0 1.0) — shelf_tall
+- [Mantel Clock 01](https://polyhaven.com/a/mantel_clock_01), Yann Kervran, Rico Cilliers (CC0 1.0) — mantel_clock
+- [Vintage Wooden Drawer 01](https://polyhaven.com/a/vintage_wooden_drawer_01), James Ray Cock (CC0 1.0) — card_catalog
+- [Standing Chalkboard 01](https://polyhaven.com/a/standing_chalkboard_01), ParzivalCG (CC0 1.0) — chalkboard
+- [School Desk 01](https://polyhaven.com/a/SchoolDesk_01), Ethan Place (CC0 1.0) — school_desk
+- [School Chair 01](https://polyhaven.com/a/SchoolChair_01), Ethan Place (CC0 1.0) — school_chair
+- [Vintage Oil Lamp](https://polyhaven.com/a/vintage_oil_lamp), Monsta3D (CC0 1.0) — oil_lamp
+- [Wooden Candlestick](https://polyhaven.com/a/wooden_candlestick), Josh Dean (CC0 1.0) — candlestick
+- [Gothic Cabinet 01](https://polyhaven.com/a/GothicCabinet_01), Kirill Sannikov (CC0 1.0) — gothic_cabinet
+- [Gothic Commode 01](https://polyhaven.com/a/GothicCommode_01), Kirill Sannikov (CC0 1.0) — gothic_commode
+- [Gallinera Chair](https://polyhaven.com/a/gallinera_chair), Ulan Cabanilla (CC0 1.0) — carved_chair
+- [Gallinera Table](https://polyhaven.com/a/gallinera_table), Ulan Cabanilla (CC0 1.0) — carved_chest
+- [Steel Frame Shelves 02](https://polyhaven.com/a/steel_frame_shelves_02), James Ray Cock (CC0 1.0) — shelf_industrial
+- [Vintage Cabinet 01](https://polyhaven.com/a/vintage_cabinet_01), Rico Cilliers (CC0 1.0) — hutch
+- [Sofa 02](https://polyhaven.com/a/sofa_02), Kirill Sannikov (CC0 1.0) — sofa_chesterfield, sofa_chesterfield_oxblood, sofa_chesterfield_green
+- [Painted Wooden Sofa](https://polyhaven.com/a/painted_wooden_sofa), Kirill Sannikov (CC0 1.0) — sofa_painted
+- [Modern Arm Chair 01](https://polyhaven.com/a/modern_arm_chair_01), Vibrant Nordic (CC0 1.0) — armchair_scandi, armchair_scandi_cognac, armchair_scandi_grey
+- [Throw Pillows 01](https://polyhaven.com/a/throw_pillows_01), Serhii Khromov (CC0 1.0) — throw_pillows
+- [Tea Set 01](https://polyhaven.com/a/tea_set_01), James Ray Cock, Rico Cilliers, Jurita Burger (CC0 1.0) — tea_set
+- [Wicker Basket 02](https://polyhaven.com/a/wicker_basket_02), Kuutti Siitonen (CC0 1.0) — wicker_basket
+- [Gothic Coffee Table](https://polyhaven.com/a/gothic_coffee_table), Ulan Cabanilla (CC0 1.0) — coffee_table_gothic
+- [Industrial Coffee Table](https://polyhaven.com/a/industrial_coffee_table), Ulan Cabanilla (CC0 1.0) — coffee_table_industrial
+- [Modern Coffee Table 01](https://polyhaven.com/a/modern_coffee_table_01), Amin (CC0 1.0) — coffee_table_modern
+- [Modern Coffee Table 02](https://polyhaven.com/a/modern_coffee_table_02), Amin (CC0 1.0) — coffee_table_square
+- [Painted Wooden Nightstand](https://polyhaven.com/a/painted_wooden_nightstand), Kirill Sannikov (CC0 1.0) — nightstand_painted
+- [Painted Wooden Stool](https://polyhaven.com/a/painted_wooden_stool), Kirill Sannikov (CC0 1.0) — stool_painted
+- [Folding Wooden Stool](https://polyhaven.com/a/folding_wooden_stool), Ulan Cabanilla (CC0 1.0) — stool_folding
+- [Bar Chair Round 01](https://polyhaven.com/a/bar_chair_round_01), Dairon Sanchez (CC0 1.0) — bar_stool
+- [Chinese Screen Panels](https://polyhaven.com/a/chinese_screen_panels), Kirill Sannikov (CC0 1.0) — folding_screen
+- [Spinning Wheel 01](https://polyhaven.com/a/spinning_wheel_01), Sofia Pahaoja (CC0 1.0) — spinning_wheel
+- [Chinese Tea Table](https://polyhaven.com/a/chinese_tea_table), Kirill Sannikov (CC0 1.0) — tea_table
+- [Chinese Stool](https://polyhaven.com/a/chinese_stool), Kirill Sannikov (CC0 1.0) — stool_lacquer
+- [Old Bed Frame](https://polyhaven.com/a/old_bed_frame), Luca B (CC0 1.0) — bed_iron
+- [Planter Box 01](https://polyhaven.com/a/planter_box_01), James Ray Cock (CC0 1.0) — planter_box
+- [Planter Box 02](https://polyhaven.com/a/planter_box_02), James Ray Cock (CC0 1.0) — planter_box_long
+- [Planter Box 03](https://polyhaven.com/a/planter_box_03), James Ray Cock (CC0 1.0) — planter_box_tall
+- [Outdoor Table Chair Set 01](https://polyhaven.com/a/outdoor_table_chair_set_01), James Ray Cock (CC0 1.0) — garden_set
+- [Garden Gnome](https://polyhaven.com/a/garden_gnome), Bhargav Kubal (CC0 1.0) — garden_gnome
+- [Concrete Cat Statue](https://polyhaven.com/a/concrete_cat_statue), Rico Cilliers, Riley Queen (CC0 1.0) — cat_statue
+- [Watering Can Metal 01](https://polyhaven.com/a/watering_can_metal_01), Charles Nderitu (CC0 1.0) — watering_can
+- [Wooden Lantern 01](https://polyhaven.com/a/wooden_lantern_01), James Ray Cock (CC0 1.0) — lantern
+- [Street Lamp 02](https://polyhaven.com/a/street_lamp_02), Josh Dean (CC0 1.0) — garden_lamp
+- [Stone Fire Pit](https://polyhaven.com/a/stone_fire_pit), Sebastian Platen (CC0 1.0) — fire_pit
+- [Wine Barrel 01](https://polyhaven.com/a/wine_barrel_01), James Ray Cock (CC0 1.0) — wine_barrel
+- [Treasure Chest](https://polyhaven.com/a/treasure_chest), Rico Cilliers (CC0 1.0) — treasure_chest
+- [Wooden Crate 01](https://polyhaven.com/a/wooden_crate_01), James Ray Cock (CC0 1.0) — wooden_crate
+- [Ceramic Vase 03](https://polyhaven.com/a/ceramic_vase_03), James Ray Cock (CC0 1.0) — vase_tall
+- [Ceramic Vase 02](https://polyhaven.com/a/ceramic_vase_02), James Ray Cock (CC0 1.0) — vase_round
+- [Brass Vase 01](https://polyhaven.com/a/brass_vase_01), Rico Cilliers (CC0 1.0) — vase_brass
+- [Hanging Picture Frame 03](https://polyhaven.com/a/hanging_picture_frame_03), James Ray Cock (CC0 1.0) — frame_small
+- [Fancy Picture Frame 01](https://polyhaven.com/a/fancy_picture_frame_01), Rob Tuytel, Rico Cilliers (CC0 1.0) — frame_landscape
+- [Vintage Telephone Wall Clock](https://polyhaven.com/a/vintage_telephone_wall_clock), Adrian C (CC0 1.0) — phone_clock
+- [Industrial Pipe Lamp](https://polyhaven.com/a/industrial_pipe_lamp), Mateusz Sadek (CC0 1.0) — desk_lamp_pipe
 - [Herringbone Parquet](https://polyhaven.com/a/herringbone_parquet), Jenelle van Heerden, Sergej Majboroda (CC0 1.0) — sol parquet
 - [Floor Tiles 06](https://polyhaven.com/a/floor_tiles_06), Rob Tuytel (CC0 1.0) — sol marble
 - [Terracotta Floor Tiles](https://polyhaven.com/a/terracotta_floor_tiles), Dimitrios Savva (CC0 1.0) — sol tiles
-- [White Stucco](https://polyhaven.com/a/white_stucco), Amal Kumar (CC0 1.0) — murs library
+- [Wood Floor](https://polyhaven.com/a/wood_floor), Dimitrios Savva (CC0 1.0) — sol oak
+- [Dark Wooden Planks](https://polyhaven.com/a/dark_wooden_planks), Amal Kumar (CC0 1.0) — sol dark_planks
+- [Diagonal Parquet](https://polyhaven.com/a/diagonal_parquet), Jenelle van Heerden, Sergej Majboroda (CC0 1.0) — sol parquet_diagonal
+- [Rectangular Parquet](https://polyhaven.com/a/rectangular_parquet), Jenelle van Heerden, Sergej Majboroda (CC0 1.0) — sol parquet_strip
+- [Terrazzo Tiles](https://polyhaven.com/a/terrazzo_tiles), Amal Kumar (CC0 1.0) — sol terrazzo
+- [Slate Floor 03](https://polyhaven.com/a/slate_floor_03), Dimitrios Savva (CC0 1.0) — sol slate
+- [Painted Concrete 02](https://polyhaven.com/a/painted_concrete_02), Rob Tuytel (CC0 1.0) — sol concrete
+- [Tatami Mat](https://polyhaven.com/a/tatami_mat), Charlotte Baglioni (CC0 1.0) — sol tatami
+- [Square Brick Floor](https://polyhaven.com/a/square_brick_floor), Dimitrios Savva (CC0 1.0) — sol brick
+- [White Stucco](https://polyhaven.com/a/white_stucco), Amal Kumar (CC0 1.0) — murs library, murs plaster, murs sage, murs blush, murs navy, murs oak_panels, murs walnut_panels, murs boards, murs paper_stripes, murs paper_trellis, murs paper_floral, murs paper_deco, murs esport
+- [Oak Veneer 01](https://polyhaven.com/a/oak_veneer_01), Jenelle van Heerden (CC0 1.0) — murs oak_panels
 - [Human Base Meshes v1.4.1](https://www.blender.org/download/demo-files/), Blender Studio, communauté Blender (CC0 1.0) — corps des avatars

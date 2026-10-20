@@ -28,6 +28,10 @@
 //
 // Une entrée invalide (rect hors de sa feuille, ancre hors du rect, feuille
 // plus grande que MAX_SHEET_PX…) est rejetée en bloc : silhouette.
+//
+// Ces feuilles d'avatars ENTIERS (a01…a12) restent le repli des avatars
+// COMPOSÉS par calques (lot 13, avatarLayers.ts + lookCompositor.ts) : un
+// look qu'on ne peut pas (encore) dessiner prend la feuille de son `avatarId`.
 
 import { type Direction, mirrorDirection } from './motion';
 
@@ -180,9 +184,12 @@ export function resolveDirection(
   return null;
 }
 
-/** Numéro d'image : à la distance (strideMeters) ou au temps (fps). */
-function frameIndex(
-  anim: AvatarAnimation,
+/**
+ * Numéro d'image : à la distance (strideMeters) ou au temps (fps). Partagé
+ * avec les avatars composés (avatarLayers.ts), qui avancent pareil.
+ */
+export function frameIndex(
+  anim: Pick<AvatarAnimation, 'fps' | 'strideMeters'>,
   frames: number,
   byDistance: boolean,
   clock: { timeSec: number; travelledMeters: number }

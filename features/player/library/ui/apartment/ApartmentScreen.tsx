@@ -18,7 +18,9 @@ import { useLibraryActions } from '../../hooks/useLibraryActions';
 import { useLibraryHome, useLibraryManifest } from '../../hooks/useLibraryHome';
 import { groupInventory, ownedCounts, placementSpecsOf } from '../../model';
 import AvatarChooser from '../avatar/AvatarChooser';
+import { lookCodeOf } from '../avatar/lookModel';
 import LibraryGate from '../gate/LibraryGate';
+import PlacesNav from '../places/PlacesNav';
 import InventoryPanel from '../shop/InventoryPanel';
 import ShopPanel from '../shop/ShopPanel';
 import ApartmentSettings from './ApartmentSettings';
@@ -145,6 +147,7 @@ export default function ApartmentScreen() {
             room={apartment.room}
             saving={actions.savingSettings}
             onSave={actions.updateSettings}
+            manifest={sprites}
           />
         ),
       },
@@ -159,6 +162,7 @@ export default function ApartmentScreen() {
             apartment={apartment}
             specs={specs}
             avatarId={me.avatar.avatarId}
+            look={lookCodeOf(me.avatar)}
             inventory={me.inventory}
             label={t.apartmentCanvasLabel}
             saveItems={actions.saveItems}
@@ -192,6 +196,8 @@ export default function ApartmentScreen() {
     >
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         {header}
+        {/* Lot 7 — les lieux (appartement, hall, salle de lecture, QG). */}
+        {home.gate === 'ready' ? <PlacesNav current="apartment" /> : null}
         {body}
       </div>
     </main>

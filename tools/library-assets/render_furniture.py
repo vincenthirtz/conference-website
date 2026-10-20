@@ -17,7 +17,12 @@ build.mjs, chemins déjà résolus), il peut être :
   (`location`) ou en fraction de la boîte (`at`), sur la surface trouvée
   dessous (`on: "surface"`) ;
 - accroché au mur (`mount.wall`) : dos contre le bord arrière de l'empreinte,
-  à `mount.elevation` m du sol, sans ombre portée au sol.
+  à `mount.elevation` m du sol, sans ombre portée au sol ;
+- une pile de livres (`books`, pièce principale) ;
+- une VARIANTE DE COULEUR (`recolor`, lot 11) : matières recolorées après la
+  composition, géométrie inchangée (voir iso_recolor.py).
+Les générateurs du grand catalogue (iso_furniture.py) s'ajoutent à ceux
+d'iso_build.py.
 
 Sortie : <out>/<clé>_r{0..3}.webp et <out>/<clé>.json (empreinte en cases,
 hauteur en mètres, taille et ancre de chaque rotation). La rotation r tourne le
@@ -42,6 +47,11 @@ from mathutils import Vector  # noqa: E402
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import iso_build as build  # noqa: E402
 import iso_common as iso  # noqa: E402
+import iso_furniture  # noqa: E402
+import iso_recolor  # noqa: E402
+
+# Générateurs du grand catalogue (lot 11) à côté de ceux du lot 3.
+build.GENERATORS.update(iso_furniture.GENERATORS)
 
 SHADOW_MARGIN = 0.3  # m de sol gardés autour de l'empreinte (ombre de contact)
 # Le ciel uniforme assombrit très légèrement tout le plan récepteur (environ
@@ -53,6 +63,10 @@ SHADOW_LUMA = 0.15
 # plus : un rayonnage de 58 cm de profondeur tient sur une case de 50 cm.
 FOOTPRINT_SLACK = 0.1
 AWAY = Vector((0.0, 0.0, 1000.0))  # hors de portée des rayons de composition
+# Recadrage : un pixel presque transparent (2/255) peut rester au coin du
+# capteur d'ombre, loin du meuble, et doubler la taille de l'image. On recadre
+# sur 4/255 (invisible en dessous) ; ce qui sort du cadre est perdu.
+CROP_ALPHA = 4 / 255
 
 
 def parse_args():
@@ -91,6 +105,28 @@ def make_shadow_catcher(scene, w_m, d_m, height):
     plane.is_shadow_catcher = True
     scene.collection.objects.link(plane)
     return plane, verts
+
+
+def crop_bounds(px):
+    """Lignes et colonnes [début, fin) des pixels visibles (alpha > CROP_ALPHA).
+
+    Un pixel visible ISOLÉ (aucun voisin visible sur 8) est un reste du
+    capteur d'ombre : il est effacé et ne compte pas pour le cadre."""
+    alpha = px[:, :, 3]
+    mask = alpha > CROP_ALPHA
+    pad = np.pad(mask, 1)
+    neighbours = sum(
+        pad[1 + dy:pad.shape[0] - 1 + dy, 1 + dx:pad.shape[1] - 1 + dx]
+        for dy in (-1, 0, 1) for dx in (-1, 0, 1) if (dy, dx) != (0, 0)
+    )
+    isolated = mask & (neighbours == 0)
+    alpha[isolated] = 0.0
+    mask &= ~isolated
+    rows = np.where(mask.any(axis=1))[0]
+    cols = np.where(mask.any(axis=0))[0]
+    if rows.size == 0:
+        return None
+    return int(rows[0]), int(rows[-1]) + 1, int(cols[0]), int(cols[-1]) + 1
 
 
 def clean_shadow_halo(px):
@@ -196,13 +232,25 @@ def main():
     if args.spec:
         with open(args.spec, encoding='utf-8') as f:
             spec = json.load(f)
-    if not args.gltf and not spec.get('generate'):
-        raise SystemExit('--gltf ou spec.generate requis')
+    if not args.gltf and not spec.get('generate') and not spec.get('books'):
+        raise SystemExit('--gltf, spec.generate ou spec.books requis')
     os.makedirs(args.out, exist_ok=True)
     scene, cam = iso.setup_scene(
         args.samples, args.hdri, args.hdri_strength, args.ambient, args.sun_energy
     )
+    # Pas de caustiques : un métal poli (coupe dorée) renverrait le soleil sur
+    # le capteur d'ombre, en halo clair loin du meuble, qui gonflerait l'image.
+    scene.cycles.caustics_reflective = False
+    scene.cycles.caustics_refractive = False
     root, meshes = compose(scene, args, spec)
+    # Lueurs « discrètes » (visage d'une citrouille…) : vues par la caméra,
+    # mais elles n'éclairent pas le sol (même raison).
+    for m in meshes:
+        if any(s.material is not None and s.material.get('glow_quiet') for s in m.material_slots):
+            m.visible_diffuse = False
+            m.visible_glossy = False
+    # Variante de couleur (lot 11) : matières recolorées, géométrie inchangée.
+    iso_recolor.apply(meshes, spec.get('recolor'), args.key)
     mount = spec.get('mount') or {}
     on_wall = bool(mount.get('wall'))
     elevation = float(mount.get('elevation', 0.0))
@@ -257,7 +305,7 @@ def main():
             bpy.data.objects.remove(plane, do_unlink=True)
 
         clean_shadow_halo(px)
-        bounds = iso.alpha_bounds(px)
+        bounds = crop_bounds(px)
         if bounds is None:
             raise SystemExit(f'rendu vide : {args.key} r{r}')
         r0, r1, c0, c1 = bounds

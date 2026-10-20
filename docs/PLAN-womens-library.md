@@ -84,8 +84,8 @@
      - Les 8 directions sont rendues, sans miroir, pour que la lumière reste cohérente, soit
        80 images par avatar.
      - En v1, 12 avatars : 6 carnations, 6 coiffures, des tenues variées.
-     - La personnalisation libre (choisir sa coiffure et sa tenue) viendra plus tard. Elle demandera
-       un rendu par calques ou un rendu à la demande, côté serveur.
+     - La personnalisation libre (coiffure, tenue et leurs couleurs) arrive au lot 13 : des calques
+       rendus en niveaux de gris, teintés dans le navigateur (décidé le 2026-10-20).
    - **Le pipeline est scripté** (`tools/library-assets/`, Blender en ligne de commande).
      - Il lit le catalogue synchronisé depuis l'API et produit les WebP, plus un manifeste JSON
        (empreinte au sol, point d'ancrage, hauteur d'assise).
@@ -153,8 +153,12 @@
 | — | **Ouverture publique**, une fois la charte écrite et la modération organisée | | | asso |
 | 9 | Les QG d'équipe | 🟧 | M | api + site |
 | 10 | Après l'ouverture | 🟩 | — | — |
+| 11 | Le grand catalogue : 200 meubles et plus, variantes de couleur, sets thématiques | 🟧 | L | site + api |
+| 12 | Le décor de pièce : sols, papiers peints, fenêtres, portes | 🟧 | M | site + api |
+| 13 | L'avatar personnalisable, par calques | 🟧 | L | site + api |
 
-**Rien n'ouvre, même en bêta, avant la fin des lots 5, 6 et 8.**
+**Rien n'ouvre, même en bêta, avant la fin des lots 5, 6 et 8.** Les lots 11 à 13 (ajoutés le
+2026-10-20) ne bloquent pas l'ouverture : ils avancent en parallèle.
 
 ---
 
@@ -362,12 +366,61 @@ C'est la condition de toute ouverture.
 
 ## Lot 10 · Après l'ouverture — 🟩
 
-- Des avatars personnalisables par calques (cheveux et tenues séparés).
+- ~~Des avatars personnalisables par calques~~ : avancé au lot 13.
 - Des permanences du staff dans la Grande salle de lecture (badge « bibliothécaire »), et un rôle
   staff dédié à la sécurité.
-- Des meubles d'événement (Halloween, Octobre Rose), limités dans le temps et non en quantité.
+- ~~Des meubles d'événement~~ : avancés au lot 11.
 - Un tableau de bord agrégé : pièces dépensées en meubles, appartements meublés, visites. La salle de
   lecture n'y figure jamais.
+
+## Lot 11 · Le grand catalogue — 🟧 / L (site + api)
+
+Ajouté le 2026-10-20. Le but est de passer de 49 meubles à **200 et plus**.
+
+- **Sources** : des modèles CC0 uniquement (Poly Haven, Kenney, Quaternius), ou faits maison dans
+  le pipeline. Les licences sont revérifiées à chaque import, et `CREDITS` est tenu à jour.
+- **Variantes de couleur** : une variante est **une clé de catalogue à part entière** (`sofa_blue`),
+  rattachée à une `family`. L'achat, l'inventaire et le placement restent inchangés, et il n'y a pas
+  de migration. La boutique regroupe les variantes d'une famille et propose de choisir la teinte.
+- **Sets thématiques** : esport, bibliothèque, cosy, jardin d'hiver… Un set est un regroupement dans
+  le catalogue, pas un paquet vendu à part.
+- **Meubles d'événement** (Halloween, Octobre Rose) : limités **dans le temps**, jamais en quantité.
+  La fenêtre de vente vit dans le catalogue, et l'achat la vérifie côté API.
+- **Barème** : celui du lot 2, calé sur le booster (de 50 à 1 000 pièces). La monnaie se gagne, elle
+  ne s'achète pas.
+- **Boutique** : catégories, sets, recherche, filtres et pagination, dans un panneau accessible.
+- **Poids** : les images sont chargées salle par salle, et le manifeste ne doit pas grossir pour
+  chaque visite (il faut le découper ou le compacter). Le budget reste d'environ 1 Mo par salle
+  meublée.
+- **Fini quand** le catalogue de l'API compte au moins 200 entrées, chacune avec ses 4 rotations
+  rendues, et qu'une joueuse retrouve un meuble par set, par teinte ou par recherche.
+
+## Lot 12 · Le décor de pièce — 🟧 / M (site + api)
+
+Ajouté le 2026-10-20.
+
+- Plus de sols, des papiers peints et des habillages de murs, des fenêtres et des portes. La liste
+  vit dans `config/library/decor.ts` (API, synchronisée), et les sprites sortent du pipeline
+  (`render_decor.py`).
+- Le choix se fait dans les réglages de l'appartement, avec un aperçu. En v1, le décor reste
+  **gratuit** : un décor payant demanderait une table de possession, à décider plus tard.
+- Une valeur enregistrée qui disparaît de la liste retombe sur le décor par défaut
+  (`resolveApartmentDecor`).
+- **Fini quand** une joueuse change de sol, de murs et de fenêtres, recharge, et retrouve son décor.
+
+## Lot 13 · L'avatar personnalisable — 🟧 / L (site + api)
+
+Ajouté le 2026-10-20. Il reprend le premier point du lot 10.
+
+- **Par calques** : le corps (6 carnations), la coiffure, la tenue. Chaque calque est rendu par
+  `render_avatar.py` sur les mêmes 80 images (8 directions × attente, marche, assise), en **niveaux
+  de gris avec un masque**. La couleur des cheveux et celle de la tenue sont **appliquées dans le
+  navigateur**, puis mises en cache. Ainsi, le poids ne se multiplie pas par le nombre de teintes.
+- **Le look** est un objet borné, validé par l'API (`library_avatars.look`, liste fermée en code).
+  Il voyage dans la présence temps réel sous une forme compacte. Les 12 avatars actuels deviennent
+  des looks prédéfinis.
+- **L'éditeur** : un aperçu animé, des choix accessibles au clavier, et l'enregistrement par l'API.
+- **Fini quand** une joueuse compose son avatar, et que les autres le voient tel quel dans la salle.
 
 ---
 

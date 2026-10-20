@@ -250,6 +250,13 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   blacklist_expired: 'Sanction joueur levée (échéance)',
   entity_blacklist_expired: 'Sanction entité levée (échéance)',
   support_ticket_convert_blacklist: 'Conversion signalement → blacklist',
+  // Women's Library
+  library_ban_add: 'Bannissement de la Library',
+  library_ban_lift: 'Levée d’un bannissement de la Library',
+  library_message_hide: 'Message du chat de la Library masqué',
+  library_mute_add: 'Sourdine dans le chat de la Library',
+  library_mute_lift: 'Sourdine du chat de la Library levée',
+  library_chat_settings: 'Chat de la Library ouvert ou fermé',
   // TCG (cartes joueuses)
   tcg_photo_approve: 'Photo de carte TCG approuvée',
   tcg_photo_reject: 'Photo de carte TCG refusée',

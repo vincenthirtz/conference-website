@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
 import { hasAtLeastRole } from '@/utils/staffRoles';
+import { canAccess } from '@/utils/admin/adminAccess';
 import type { StaffRole } from '@/utils/staff';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
@@ -28,6 +29,21 @@ const EntityBlacklistPanel = lazyPanel(
 );
 const SupportPanel = lazyPanel(
   () => import('@/components/admin/moderation/SupportPanel')
+);
+// Bannissements de la Women's Library (lot 5 de docs/PLAN-womens-library.md).
+const LibraryBansPanel = lazyPanel(
+  () => import('@/components/admin/moderation/LibraryBansPanel')
+);
+// Chat de la Women's Library (lot 6) : interrupteur, messages récents,
+// sourdines — dans le même onglet, avant les bannissements.
+const LibraryChatSwitch = lazyPanel(
+  () => import('@/components/admin/moderation/LibraryChatSwitch')
+);
+const LibraryChatMessagesPanel = lazyPanel(
+  () => import('@/components/admin/moderation/LibraryChatMessagesPanel')
+);
+const LibraryChatMutesList = lazyPanel(
+  () => import('@/components/admin/moderation/LibraryChatMutesList')
 );
 // Panneau SÉPARÉ, monté à côté du précédent : le lien d'overlay OBS relève du
 // TCG mais n'a rien à faire dans un fichier qu'on vient d'alléger pour tenir
@@ -61,10 +77,20 @@ export const getServerSideProps = withStaffPage('caster');
  *   - Commentaires → manager+
  *   - Blacklist   → manager+
  *   - Support     → manager+
+ *   - Library     → permission `moderate_support`
  */
 function AdminModerationPage({ staff }: StaffProps) {
   const t = useAdminT(nsAdminModeration);
   const isManager = hasAtLeastRole(staff.role as StaffRole, 'admin');
+  // Library : le droit EXACT de sa route (`moderate_support`), lu sur les
+  // permissions effectives posées par `withStaffPage` (rôle + droits accordés
+  // à l'unité). Par le rôle seul, ce sont les mêmes que l'onglet Support
+  // (owner, admin) ; un droit accordé à l'unité ouvre aussi celui-ci.
+  const canModerateSupport = canAccess(
+    { permission: 'moderate_support' },
+    staff.role as StaffRole,
+    staff.permissions
+  );
   // Les onglets TCG suivent la PERMISSION de leurs routes (`manage_tcg` pour
   // photos, vue d'ensemble, overlay, cadeau et ajustement de solde), pas le
   const tabs = [
@@ -76,6 +102,7 @@ function AdminModerationPage({ staff }: StaffProps) {
           { id: 'support', label: t.tabSupport },
         ]
       : []),
+    ...(canModerateSupport ? [{ id: 'library', label: t.tabLibrary }] : []),
   ];
   const [active, setActive] = useQueryTab(tabs);
 
@@ -155,6 +182,13 @@ function AdminModerationPage({ staff }: StaffProps) {
             </>
           ) : active === 'support' && isManager ? (
             <SupportPanel />
+          ) : active === 'library' && canModerateSupport ? (
+            <>
+              <LibraryChatSwitch />
+              <LibraryChatMessagesPanel />
+              <LibraryChatMutesList />
+              <LibraryBansPanel currentStaffId={staff.id} />
+            </>
           ) : (
             <DisputesPanel />
           )}

@@ -954,6 +954,9 @@ export const PERSONAL_DATA_TABLES: readonly PersonalDataTable[] = [
   {
     table: 'library_inventory',
     columns: ['user_id'],
+    // Un meuble PRÊTÉ au QG d'une équipe (lot 9, library_team_hq.sql) reste
+    // une ligne d'inventaire à elle : exporté ici, effacé avec son compte, et
+    // sa pose dans le QG (library_room_items) part avec lui.
     policy: { kind: 'cascade', onDelete: { user_id: 'CASCADE' } },
     why: 'Les meubles qu’elle a achetés avec ses pièces ; les meubles posés (library_room_items) partent avec eux.',
     export: {
@@ -1032,6 +1035,16 @@ export const PERSONAL_DATA_TABLES: readonly PersonalDataTable[] = [
       columns: ['tenant_id', 'reason', 'until', 'created_at'],
     },
   },
+  {
+    table: 'library_room_kicks',
+    columns: ['user_id'],
+    policy: { kind: 'cascade', onDelete: { user_id: 'CASCADE' } },
+    why: 'Les expulsions d’une salle de la Library qui la concernent (database/migrations/library_realtime.sql).',
+    export: {
+      // Sans `by_user_id` : qui l'a expulsée n'est pas sa donnée à elle.
+      columns: ['tenant_id', 'room_id', 'until', 'created_at'],
+    },
+  },
 ];
 
 /**
@@ -1069,6 +1082,8 @@ export const NOT_PERSONAL_DATA_COLUMNS: Readonly<Record<string, string>> = {
     'Personne (staff, propriétaire, capitaine) qui a masqué un message de la Library (FK SET NULL).',
   'library_mutes.by_user_id':
     'Personne (staff, propriétaire) qui a posé une sourdine dans la Library (FK SET NULL).',
+  'library_room_kicks.by_user_id':
+    'Propriétaire qui a expulsé une visiteuse de son appartement dans la Library (FK SET NULL).',
 
   // Identifiants Discord / Twitch : un compte TIERS, pas le compte du site.
   'user_discord_links.discord_user_id':

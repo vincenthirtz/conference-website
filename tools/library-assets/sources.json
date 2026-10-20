@@ -64,6 +64,56 @@
       "provider": "polyhaven",
       "id": "terracotta_floor_tiles",
       "resolution": "1k"
+    },
+    "wood_floor": {
+      "provider": "polyhaven",
+      "id": "wood_floor",
+      "resolution": "1k"
+    },
+    "dark_wooden_planks": {
+      "provider": "polyhaven",
+      "id": "dark_wooden_planks",
+      "resolution": "1k"
+    },
+    "diagonal_parquet": {
+      "provider": "polyhaven",
+      "id": "diagonal_parquet",
+      "resolution": "1k"
+    },
+    "rectangular_parquet": {
+      "provider": "polyhaven",
+      "id": "rectangular_parquet",
+      "resolution": "1k"
+    },
+    "terrazzo_tiles": {
+      "provider": "polyhaven",
+      "id": "terrazzo_tiles",
+      "resolution": "1k"
+    },
+    "slate_floor_03": {
+      "provider": "polyhaven",
+      "id": "slate_floor_03",
+      "resolution": "1k"
+    },
+    "painted_concrete_02": {
+      "provider": "polyhaven",
+      "id": "painted_concrete_02",
+      "resolution": "1k"
+    },
+    "tatami_mat": {
+      "provider": "polyhaven",
+      "id": "tatami_mat",
+      "resolution": "1k"
+    },
+    "square_brick_floor": {
+      "provider": "polyhaven",
+      "id": "square_brick_floor",
+      "resolution": "1k"
+    },
+    "oak_veneer_01": {
+      "provider": "polyhaven",
+      "id": "oak_veneer_01",
+      "resolution": "1k"
     }
   },
   "furniture": {
@@ -114,11 +164,7 @@
         "sittable": false,
         "stackable": false
       },
-      "tint": [
-        176,
-        128,
-        92
-      ]
+      "tint": [176, 128, 92]
     },
     "bookshelf_double": {
       "provider": "polyhaven",
@@ -135,17 +181,9 @@
             "books": "book_encyclopedia_set_01",
             "seed": 12
           },
-          "location": [
-            0,
-            0.51,
-            0
-          ],
+          "location": [0, 0.51, 0],
           "rotation": 180,
-          "tint": [
-            176,
-            128,
-            92
-          ]
+          "tint": [176, 128, 92]
         }
       ],
       "catalog": {
@@ -154,11 +192,7 @@
         "sittable": false,
         "stackable": false
       },
-      "tint": [
-        176,
-        128,
-        92
-      ]
+      "tint": [176, 128, 92]
     },
     "shelf_small": {
       "provider": "polyhaven",
@@ -182,9 +216,7 @@
       "fill": {
         "books": "book_encyclopedia_set_01",
         "seed": 7,
-        "skip": [
-          0
-        ]
+        "skip": [0]
       },
       "catalog": {
         "category": "storage",
@@ -352,11 +384,7 @@
     "reading_table": {
       "generate": {
         "kind": "reading_table",
-        "size": [
-          2.4,
-          0.98,
-          0.76
-        ]
+        "size": [2.4, 0.98, 0.76]
       },
       "textures": {
         "wood": "dark_wood"
@@ -366,20 +394,14 @@
           "generate": {
             "kind": "bankers_lamp"
           },
-          "at": [
-            0.27,
-            0.5
-          ],
+          "at": [0.27, 0.5],
           "on": "surface"
         },
         {
           "generate": {
             "kind": "bankers_lamp"
           },
-          "at": [
-            0.73,
-            0.5
-          ],
+          "at": [0.73, 0.5],
           "on": "surface"
         },
         {
@@ -389,10 +411,7 @@
             "first": 2,
             "cover": 1
           },
-          "at": [
-            0.5,
-            0.42
-          ],
+          "at": [0.5, 0.42],
           "on": "surface",
           "rotation": 18
         }
@@ -484,11 +503,7 @@
     "reception_desk": {
       "generate": {
         "kind": "reception_desk",
-        "size": [
-          2.3,
-          0.75,
-          1.05
-        ]
+        "size": [2.3, 0.75, 1.05]
       },
       "textures": {
         "wood": "dark_wood",
@@ -499,10 +514,7 @@
           "generate": {
             "kind": "bankers_lamp"
           },
-          "at": [
-            0.18,
-            0.5
-          ],
+          "at": [0.18, 0.5],
           "on": "surface"
         },
         {
@@ -512,19 +524,13 @@
             "first": 7,
             "cover": 4
           },
-          "at": [
-            0.52,
-            0.5
-          ],
+          "at": [0.52, 0.5],
           "on": "surface",
           "rotation": -12
         },
         {
           "model": "potted_plant_04",
-          "at": [
-            0.86,
-            0.5
-          ],
+          "at": [0.86, 0.5],
           "on": "surface"
         }
       ],
@@ -617,28 +623,13 @@
     "rug_red": {
       "generate": {
         "kind": "rug",
-        "size": [
-          2.9,
-          1.9
-        ],
+        "size": [2.9, 1.9],
         "border": 0.16,
         "pattern": 0.45,
         "edgePattern": 0.3,
-        "edgeTint": [
-          150,
-          120,
-          110
-        ],
-        "band": [
-          214,
-          186,
-          132
-        ],
-        "medallionColor": [
-          70,
-          30,
-          40
-        ]
+        "edgeTint": [150, 120, 110],
+        "band": [214, 186, 132],
+        "medallionColor": [70, 30, 40]
       },
       "textures": {
         "fabric": "quatrefoil_jacquard_fabric",
@@ -655,33 +646,14 @@
     "rug_green": {
       "generate": {
         "kind": "rug",
-        "size": [
-          3.9,
-          2.9
-        ],
+        "size": [3.9, 2.9],
         "border": 0.18,
         "pattern": 0.3,
-        "tint": [
-          96,
-          150,
-          110
-        ],
+        "tint": [96, 150, 110],
         "edgePattern": 0.45,
-        "edgeTint": [
-          120,
-          150,
-          120
-        ],
-        "band": [
-          200,
-          180,
-          120
-        ],
-        "medallionColor": [
-          40,
-          66,
-          50
-        ]
+        "edgeTint": [120, 150, 120],
+        "band": [200, 180, 120],
+        "medallionColor": [40, 66, 50]
       },
       "textures": {
         "fabric": "poly_wool_herringbone",
@@ -698,24 +670,13 @@
     "rug_round": {
       "generate": {
         "kind": "rug",
-        "size": [
-          1.9,
-          1.9
-        ],
+        "size": [1.9, 1.9],
         "round": true,
         "border": 0.12,
         "pattern": 0.6,
         "edgePattern": 0.3,
-        "edgeTint": [
-          120,
-          90,
-          80
-        ],
-        "band": [
-          214,
-          186,
-          132
-        ]
+        "edgeTint": [120, 90, 80],
+        "band": [214, 186, 132]
       },
       "textures": {
         "fabric": "floral_jacquard",
@@ -763,11 +724,7 @@
     "notice_board": {
       "generate": {
         "kind": "notice_board",
-        "size": [
-          1.32,
-          0.95,
-          0.85
-        ]
+        "size": [1.32, 0.95, 0.85]
       },
       "textures": {
         "wood": "dark_wood",
@@ -791,10 +748,7 @@
       "parts": [
         {
           "model": "marble_bust_01",
-          "at": [
-            0.5,
-            0.5
-          ],
+          "at": [0.5, 0.5],
           "on": "surface"
         }
       ],
@@ -892,11 +846,7 @@
         "texture": "poly_wool_herringbone",
         "periodTiles": 1,
         "scaleM": 0.25,
-        "tint": [
-          110,
-          150,
-          118
-        ]
+        "tint": [110, 150, 118]
       },
       "marble": {
         "texture": "floor_tiles_06",
@@ -907,6 +857,64 @@
         "texture": "terracotta_floor_tiles",
         "periodTiles": 4,
         "scaleM": 2
+      },
+      "oak": {
+        "texture": "wood_floor",
+        "periodTiles": 4,
+        "scaleM": 2
+      },
+      "dark_planks": {
+        "texture": "dark_wooden_planks",
+        "periodTiles": 4,
+        "scaleM": 2,
+        "tint": [236, 206, 180]
+      },
+      "parquet_diagonal": {
+        "texture": "diagonal_parquet",
+        "periodTiles": 4,
+        "scaleM": 2
+      },
+      "parquet_strip": {
+        "texture": "rectangular_parquet",
+        "periodTiles": 4,
+        "scaleM": 2
+      },
+      "terrazzo": {
+        "texture": "terrazzo_tiles",
+        "periodTiles": 4,
+        "scaleM": 2
+      },
+      "slate": {
+        "texture": "slate_floor_03",
+        "periodTiles": 4,
+        "scaleM": 2
+      },
+      "concrete": {
+        "texture": "painted_concrete_02",
+        "periodTiles": 4,
+        "scaleM": 2
+      },
+      "tatami": {
+        "texture": "tatami_mat",
+        "periodTiles": 4,
+        "scaleM": 2
+      },
+      "brick": {
+        "texture": "square_brick_floor",
+        "periodTiles": 4,
+        "scaleM": 2
+      },
+      "carpet_blue": {
+        "texture": "poly_wool_herringbone",
+        "periodTiles": 1,
+        "scaleM": 0.25,
+        "tint": [92, 112, 158]
+      },
+      "carpet_rose": {
+        "texture": "poly_wool_herringbone",
+        "periodTiles": 1,
+        "scaleM": 0.25,
+        "tint": [196, 128, 146]
       }
     },
     "walls": {
@@ -918,17 +926,599 @@
           "wood": "dark_wood",
           "door": "walnut_veneer"
         },
-        "plasterTint": [
-          238,
-          226,
-          204
-        ],
+        "plasterTint": [238, 226, 204],
         "books": "book_encyclopedia_set_01",
         "variants": {
           "plain": 1,
           "window": 2,
           "door": 2,
-          "bookshelf": 3
+          "bookshelf": 3,
+          "window_arched": 2,
+          "window_round": 2,
+          "window_loft": 2,
+          "window_greenhouse": 2,
+          "door_glazed": 2,
+          "door_modern": 2,
+          "door_arched": 2
+        }
+      },
+      "plaster": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {
+          "plaster": "white_stucco"
+        },
+        "finish": {
+          "dado": 0,
+          "base": 0.12
+        },
+        "materials": {
+          "plaster": {
+            "texture": "plaster",
+            "scale": 0.5,
+            "tint": [246, 242, 234],
+            "normal": 0.5
+          },
+          "trim": {
+            "color": [240, 237, 230],
+            "roughness": 0.35
+          },
+          "frame": {
+            "color": [240, 237, 230],
+            "roughness": 0.35
+          },
+          "door": {
+            "color": [234, 230, 222],
+            "roughness": 0.4
+          }
+        }
+      },
+      "sage": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {
+          "plaster": "white_stucco"
+        },
+        "finish": {
+          "dado": 0.95
+        },
+        "materials": {
+          "plaster": {
+            "texture": "plaster",
+            "scale": 0.5,
+            "tint": [160, 180, 150],
+            "normal": 0.5
+          },
+          "wood": {
+            "color": [236, 233, 226],
+            "roughness": 0.4
+          },
+          "trim": {
+            "color": [240, 237, 230],
+            "roughness": 0.35
+          },
+          "frame": {
+            "color": [240, 237, 230],
+            "roughness": 0.35
+          },
+          "door": {
+            "color": [228, 226, 216],
+            "roughness": 0.4
+          }
+        }
+      },
+      "blush": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {
+          "plaster": "white_stucco"
+        },
+        "finish": {
+          "dado": 0.95
+        },
+        "materials": {
+          "plaster": {
+            "texture": "plaster",
+            "scale": 0.5,
+            "tint": [226, 178, 182],
+            "normal": 0.5
+          },
+          "wood": {
+            "color": [238, 232, 228],
+            "roughness": 0.4
+          },
+          "trim": {
+            "color": [242, 236, 232],
+            "roughness": 0.35
+          },
+          "frame": {
+            "color": [242, 236, 232],
+            "roughness": 0.35
+          },
+          "door": {
+            "color": [234, 226, 222],
+            "roughness": 0.4
+          }
+        }
+      },
+      "navy": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {
+          "plaster": "white_stucco",
+          "door": "walnut_veneer"
+        },
+        "finish": {
+          "dado": 0.95
+        },
+        "materials": {
+          "plaster": {
+            "texture": "plaster",
+            "scale": 0.5,
+            "tint": [58, 72, 112],
+            "normal": 0.5
+          },
+          "wood": {
+            "color": [40, 52, 86],
+            "roughness": 0.45
+          },
+          "trim": {
+            "color": [236, 232, 222],
+            "roughness": 0.35
+          },
+          "frame": {
+            "color": [236, 232, 222],
+            "roughness": 0.35
+          }
+        }
+      },
+      "oak_panels": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {
+          "plaster": "white_stucco",
+          "oak": "oak_veneer_01",
+          "door": "walnut_veneer"
+        },
+        "finish": {
+          "dado": 2.2,
+          "panels": [[0.18, 0.86], [1, 2.08]]
+        },
+        "materials": {
+          "plaster": {
+            "texture": "plaster",
+            "scale": 0.5,
+            "tint": [240, 230, 210],
+            "normal": 0.5
+          },
+          "wood": {
+            "texture": "oak",
+            "scale": 0.5,
+            "tint": [236, 214, 186]
+          },
+          "trim": {
+            "texture": "oak",
+            "scale": 0.5,
+            "tint": [210, 184, 150]
+          },
+          "frame": {
+            "texture": "oak",
+            "scale": 0.5,
+            "tint": [210, 184, 150]
+          }
+        }
+      },
+      "walnut_panels": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {
+          "plaster": "white_stucco",
+          "walnut": "walnut_veneer",
+          "wood": "dark_wood",
+          "door": "walnut_veneer"
+        },
+        "finish": {
+          "dado": 2.2,
+          "panels": [[0.18, 0.86], [1, 2.08]]
+        },
+        "materials": {
+          "plaster": {
+            "texture": "plaster",
+            "scale": 0.5,
+            "tint": [226, 210, 184],
+            "normal": 0.5
+          },
+          "wood": {
+            "texture": "walnut",
+            "scale": 0.5,
+            "tint": [150, 110, 86]
+          },
+          "trim": {
+            "texture": "wood",
+            "scale": 0.5,
+            "tint": [190, 170, 160]
+          },
+          "frame": {
+            "texture": "wood",
+            "scale": 0.5,
+            "tint": [190, 170, 160]
+          }
+        }
+      },
+      "boards": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {
+          "plaster": "white_stucco"
+        },
+        "finish": {
+          "dado": 1.25,
+          "panels": [],
+          "boards": 0.125
+        },
+        "materials": {
+          "plaster": {
+            "texture": "plaster",
+            "scale": 0.5,
+            "tint": [222, 226, 214],
+            "normal": 0.5
+          },
+          "wood": {
+            "color": [238, 236, 230],
+            "roughness": 0.45
+          },
+          "groove": {
+            "color": [176, 174, 168],
+            "roughness": 0.7
+          },
+          "trim": {
+            "color": [242, 240, 234],
+            "roughness": 0.35
+          },
+          "frame": {
+            "color": [242, 240, 234],
+            "roughness": 0.35
+          },
+          "door": {
+            "color": [226, 230, 220],
+            "roughness": 0.4
+          }
+        }
+      },
+      "brick": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {
+          "door": "walnut_veneer"
+        },
+        "finish": {
+          "dado": 0,
+          "base": 0,
+          "crown": false
+        },
+        "materials": {
+          "plaster": {
+            "pattern": {
+              "kind": "brick",
+              "colors": [[146, 60, 42], [182, 88, 60], [196, 186, 170]]
+            },
+            "roughness": 0.85,
+            "bump": 0.8
+          },
+          "trim": {
+            "color": [46, 42, 40],
+            "roughness": 0.5
+          },
+          "frame": {
+            "color": [40, 40, 42],
+            "roughness": 0.45,
+            "metallic": 0.4
+          }
+        }
+      },
+      "brick_white": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {},
+        "finish": {
+          "dado": 0,
+          "base": 0.1,
+          "crown": false
+        },
+        "materials": {
+          "plaster": {
+            "pattern": {
+              "kind": "brick",
+              "colors": [[226, 222, 214], [240, 237, 230], [196, 192, 184]]
+            },
+            "roughness": 0.85,
+            "bump": 0.8
+          },
+          "trim": {
+            "color": [240, 237, 230],
+            "roughness": 0.4
+          },
+          "frame": {
+            "color": [240, 237, 230],
+            "roughness": 0.4
+          },
+          "door": {
+            "color": [222, 216, 204],
+            "roughness": 0.45
+          }
+        }
+      },
+      "concrete": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {},
+        "finish": {
+          "dado": 0,
+          "base": 0,
+          "crown": false
+        },
+        "materials": {
+          "plaster": {
+            "pattern": {
+              "kind": "formwork",
+              "colors": [[146, 146, 142], [176, 175, 170], [92, 92, 90]]
+            },
+            "roughness": 0.8,
+            "bump": 0.5
+          },
+          "trim": {
+            "color": [44, 44, 46],
+            "roughness": 0.45,
+            "metallic": 0.4
+          },
+          "frame": {
+            "color": [40, 40, 42],
+            "roughness": 0.45,
+            "metallic": 0.4
+          },
+          "door": {
+            "color": [70, 70, 74],
+            "roughness": 0.5
+          },
+          "modern": {
+            "color": [62, 62, 66],
+            "roughness": 0.45
+          }
+        }
+      },
+      "paper_stripes": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {
+          "plaster": "white_stucco"
+        },
+        "finish": {
+          "dado": 0.9,
+          "panels": [[0.22, 0.8]],
+          "skin": "paper"
+        },
+        "materials": {
+          "plaster": {
+            "texture": "plaster",
+            "scale": 0.5,
+            "tint": [238, 228, 214],
+            "normal": 0.5
+          },
+          "paper": {
+            "pattern": {
+              "kind": "stripes",
+              "period": 0.125,
+              "ratio": 0.5,
+              "colors": [[238, 226, 212], [212, 184, 172], [176, 132, 128]]
+            },
+            "roughness": 0.7
+          },
+          "wood": {
+            "color": [236, 232, 224],
+            "roughness": 0.4
+          },
+          "trim": {
+            "color": [240, 236, 228],
+            "roughness": 0.35
+          },
+          "frame": {
+            "color": [240, 236, 228],
+            "roughness": 0.35
+          },
+          "door": {
+            "color": [232, 228, 220],
+            "roughness": 0.4
+          }
+        }
+      },
+      "paper_trellis": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {
+          "plaster": "white_stucco"
+        },
+        "finish": {
+          "dado": 0.9,
+          "panels": [[0.22, 0.8]],
+          "skin": "paper"
+        },
+        "materials": {
+          "plaster": {
+            "texture": "plaster",
+            "scale": 0.5,
+            "tint": [236, 232, 214],
+            "normal": 0.5
+          },
+          "paper": {
+            "pattern": {
+              "kind": "trellis",
+              "period": [0.125, 0.18],
+              "width": 0.08,
+              "colors": [[236, 232, 212], [116, 146, 108], [196, 156, 98]]
+            },
+            "roughness": 0.7
+          },
+          "wood": {
+            "color": [120, 146, 112],
+            "roughness": 0.45
+          },
+          "trim": {
+            "color": [240, 237, 226],
+            "roughness": 0.35
+          },
+          "frame": {
+            "color": [240, 237, 226],
+            "roughness": 0.35
+          },
+          "door": {
+            "color": [226, 230, 214],
+            "roughness": 0.4
+          }
+        }
+      },
+      "paper_floral": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {
+          "plaster": "white_stucco",
+          "wood": "dark_wood",
+          "door": "walnut_veneer"
+        },
+        "finish": {
+          "dado": 0.95,
+          "skin": "paper"
+        },
+        "materials": {
+          "plaster": {
+            "texture": "plaster",
+            "scale": 0.5,
+            "tint": [236, 220, 212],
+            "normal": 0.5
+          },
+          "paper": {
+            "pattern": {
+              "kind": "floral",
+              "period": [0.125, 0.15],
+              "radius": 0.044,
+              "colors": [[234, 216, 206], [190, 102, 118], [222, 178, 94]]
+            },
+            "roughness": 0.7
+          },
+          "wood": {
+            "texture": "wood",
+            "scale": 1
+          },
+          "trim": {
+            "texture": "wood",
+            "scale": 1,
+            "tint": [200, 180, 170]
+          },
+          "frame": {
+            "texture": "wood",
+            "scale": 1,
+            "tint": [200, 180, 170]
+          }
+        }
+      },
+      "paper_deco": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {
+          "plaster": "white_stucco",
+          "walnut": "walnut_veneer",
+          "door": "walnut_veneer"
+        },
+        "finish": {
+          "dado": 0.95,
+          "skin": "paper"
+        },
+        "materials": {
+          "plaster": {
+            "texture": "plaster",
+            "scale": 0.5,
+            "tint": [60, 70, 104],
+            "normal": 0.5
+          },
+          "paper": {
+            "pattern": {
+              "kind": "fans",
+              "period": 0.25,
+              "colors": [[38, 48, 80], [204, 166, 92]]
+            },
+            "roughness": 0.55
+          },
+          "wood": {
+            "texture": "walnut",
+            "scale": 0.5,
+            "tint": [150, 110, 86]
+          },
+          "trim": {
+            "color": [184, 146, 80],
+            "roughness": 0.35,
+            "metallic": 0.6
+          },
+          "frame": {
+            "color": [30, 32, 40],
+            "roughness": 0.4
+          }
+        }
+      },
+      "esport": {
+        "height": 2.8,
+        "thickness": 0.15,
+        "textures": {
+          "plaster": "white_stucco"
+        },
+        "finish": {
+          "dado": 0,
+          "base": 0.08,
+          "crown": false,
+          "cap": true,
+          "leds": [
+            {
+              "z": 0.96,
+              "h": 0.025,
+              "mat": "neon"
+            },
+            {
+              "z": 2.52,
+              "h": 0.025,
+              "mat": "neon2"
+            }
+          ]
+        },
+        "materials": {
+          "plaster": {
+            "texture": "plaster",
+            "scale": 0.5,
+            "tint": [56, 52, 66],
+            "normal": 0.4
+          },
+          "trim": {
+            "color": [24, 22, 28],
+            "roughness": 0.4
+          },
+          "frame": {
+            "color": [24, 22, 28],
+            "roughness": 0.4,
+            "metallic": 0.3
+          },
+          "door": {
+            "color": [40, 38, 46],
+            "roughness": 0.45
+          },
+          "modern": {
+            "color": [36, 34, 42],
+            "roughness": 0.4
+          },
+          "neon": {
+            "emission": [190, 92, 255],
+            "strength": 6
+          },
+          "neon2": {
+            "emission": [70, 200, 255],
+            "strength": 6
+          }
         }
       }
     }
@@ -943,470 +1533,230 @@
   "avatars": [
     {
       "id": "a01",
-      "skin": [
-        198,
-        150,
-        118
-      ],
+      "skin": [198, 150, 118],
       "hair": {
         "style": "bob",
-        "color": [
-          52,
-          34,
-          24
-        ]
+        "color": [52, 34, 24]
       },
       "top": {
-        "color": [
-          180,
-          60,
-          110
-        ],
+        "color": [180, 60, 110],
         "sleeves": "short"
       },
       "bottom": {
         "style": "trousers",
-        "color": [
-          38,
-          52,
-          88
-        ]
+        "color": [38, 52, 88]
       },
       "shoes": {
-        "color": [
-          240,
-          240,
-          236
-        ]
+        "color": [240, 240, 236]
       }
     },
     {
       "id": "a02",
-      "skin": [
-        88,
-        56,
-        40
-      ],
+      "skin": [88, 56, 40],
       "hair": {
         "style": "curly",
-        "color": [
-          20,
-          16,
-          14
-        ]
+        "color": [20, 16, 14]
       },
       "top": {
-        "color": [
-          210,
-          170,
-          60
-        ],
+        "color": [210, 170, 60],
         "sleeves": "short"
       },
       "bottom": {
         "style": "trousers",
-        "color": [
-          28,
-          28,
-          30
-        ]
+        "color": [28, 28, 30]
       },
       "shoes": {
-        "color": [
-          240,
-          240,
-          236
-        ]
+        "color": [240, 240, 236]
       }
     },
     {
       "id": "a03",
-      "skin": [
-        236,
-        200,
-        178
-      ],
+      "skin": [236, 200, 178],
       "hair": {
         "style": "long",
-        "color": [
-          196,
-          160,
-          104
-        ]
+        "color": [196, 160, 104]
       },
       "top": {
-        "color": [
-          110,
-          160,
-          210
-        ],
+        "color": [110, 160, 210],
         "sleeves": "long"
       },
       "bottom": {
         "style": "trousers",
-        "color": [
-          190,
-          170,
-          140
-        ]
+        "color": [190, 170, 140]
       },
       "shoes": {
-        "color": [
-          110,
-          70,
-          45
-        ]
+        "color": [110, 70, 45]
       }
     },
     {
       "id": "a04",
-      "skin": [
-        128,
-        84,
-        58
-      ],
+      "skin": [128, 84, 58],
       "hair": {
         "style": "ponytail",
-        "color": [
-          20,
-          16,
-          14
-        ]
+        "color": [20, 16, 14]
       },
       "top": {
-        "color": [
-          120,
-          70,
-          170
-        ],
+        "color": [120, 70, 170],
         "sleeves": "short"
       },
       "bottom": {
         "style": "capri",
-        "color": [
-          100,
-          100,
-          105
-        ]
+        "color": [100, 100, 105]
       },
       "shoes": {
-        "color": [
-          28,
-          28,
-          30
-        ]
+        "color": [28, 28, 30]
       }
     },
     {
       "id": "a05",
-      "skin": [
-        222,
-        180,
-        150
-      ],
+      "skin": [222, 180, 150],
       "hair": {
         "style": "short",
-        "color": [
-          130,
-          52,
-          28
-        ]
+        "color": [130, 52, 28]
       },
       "top": {
-        "color": [
-          236,
-          236,
-          232
-        ],
+        "color": [236, 236, 232],
         "sleeves": "short"
       },
       "bottom": {
         "style": "trousers",
-        "color": [
-          80,
-          90,
-          60
-        ]
+        "color": [80, 90, 60]
       },
       "shoes": {
-        "color": [
-          28,
-          28,
-          30
-        ]
+        "color": [28, 28, 30]
       }
     },
     {
       "id": "a06",
-      "skin": [
-        168,
-        118,
-        84
-      ],
+      "skin": [168, 118, 84],
       "hair": {
         "style": "bun",
-        "color": [
-          52,
-          34,
-          24
-        ]
+        "color": [52, 34, 24]
       },
       "top": {
-        "color": [
-          40,
-          130,
-          130
-        ],
+        "color": [40, 130, 130],
         "sleeves": "long"
       },
       "bottom": {
         "style": "trousers",
-        "color": [
-          38,
-          52,
-          88
-        ]
+        "color": [38, 52, 88]
       },
       "shoes": {
-        "color": [
-          240,
-          240,
-          236
-        ]
+        "color": [240, 240, 236]
       }
     },
     {
       "id": "a07",
-      "skin": [
-        88,
-        56,
-        40
-      ],
+      "skin": [88, 56, 40],
       "hair": {
         "style": "short",
-        "color": [
-          20,
-          16,
-          14
-        ]
+        "color": [20, 16, 14]
       },
       "top": {
-        "color": [
-          230,
-          110,
-          90
-        ],
+        "color": [230, 110, 90],
         "sleeves": "short"
       },
       "bottom": {
         "style": "trousers",
-        "color": [
-          190,
-          170,
-          140
-        ]
+        "color": [190, 170, 140]
       },
       "shoes": {
-        "color": [
-          240,
-          240,
-          236
-        ]
+        "color": [240, 240, 236]
       }
     },
     {
       "id": "a08",
-      "skin": [
-        236,
-        200,
-        178
-      ],
+      "skin": [236, 200, 178],
       "hair": {
         "style": "ponytail",
-        "color": [
-          96,
-          58,
-          34
-        ]
+        "color": [96, 58, 34]
       },
       "top": {
-        "color": [
-          30,
-          30,
-          34
-        ],
+        "color": [30, 30, 34],
         "sleeves": "long"
       },
       "bottom": {
         "style": "trousers",
-        "color": [
-          100,
-          100,
-          105
-        ]
+        "color": [100, 100, 105]
       },
       "shoes": {
-        "color": [
-          170,
-          40,
-          50
-        ]
+        "color": [170, 40, 50]
       }
     },
     {
       "id": "a09",
-      "skin": [
-        198,
-        150,
-        118
-      ],
+      "skin": [198, 150, 118],
       "hair": {
         "style": "long",
-        "color": [
-          20,
-          16,
-          14
-        ]
+        "color": [20, 16, 14]
       },
       "top": {
-        "color": [
-          170,
-          40,
-          50
-        ],
+        "color": [170, 40, 50],
         "sleeves": "short"
       },
       "bottom": {
         "style": "trousers",
-        "color": [
-          38,
-          52,
-          88
-        ]
+        "color": [38, 52, 88]
       },
       "shoes": {
-        "color": [
-          28,
-          28,
-          30
-        ]
+        "color": [28, 28, 30]
       }
     },
     {
       "id": "a10",
-      "skin": [
-        128,
-        84,
-        58
-      ],
+      "skin": [128, 84, 58],
       "hair": {
         "style": "curly",
-        "color": [
-          96,
-          58,
-          34
-        ]
+        "color": [96, 58, 34]
       },
       "top": {
-        "color": [
-          236,
-          236,
-          232
-        ],
+        "color": [236, 236, 232],
         "sleeves": "long"
       },
       "bottom": {
         "style": "trousers",
-        "color": [
-          28,
-          28,
-          30
-        ]
+        "color": [28, 28, 30]
       },
       "shoes": {
-        "color": [
-          240,
-          240,
-          236
-        ]
+        "color": [240, 240, 236]
       }
     },
     {
       "id": "a11",
-      "skin": [
-        222,
-        180,
-        150
-      ],
+      "skin": [222, 180, 150],
       "hair": {
         "style": "bob",
-        "color": [
-          104,
-          60,
-          140
-        ]
+        "color": [104, 60, 140]
       },
       "top": {
-        "color": [
-          40,
-          50,
-          80
-        ],
+        "color": [40, 50, 80],
         "sleeves": "short"
       },
       "bottom": {
         "style": "trousers",
-        "color": [
-          190,
-          170,
-          140
-        ]
+        "color": [190, 170, 140]
       },
       "shoes": {
-        "color": [
-          240,
-          240,
-          236
-        ]
+        "color": [240, 240, 236]
       }
     },
     {
       "id": "a12",
-      "skin": [
-        168,
-        118,
-        84
-      ],
+      "skin": [168, 118, 84],
       "hair": {
         "style": "long",
-        "color": [
-          96,
-          58,
-          34
-        ]
+        "color": [96, 58, 34]
       },
       "top": {
-        "color": [
-          140,
-          140,
-          145
-        ],
+        "color": [140, 140, 145],
         "sleeves": "short"
       },
       "bottom": {
         "style": "capri",
-        "color": [
-          80,
-          90,
-          60
-        ]
+        "color": [80, 90, 60]
       },
       "shoes": {
-        "color": [
-          240,
-          240,
-          236
-        ]
+        "color": [240, 240, 236]
       }
     }
   ]

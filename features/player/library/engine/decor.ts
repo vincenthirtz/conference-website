@@ -23,6 +23,13 @@
 // La salle choisit son sol, son style et ses variantes (RoomDecor) ; une case
 // de mur sans variante est `plain`. Une variante inconnue, qui déborde ou en
 // chevauche une autre est ignorée (case simple) et signalée par wallIssues.
+//
+// Lot 12 : un appartement prend pour style son habillage de murs (`finish`)
+// et pour variantes ses fenêtres (`window`, `window_<style>`) et sa porte
+// (`door`, `door_<style>`), aux places de `apartmentOpenings`
+// (config/library/decor.ts). Fenêtres et portes sont dans l'ÉPAISSEUR du mur
+// (derrière gx = 0 / gy = 0) : aucune case du sol n'est prise, la pose des
+// meubles ne change pas.
 
 import { TILE_H, TILE_W } from './projection';
 
@@ -235,6 +242,36 @@ export function floorPatternMatrix(
 ): [number, number, number, number, number, number] {
   const s = 1 / pixelRatio;
   return [s, 0, 0, s, -floor.anchor.x * s, -floor.anchor.y * s];
+}
+
+/**
+ * Ce qui MANQUE au manifeste pour dessiner une liste de choix (lot 12) : un
+ * sol, un style de mur, ou une variante d'un style (de chaque côté, plus son
+ * bout de mur). Vide = tout se dessine en sprites. Sert aux tests et au
+ * diagnostic : le moteur, lui, retombe sur un mur plein ou procédural.
+ */
+export function missingDecor(
+  decor: ManifestDecor,
+  want: {
+    floors: readonly string[];
+    walls: readonly string[];
+    variants: readonly string[];
+  }
+): string[] {
+  const out: string[] = [];
+  for (const f of want.floors)
+    if (!Object.hasOwn(decor.floors, f)) out.push(`floor ${f}`);
+  for (const w of want.walls) {
+    if (!Object.hasOwn(decor.walls, w)) {
+      out.push(`wall ${w}`);
+      continue;
+    }
+    for (const side of ['left', 'right'] as const)
+      for (const v of [...want.variants, 'end'])
+        if (!Object.hasOwn(decor.walls[w][side], v))
+          out.push(`wall ${w} ${side} ${v}`);
+  }
+  return out;
 }
 
 /** Toutes les images de décor dont une salle a besoin (préchargement). */

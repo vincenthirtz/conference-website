@@ -13,6 +13,14 @@
 //     souris : au doigt, tout passe par `tap`.
 // Les mises à jour (`setRoomItems`, `setDecor`, `setPlayerAvatar`) se font
 // SANS remonter le contrôleur : caméra, avatar et images restent en place.
+//
+// MULTIJOUEUR (lot 5 phase B) : `syncRemoteAvatars` reçoit les autres
+// joueuses (et réveille la boucle), `showPlayerBubble` / `setPlayerMarker`
+// habillent la joueuse. En `walk`, un appui vise D'ABORD une autre joueuse
+// (boîte projetée, la plus en avant) → `onAvatarTap`, sans marcher ; sinon le
+// sol → marche + `onPlayerWalk(case)` ; l'arrivée → `onPlayerArrive`.
+// ZONES (lot 7, engine/hotspots.ts) : entre l'autre joueuse et le sol, un
+// appui sur une zone → `onHotspotTap`, sans marcher.
 
 import {
   avatarIdsOf,
@@ -25,7 +33,10 @@ import {
 import type { RoomDecor } from './decor';
 import { wallPlanIssues } from './decorRenderer';
 import type { GhostItem } from './editOverlay';
+import { headPoint } from './avatarOverlays';
+import { HotspotLayer, type HotspotTap, type LibraryHotspot } from './hotspots';
 import { FrameLoop, type FrameStats } from './loop';
+import { type Direction, isWalking, walkerTile } from './motion';
 import {
   canvasToWorld,
   centerCamera,
@@ -40,9 +51,10 @@ import {
   type Tile,
   type WallHit,
 } from './projection';
+import type { BubbleContent, RemoteAvatarInput } from './remotes';
 import { LibraryRenderer } from './renderer';
 import { layoutIssues, type RoomItem, type RoomModel } from './room';
-import { LibraryWorld } from './world';
+import { DEFAULT_BUBBLE_MS, LibraryWorld } from './world';
 
 export type ControllerStats = FrameStats & { avatars: number };
 
@@ -75,7 +87,23 @@ export type ControllerOptions = {
   onManifest?: (loaded: boolean) => void;
   /** Mode déco : survol, toucher, sortie du pointeur. */
   onTilePointer?: (p: TilePointer) => void;
+  /** `walk` : appui sur une AUTRE joueuse (au lieu de marcher) ; `false` : on marche quand même. */
+  onAvatarTap?: (tap: AvatarTap) => boolean | undefined;
+  /** `walk` : la joueuse part vers cette case (un appui = un appel). */
+  onPlayerWalk?: (goal: Tile) => void;
+  /** La joueuse est arrivée (case, direction). */
+  onPlayerArrive?: (tile: Tile, dir: Direction) => void;
+  /** Durée d'une bulle (ms) ; défaut DEFAULT_BUBBLE_MS. */
+  bubbleMs?: number;
+  /** Horloge des bulles (ms) : celle des `receivedAt` du temps réel. */
+  now?: () => number;
+  /** `walk` : zones interactives (engine/hotspots.ts) ; un appui → `onHotspotTap`. */
+  hotspots?: readonly LibraryHotspot[];
+  onHotspotTap?: (tap: HotspotTap) => void;
 };
+
+/** Un appui sur une autre joueuse ; `anchor` : au-dessus de sa tête, px CSS du conteneur. */
+export type AvatarTap = { userId: string; anchor: ScreenPoint };
 
 /** Au-delà de ce déplacement (px CSS), un appui devient un glisser. */
 const CLICK_SLOP = 5;
@@ -105,6 +133,11 @@ export class LibraryController {
   private manifest: LibraryManifest | null = null;
   /** Dernier survol signalé (évite d'appeler l'appelant à chaque pixel). */
   private lastHover = '';
+  private now: () => number;
+  /** Prochaine échéance de bulle (réveille la boucle de rendu à la demande). */
+  private bubbleTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Zones interactives (`ctrl.hotspots.set(...)`) : après les avatars, avant le sol. */
+  readonly hotspots: HotspotLayer;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -112,8 +145,10 @@ export class LibraryController {
     private opts: ControllerOptions
   ) {
     this.mode = opts.mode ?? 'walk';
+    this.now = opts.now ?? (() => Date.now());
     canvas.dataset.mode = this.mode;
     this.world = new LibraryWorld(opts.room, PLACEHOLDER_CATALOG);
+    this.world.bubbleMs = opts.bubbleMs ?? DEFAULT_BUBBLE_MS;
     this.world.addAvatar(
       opts.playerId,
       opts.playerStart,
@@ -124,9 +159,15 @@ export class LibraryController {
     this.images = new ImageCache(() => this.loop.request());
     this.renderer = new LibraryRenderer(canvas, this.images);
     this.renderer.playerId = opts.playerId;
+    this.hotspots = new HotspotLayer(canvas, opts.hotspots, this);
     this.loop = new FrameLoop(
       (dt) => this.tick(dt),
-      (s) => this.opts.onStats?.({ ...s, avatars: this.world.avatars.length })
+      (s) => {
+        // Repères e2e : cadence et temps JS d'une image animée.
+        canvas.dataset.fps = s.fps === null ? '' : s.fps.toFixed(0);
+        canvas.dataset.frameMs = s.frameMs.toFixed(2);
+        this.opts.onStats?.({ ...s, avatars: this.world.avatars.length });
+      }
     );
 
     canvas.addEventListener('pointerdown', this.onDown);
@@ -238,6 +279,48 @@ export class LibraryController {
     this.loop.request();
   }
 
+  /** Les autres joueuses de la salle (lot 5) : la boucle se réveille. */
+  syncRemoteAvatars(list: readonly RemoteAvatarInput[]): void {
+    this.world.syncRemoteAvatars(list, this.now());
+    this.scheduleBubbleExpiry();
+    this.loop.request();
+  }
+
+  /** La bulle de la joueuse (son propre signe, parti) ; null l'efface. */
+  showPlayerBubble(content: BubbleContent | null): void {
+    this.world.showBubble(this.opts.playerId, content, this.now());
+    this.scheduleBubbleExpiry();
+    this.loop.request();
+  }
+
+  /** Repère au-dessus de la joueuse (« discrète ») ; null l'efface. */
+  setPlayerMarker(text: string | null): void {
+    this.world.setMarker(this.opts.playerId, text);
+    this.loop.request();
+  }
+
+  /** Au-dessus de la tête d'un avatar, en px CSS du conteneur ; null s'il n'est pas là. */
+  avatarAnchor(id: string): ScreenPoint | null {
+    const a = this.world.avatar(id);
+    return a ? headPoint(a, this.cam) : null;
+  }
+
+  /** Une seule minuterie : la prochaine bulle échue redemande une image. */
+  private scheduleBubbleExpiry(): void {
+    if (this.bubbleTimer !== null) clearTimeout(this.bubbleTimer);
+    this.bubbleTimer = null;
+    const next = this.world.nextBubbleExpiry();
+    if (next === null || this.disposed) return;
+    this.bubbleTimer = setTimeout(
+      () => {
+        this.bubbleTimer = null;
+        if (this.world.pruneBubbles(this.now())) this.loop.request();
+        this.scheduleBubbleExpiry();
+      },
+      Math.max(0, next - this.now()) + 16
+    );
+  }
+
   /** Ce qui est sous un point du canvas (px CSS) : sol, mur, meuble. */
   pointerAt(
     p: ScreenPoint,
@@ -268,6 +351,8 @@ export class LibraryController {
   dispose(): void {
     this.disposed = true;
     this.loop.stop();
+    if (this.bubbleTimer !== null) clearTimeout(this.bubbleTimer);
+    this.bubbleTimer = null;
     this.ro?.disconnect();
     const c = this.canvas;
     c.removeEventListener('pointerdown', this.onDown);
@@ -282,15 +367,20 @@ export class LibraryController {
   private tick(dt: number): { keepGoing: boolean; frameMs: number } {
     const t0 = performance.now();
     this.world.update(dt);
+    this.world.pruneBubbles(this.now());
     this.draw();
     this.syncDebug();
+    for (const id of this.world.takeArrivals()) {
+      const me = id === this.opts.playerId ? this.world.avatar(id) : undefined;
+      if (me) this.opts.onPlayerArrive?.(walkerTile(me.walker), me.walker.dir);
+    }
     return {
       keepGoing: this.world.isActive(),
       frameMs: performance.now() - t0,
     };
   }
 
-  /** Repères lisibles par un test e2e (caméra, case de la joueuse). */
+  /** Repères lisibles par un test e2e (caméra, case de la joueuse, autres joueuses). */
   private syncDebug(): void {
     const { x, y, zoom } = this.cam;
     const camera = `${x.toFixed(2)},${y.toFixed(2)},${zoom.toFixed(4)}`;
@@ -304,6 +394,11 @@ export class LibraryController {
       this.canvas.dataset.playerTile = tile;
       this.debug.tile = tile;
     }
+    const remotes = String(
+      this.world.avatars.filter((a) => a.kind === 'remote').length
+    );
+    if (this.canvas.dataset.remoteAvatars !== remotes)
+      this.canvas.dataset.remoteAvatars = remotes;
   }
 
   /** Zoom qui fait tenir la salle et ses murs, centrée. */
@@ -379,7 +474,7 @@ export class LibraryController {
         }
         return;
       }
-      this.setHover(pickTile(p.x, p.y, this.cam, this.world.room));
+      this.setHover(this.hotspots.hover(this.world, this.cam, p));
       return;
     }
     this.pointers.set(e.pointerId, p);
@@ -439,10 +534,29 @@ export class LibraryController {
       this.opts.onTilePointer?.(info);
       return;
     }
+    // Une autre joueuse d'abord (son image passe devant le sol et les meubles).
+    const w = canvasToWorld(p, this.cam);
+    const other = this.opts.onAvatarTap
+      ? this.world.avatarAtScreen(w.x, w.y)
+      : null;
+    if (
+      other &&
+      this.opts.onAvatarTap?.({
+        userId: other.id,
+        anchor: headPoint(other, this.cam),
+      }) !== false
+    )
+      return;
+    const spot = this.hotspots.at(this.world, this.cam, p);
+    if (spot && this.opts.onHotspotTap) return this.opts.onHotspotTap(spot);
     const t = pickTile(p.x, p.y, this.cam, this.world.room);
     if (!t) return;
     if (e.pointerType !== 'mouse') this.setHover(t);
-    if (this.world.walkTo(this.opts.playerId, t)) this.loop.request();
+    if (!this.world.walkTo(this.opts.playerId, t)) return;
+    this.loop.request();
+    // Un appui = un message : seulement si la joueuse part vraiment.
+    const me = this.world.avatar(this.opts.playerId);
+    if (me && isWalking(me.walker)) this.opts.onPlayerWalk?.(t);
   };
 
   private onCancel = (e: PointerEvent): void => {
@@ -453,6 +567,7 @@ export class LibraryController {
 
   private onLeave = (e: PointerEvent): void => {
     if (e.pointerType !== 'mouse' || this.pointers.size !== 0) return;
+    this.hotspots.hover(this.world, this.cam, null);
     this.setHover(null);
     if (this.mode === 'edit') {
       this.lastHover = '';
