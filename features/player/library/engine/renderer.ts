@@ -10,6 +10,12 @@
 // ils sont procéduraux. L'ombre au sol des avatars est toujours dessinée ici
 // (elle n'est pas cuite dans les sprites). Pseudos, repère « discrète » et
 // bulles passent en DERNIER, par-dessus tout (avatarOverlays.ts).
+//
+// ASSISES ET ALLONGÉES (lot 15) : sorties du tri, elles sont ATTACHÉES à leur
+// meuble — dessinées juste après lui, sauf celles qui tournent le dos à la
+// caméra sur un siège à dossier (`behind`), dessinées juste avant (le dossier
+// les cache). Leur ombre passe avant le meuble. Un meuble absent du dessin
+// (caché, fantôme) : elles rejoignent le tri comme les autres.
 
 import type { ImageCache, LibraryManifest, SpriteFrame } from './assets';
 import {
@@ -17,13 +23,7 @@ import {
   drawAvatarOverlays,
   ElideCache,
 } from './avatarOverlays';
-import {
-  animationFor,
-  avatarFrame,
-  frameDestination,
-  type SheetRef,
-  sheetMatchesImage,
-} from './avatarSprites';
+import { AvatarPainter } from './avatarPainter';
 import {
   drawFloorSprite,
   drawWallShade,
@@ -37,13 +37,8 @@ import {
   GHOST_ALPHA,
   type GhostItem,
 } from './editOverlay';
-import { drawLookAvatar } from './lookCompositor';
-import { isWalking, tileCenter } from './motion';
-import {
-  drawAvatarPlaceholder,
-  drawAvatarShadow,
-  drawFurniturePlaceholder,
-} from './placeholders';
+import { tileCenter } from './motion';
+import { drawFurniturePlaceholder } from './placeholders';
 import {
   type Camera,
   gridToScreen,
@@ -52,8 +47,9 @@ import {
   TILE_H,
   TILE_W,
 } from './projection';
+import { frontPanels } from './interactions';
 import {
-  avatarBox,
+  type FurnitureCatalog,
   itemBox,
   itemTiles,
   layerOf,
@@ -61,6 +57,7 @@ import {
   type RoomModel,
   specOf,
 } from './room';
+import { stanceBox } from './stance';
 import type { AvatarEntity, LibraryWorld } from './world';
 
 type Ctx = CanvasRenderingContext2D;
@@ -291,12 +288,8 @@ function drawPathDots(ctx: Ctx, avatar: AvatarEntity): void {
   }
 }
 
-/** Décalage d'horloge stable par avatar (les bots ne respirent pas en chœur). */
-function phaseOffset(id: string): number {
-  let h = 0;
-  for (let k = 0; k < id.length; k++) h = (h * 31 + id.charCodeAt(k)) >>> 0;
-  return (h % 1000) / 1000;
-}
+/** Les avatars posés sur un meuble : avant lui (dos à la caméra), après lui. */
+type Attached = { before: AvatarEntity[]; after: AvatarEntity[] };
 
 export class LibraryRenderer {
   private ctx: Ctx;
@@ -309,8 +302,7 @@ export class LibraryRenderer {
   selectedId: string | null = null;
   /** Le meuble qu'on déplace : caché à sa place d'origine. */
   hiddenId: string | null = null;
-  /** Feuille d'avatar conforme à sa taille annoncée, par URL de feuille. */
-  private sheetVerdict = new Map<string, boolean>();
+  private painter: AvatarPainter;
   private patterns = new PatternCache();
   private elide = new ElideCache();
   /** Police des pseudos et bulles : celle de la page (Work Sans). */
@@ -323,6 +315,7 @@ export class LibraryRenderer {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas 2D unavailable');
     this.ctx = ctx;
+    this.painter = new AvatarPainter(ctx, images, () => this.manifest);
     const family =
       typeof getComputedStyle === 'function'
         ? getComputedStyle(canvas).fontFamily
@@ -345,23 +338,6 @@ export class LibraryRenderer {
     return m.furniture[item.key].rotations[item.r] ?? null;
   }
 
-  /**
-   * Taille de la feuille chargée conforme au manifeste ? Vérifié une fois par
-   * feuille (le verdict est gardé) ; une feuille non conforme est écartée et
-   * signalée une seule fois — l'avatar garde sa silhouette pour cette pose.
-   */
-  private sheetUsable(ref: SheetRef, img: HTMLImageElement): boolean {
-    const known = this.sheetVerdict.get(ref.src);
-    if (known !== undefined) return known;
-    const ok = sheetMatchesImage(ref, img);
-    if (!ok)
-      console.warn(
-        `[library] avatar sheet ${ref.src}: ${img.naturalWidth}×${img.naturalHeight}, expected ${ref.width}×${ref.height}`
-      );
-    this.sheetVerdict.set(ref.src, ok);
-    return ok;
-  }
-
   /** Pose un sprite de meuble par son ancre ; false s'il n'est pas prêt. */
   private drawFurnitureSprite(item: RoomItem): boolean {
     const frame = this.frameOf(item);
@@ -379,40 +355,80 @@ export class LibraryRenderer {
     return true;
   }
 
+  /** Un avatar debout (ou rejeté du meuble) : ombre puis image. */
+  private drawAvatar(a: AvatarEntity, timeSec: number): boolean {
+    this.painter.shadow(a, a.id === this.playerId);
+    return this.painter.body(a, timeSec);
+  }
+
   /**
-   * Image de l'avatar, posée par son ancre (miroir compris) ; false si
-   * l'avatar n'a pas d'entrée, que la direction manque, ou que la feuille de
-   * l'image n'est pas (encore) prête ou n'a pas la taille annoncée. Seule la
-   * feuille de l'image dessinée est demandée au cache : celle de `sit` n'est
-   * chargée que si un avatar s'assoit.
+   * Les assises et allongées attachées à leur meuble, du fond vers l'avant
+   * de chaque côté ; celles dont le meuble n'est pas dessiné restent libres.
    */
-  private drawAvatarSprite(a: AvatarEntity, timeSec: number): boolean {
-    const m = this.manifest;
-    if (!m || !a.avatarId || !Object.hasOwn(m.avatars, a.avatarId))
-      return false;
-    const sheet = m.avatars[a.avatarId];
-    const w = a.walker;
-    const pose = isWalking(w) ? 'walk' : 'idle';
-    const f = avatarFrame(sheet, w.dir, pose, {
-      timeSec: timeSec + phaseOffset(a.id),
-      travelledMeters: w.travelled * METERS_PER_TILE,
-    });
-    if (!f) return false;
-    const ref = animationFor(sheet, pose).anim.sheet;
-    const img = this.images.get(f.src);
-    if (!img || !this.sheetUsable(ref, img)) return false;
-    const d = frameDestination(f, gridToScreen(w.x, w.y), m.pixelRatio);
-    const { ctx } = this;
-    if (!f.mirrored) {
-      ctx.drawImage(img, f.sx, f.sy, f.sw, f.sh, d.x, d.y, d.w, d.h);
-      return true;
+  private attach(
+    world: LibraryWorld,
+    drawn: ReadonlySet<string>
+  ): { attached: Map<string, Attached>; free: AvatarEntity[] } {
+    const attached = new Map<string, Attached>();
+    const free: AvatarEntity[] = [];
+    for (const a of world.avatars) {
+      const p = a.posture;
+      if (!p || p.kind !== 'seat' || !drawn.has(p.itemId)) {
+        free.push(a);
+        continue;
+      }
+      let slot = attached.get(p.itemId);
+      if (!slot) {
+        slot = { before: [], after: [] };
+        attached.set(p.itemId, slot);
+      }
+      (p.behind ? slot.before : slot.after).push(a);
     }
-    ctx.save();
-    ctx.translate(d.x + d.w, d.y);
-    ctx.scale(-1, 1);
-    ctx.drawImage(img, f.sx, f.sy, f.sw, f.sh, 0, 0, d.w, d.h);
-    ctx.restore();
-    return true;
+    const depth = (a: AvatarEntity) => centerDepth(stanceBox(a));
+    for (const slot of attached.values()) {
+      slot.before.sort((x, y) => depth(x) - depth(y));
+      slot.after.sort((x, y) => depth(x) - depth(y));
+    }
+    return { attached, free };
+  }
+
+  /**
+   * Un meuble et ses avatars posés : ombres, ceux d'avant, lui, ceux
+   * d'après — puis, s'il y en a, ses panneaux tournés vers la caméra (tête
+   * de lit, dossier d'une banquette) redessinés par-dessus eux.
+   */
+  private drawWithAttached(
+    item: RoomItem,
+    box: Box3,
+    slot: Attached | undefined,
+    timeSec: number,
+    catalog: FurnitureCatalog
+  ): number {
+    let sprites = 0;
+    for (const a of slot?.after ?? [])
+      this.painter.shadow(a, a.id === this.playerId);
+    for (const a of slot?.before ?? [])
+      if (this.drawAvatar(a, timeSec)) sprites++;
+    const sprite = this.drawItem(item, box, false);
+    if (sprite) sprites++;
+    for (const a of slot?.after ?? [])
+      if (this.painter.body(a, timeSec)) sprites++;
+    if (!sprite || !slot?.after.length) return sprites;
+    for (const quad of frontPanels(item, catalog)) {
+      const { ctx } = this;
+      ctx.save();
+      ctx.beginPath();
+      quad.forEach(([x, y, z], k) => {
+        const p = gridToScreen(x, y, z);
+        if (k === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.closePath();
+      ctx.clip();
+      this.drawFurnitureSprite(item);
+      ctx.restore();
+    }
+    return sprites;
   }
 
   /** Un meuble, sprite ou remplaçant ; le fantôme en transparence. */
@@ -505,35 +521,29 @@ export class LibraryRenderer {
         ghost,
         box: itemBox(item, specOf(world.catalog, item.key)),
       });
-    for (const avatar of world.avatars)
-      drawables.push({
-        kind: 'avatar',
-        avatar,
-        box: avatarBox(avatar.walker.x, avatar.walker.y),
-      });
+    const { attached, free } = this.attach(
+      world,
+      new Set(objects.filter((o) => !o.ghost).map((o) => o.item.id))
+    );
+    for (const avatar of free)
+      drawables.push({ kind: 'avatar', avatar, box: stanceBox(avatar) });
 
     for (const d of depthSort(drawables)) {
-      if (d.kind === 'item') {
-        if (this.drawItem(d.item, d.box, d.ghost === true)) sprites++;
+      if (d.kind === 'avatar') {
+        if (this.drawAvatar(d.avatar, timeSec)) sprites++;
         continue;
       }
-      const a = d.avatar;
-      const w = a.walker;
-      drawAvatarShadow(ctx, w.x, w.y, a.id === this.playerId);
-      // Avatar composé (lot 13), sinon la feuille de son `avatarId`.
-      if (
-        drawLookAvatar(ctx, this.images, a, timeSec, phaseOffset(a.id)) ||
-        this.drawAvatarSprite(a, timeSec)
-      )
-        sprites++;
-      else
-        drawAvatarPlaceholder(ctx, w.x, w.y, {
-          hue: a.hue,
-          dir: w.dir,
-          walking: isWalking(w),
-          // Un cycle de jambes tous les ~0,7 m.
-          phase: (w.travelled * METERS_PER_TILE * Math.PI * 2) / 0.7,
-        });
+      if (d.ghost) {
+        if (this.drawItem(d.item, d.box, true)) sprites++;
+        continue;
+      }
+      sprites += this.drawWithAttached(
+        d.item,
+        d.box,
+        attached.get(d.item.id),
+        timeSec,
+        world.catalog
+      );
     }
 
     // Contour de la sélection, par-dessus tout : visible même derrière un

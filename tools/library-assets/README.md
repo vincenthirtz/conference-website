@@ -13,6 +13,7 @@ node tools/library-assets/build.mjs --only a03         # un seul avatar (~2 min)
 node tools/library-assets/build.mjs --only lamp,globe --samples 128
 node tools/library-assets/build.mjs --kind avatars-repack --quality 90  # grilles → feuilles empaquetées
 node tools/library-assets/build.mjs --kind furniture --missing   # reprise : saute ce qui est rendu
+node tools/library-assets/build.mjs --kind avatars --poses lie,sit_low --missing  # poses ajoutées (~7 min)
 node tools/library-assets/build.mjs --kind none                  # réécrit manifeste, CREDITS, brouillon
 ```
 
@@ -22,7 +23,13 @@ manifeste qu'il ne touche pas.
 
 - **Reprise** : `--missing` saute un meuble déjà au manifeste dont les 4 images existent. Un long
   build interrompu (le grand catalogue prend environ 1 h 30) se relance avec `--missing`, et
-  `--only` reste combinable.
+  `--only` reste combinable. Pour les avatars, il saute celui dont toutes les poses demandées
+  sont au manifeste, feuilles présentes.
+- **Poses ajoutées** : `--poses lie,sit_low` ne rend que ces poses (par groupes entiers :
+  `idle,walk,sit` se rendent ensemble, `lie` et `sit_low` chacune seule) et les **fusionne** dans
+  l'entrée existante de l'avatar. Ses autres animations, sa feuille et leurs rects ne bougent pas
+  (le diff du manifeste n'est fait que d'ajouts). Sans `--poses`, un avatar est rendu dans toutes
+  ses poses.
 - **Écriture par fusion** : `build.mjs` relit `manifest.json` juste avant chaque écriture et n'y
   remplace que les entrées qu'il vient de rendre (meubles, sols, styles de murs, avatars). Un build
   de meubles et un build de décor ou d'avatars lancés en même temps ne s'écrasent donc pas. Une
@@ -55,7 +62,8 @@ manifeste qu'il ne touche pas.
 - **Cache** : les sources téléchargées vont dans `LIBRARY_ASSETS_CACHE`, par défaut
   `~/.cache/womens-library-assets`. Elles ne sont jamais versionnées.
 - **Sortie** : `public/library/spike/` contient `furniture/<clé>_r{0..3}.webp`,
-  `decor/<fichier>.webp`, `avatars/<id>.webp` et `avatars/<id>-sit.webp`, `manifest.json` et
+  `decor/<fichier>.webp`, `avatars/<id>.webp` et `avatars/<id>-{sit,lie,sit_low}.webp`,
+  `manifest.json` et
   `CREDITS.md` (une ligne par
   source, avec ses usages). Le manifeste est réécrit après chaque rendu, donc un build interrompu
   garde ce qui est fait. Le build écrit aussi [catalog-draft.json](catalog-draft.json) (voir plus
@@ -74,7 +82,8 @@ des deux côtés. Il est défini dans [iso_common.py](iso_common.py).
   px d'image, et une case en `gy` (−64, +32).
 - **Ancre** : le pixel de l'image où tombe l'origine du monde.
   - Pour un meuble, c'est le coin d'origine de l'empreinte, le sommet haut du losange.
-  - Pour un avatar, c'est le point au sol entre ses pieds.
+  - Pour un avatar debout, c'est le point au sol entre ses pieds ; assise (`sit`, `sit_low`) ou
+    allongée (`lie`), le point au sol sous l'articulation du bassin.
 - **Lumière** : le soleil vient de la gauche de l'écran, pareil pour tous les rendus.
   - Les ombres des meubles sont dans leur sprite et tombent vers l'avant à droite.
   - Les avatars n'ont pas d'ombre cuite : le moteur dessine une ellipse.
@@ -245,7 +254,11 @@ fichier.
     "idle": { "fps": 1, "directions": { "0": [ { "x": 0, "y": 0, "w": 96, "h": 310, "ax": 48, "ay": 300 } ], … "7": [ … ] } },
     "walk": { "fps": 10, "strideMeters": 1.33, "directions": { "0": [ 8 rects ], … } },
     "sit":  { "fps": 1, "sheet": "/library/spike/avatars/a01-sit.webp", "sheetWidth": 480,
-              "sheetHeight": 489, "directions": { … } }
+              "sheetHeight": 489, "directions": { … } },
+    "lie":  { "sheet": "/library/spike/avatars/a01-lie.webp", "fps": 1, "sheetWidth": 710,
+              "sheetHeight": 542, "directions": { "0": [ { "x": 2, "y": 2, "w": 94, "h": 209,
+              "ax": 47, "ay": 208 } ], … } },
+    "sit_low": { "sheet": "/library/spike/avatars/a01-sit_low.webp", … même forme }
   }
 }
 ```
@@ -256,7 +269,26 @@ fichier.
 - **Attente** (`idle`) : 1 image. **Marche** (`walk`) : 8 images ; `strideMeters` (1,33 m) est la
   distance d'un cycle complet, et le moteur avance les images selon la distance parcourue.
 - **Assise** (`sit`) : 1 image, dans sa propre feuille, chargée seulement quand un avatar
-  s'assoit. La hanche est à 54 cm, soit une assise à 45 cm.
+  s'assoit. La hanche est à 54 cm, soit une assise à 45 cm (`SEAT_HEIGHT`). Le bassin est 3 cm
+  devant l'ancre.
+- **Allongée** (`lie`, lot 15b) : 1 image, dans sa propre feuille. Sur le dos, le dos posé sur
+  une surface à **0,55 m** du sol (`LIE_SURFACE_M` : c'est le tissu qui touche, la peau des fesses
+  est à 0,56 m), les **pieds vers la direction d** (celle du corps debout), la tête à l'opposé,
+  relevée comme sur un oreiller ; bras le long du corps, jambes droites un peu écartées. L'ancre
+  est le point au sol **exactement sous l'articulation du bassin** (à 0,70 m). Mesures depuis
+  l'ancre, le long du corps : talons à **0,88 m** vers d (bout des pieds 0,96 m, chaussures
+  0,97 m), sommet du crâne à **0,74 m** à l'opposé (0,75 à 0,79 m avec les cheveux, l'afro le plus
+  long) ; demi-largeur **0,24 m** (0,25 m avec la tenue). Un lit de 2 m tient donc le corps entier
+  si l'ancre est à ~1 m de son pied.
+- **Assise basse** (`sit_low`, lot 15b) : 1 image, dans sa propre feuille. Pouf ou coussin de
+  sol : l'assise à **0,20 m** (`SIT_LOW_HEIGHT_M`, la hanche 9 cm au-dessus comme pour `sit`),
+  genoux relevés (~0,46 m), pieds à plat au sol devant elle, mains sur les genoux ; tournée vers
+  d. L'ancre est le point au sol exactement sous le bassin.
+- Chaque groupe de poses a son propre cadre de rendu (`idle`+`walk`+`sit` gardent le leur) : seuls
+  les rects et leurs ancres comptent, l'échelle (PPM) est la même partout. Comme pour `sit`, le
+  recadrage garde l'ancre dans le rect : une image `lie` descend jusqu'au sol (≈ 100 px
+  transparents sous le corps).
+- Tant qu'une pose manque, le moteur retombe sur `sit` (lot 15).
 - **Directions** : de 0 (haut de l'écran) à 7, dans le sens horaire, 4 étant vers la caméra. Les
   8 directions sont toutes rendues, sans miroir, pour que la lumière reste cohérente. Si une
   direction manque, le moteur prend son miroir `(8 − d) % 8` (ancre `ax → w − ax`).
@@ -283,11 +315,13 @@ Le corps vient du bundle ; [render_avatar.py](render_avatar.py) fabrique tout le
 Un avatar COMPOSÉ (look : carnation, coiffure, tenue et couleurs, `config/library/avatarLook.ts`
 de l'API) est fait de calques rendus séparément par
 [render_avatar_layers.py](render_avatar_layers.py), avec les briques de `render_avatar.py`, sur
-les mêmes 80 images (même squelette, caméra, lumière et cadre, donc même ancre) :
+les mêmes images (même squelette, caméra, lumière et, pour une même pose, même cadre, donc même
+ancre) :
 
 ```powershell
-node tools/library-assets/render_layers.mjs                 # tous les calques (~45 min, reprend)
+node tools/library-assets/render_layers.mjs                 # tous les calques (~50 min, reprend)
 node tools/library-assets/render_layers.mjs --only hair.afro,top.coat
+node tools/library-assets/render_layers.mjs --poses lie,sit_low        # poses ajoutées seules (~5 min)
 node tools/library-assets/render_layers.mjs --preview --only body.s3   # aperçu dans le cache
 node tools/library-assets/render_layers.mjs --index         # réécrit l'index seul
 ```
@@ -303,9 +337,9 @@ node tools/library-assets/render_layers.mjs --index         # réécrit l'index 
   jambe nus ne sort du pipeline**. Haut et bas sont réservés par le corps découvert (tête, cou,
   bras, mains, chaussures) et l'un par l'autre ; les cheveux par le corps découvert et la tenue la
   plus courte (t-shirt), contenue dans toutes les autres. Détails en tête du script.
-- **Sortie** : `public/library/spike/avatars/layers/<calque>-{idle,walk,sit}.webp` (une feuille
-  par animation : une salle où l'on reste debout ne décode jamais la marche) et l'index
-  `layers.json`, À CÔTÉ du manifeste (qui ne grossit pas) :
+- **Sortie** : `public/library/spike/avatars/layers/<calque>-{idle,walk,sit,lie,sit_low}.webp`
+  (une feuille par animation : une salle où l'on reste debout ne décode jamais la marche) et
+  l'index `layers.json`, À CÔTÉ du manifeste (qui ne grossit pas) :
 
 ```jsonc
 { "version": 1, "tile": { "width": 64, "height": 32, "meters": 0.5 }, "pixelRatio": 2,
@@ -314,12 +348,24 @@ node tools/library-assets/render_layers.mjs --index         # réécrit l'index 
     "idle": { "sheet": "/library/spike/avatars/layers/hair.bob-idle.webp", "width": 412, "height": 233,
               "fps": 1, "directions": [ [ [x, y, w, h, ax, ay] ], … × 8 ] },
     "walk": { …, "fps": 10, "strideMeters": 1.33, "directions": [ [ 8 rects ], … × 8 ] },
-    "sit":  { … } } } }
+    "sit":  { … },
+    "lie":  { "sheet": "/library/spike/avatars/layers/hair.bob-lie.webp", "width": …, "height": …,
+              "fps": 1, "directions": [ [ [x, y, w, h, ax, ay] ], … × 8 ] },
+    "sit_low": { … même forme } } } }
 ```
 
+- `lie` et `sit_low` : mêmes poses, constantes et ancre que les avatars entiers (section
+  précédente). Recadrage serré : l'ancre d'une image `lie` tombe hors du rect (≈ 0,55 m sous le
+  corps).
 - **Reprise** : les metas par calque restent dans le cache (`avatar-layers/<calque>.json`, avec
   l'empreinte de leur spec) ; un calque déjà rendu avec la même empreinte est sauté. Un seul
   Blender à la fois.
+- **Poses ajoutées** : chacune a sa meta, `avatar-layers/<calque>@<pose>.json`, avec son cadre
+  et son empreinte, qui contient la définition de la pose (retoucher `pose_lie` ne refait que
+  `lie`). La base (`<calque>.json` : idle, walk, sit) garde l'empreinte du lot 13 : `--poses
+  lie,sit_low` ne la relit ni ne la réécrit. L'index fusionne la base et les poses ajoutées
+  présentes, et dit lesquelles manquent ; un calque sans `lie` reste à l'index avec ses autres
+  poses.
 - Aucune source nouvelle : le corps du bundle CC0 et la HDRI déjà listés (rien à ajouter à
   `CREDITS.md`).
 

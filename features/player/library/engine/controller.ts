@@ -15,12 +15,12 @@
 // SANS remonter le contrôleur : caméra, avatar et images restent en place.
 //
 // MULTIJOUEUR (lot 5 phase B) : `syncRemoteAvatars` reçoit les autres
-// joueuses (et réveille la boucle), `showPlayerBubble` / `setPlayerMarker`
-// habillent la joueuse. En `walk`, un appui vise D'ABORD une autre joueuse
-// (boîte projetée, la plus en avant) → `onAvatarTap`, sans marcher ; sinon le
-// sol → marche + `onPlayerWalk(case)` ; l'arrivée → `onPlayerArrive`.
-// ZONES (lot 7, engine/hotspots.ts) : entre l'autre joueuse et le sol, un
-// appui sur une zone → `onHotspotTap`, sans marcher.
+// joueuses, `showPlayerBubble` / `setPlayerMarker` habillent la joueuse.
+// En `walk`, un appui vise, DANS L'ORDRE : une autre joueuse → `onAvatarTap` ;
+// une zone (lot 7, engine/hotspots.ts) → `onHotspotTap` ; un meuble
+// interactif (lot 15, engine/playerActions.ts : s'asseoir, s'allonger, s'en
+// servir) ; sinon le sol → marche + `onPlayerWalk` ; l'arrivée →
+// `onPlayerArrive`. En `edit`, aucune interaction (la joueuse se relève).
 
 import {
   avatarIdsOf,
@@ -31,12 +31,17 @@ import {
   PLACEHOLDER_CATALOG,
 } from './assets';
 import type { RoomDecor } from './decor';
+import { DebugMarks } from './debugMarks';
 import { wallPlanIssues } from './decorRenderer';
 import type { GhostItem } from './editOverlay';
 import { headPoint } from './avatarOverlays';
 import { HotspotLayer, type HotspotTap, type LibraryHotspot } from './hotspots';
 import { FrameLoop, type FrameStats } from './loop';
-import { type Direction, isWalking, walkerTile } from './motion';
+import {
+  type InteractionOptions,
+  PlayerActions,
+  type PlayerCallbacks,
+} from './playerActions';
 import {
   canvasToWorld,
   centerCamera,
@@ -73,7 +78,7 @@ export type TilePointer = {
   pointerType: string;
 };
 
-export type ControllerOptions = {
+export type ControllerOptions = PlayerCallbacks & {
   room: RoomModel;
   playerId: string;
   playerStart: Tile;
@@ -89,10 +94,8 @@ export type ControllerOptions = {
   onTilePointer?: (p: TilePointer) => void;
   /** `walk` : appui sur une AUTRE joueuse (au lieu de marcher) ; `false` : on marche quand même. */
   onAvatarTap?: (tap: AvatarTap) => boolean | undefined;
-  /** `walk` : la joueuse part vers cette case (un appui = un appel). */
-  onPlayerWalk?: (goal: Tile) => void;
-  /** La joueuse est arrivée (case, direction). */
-  onPlayerArrive?: (tile: Tile, dir: Direction) => void;
+  /** Lot 15 : les meubles proposés (noms traduits) et les pictogrammes. */
+  interactions?: InteractionOptions;
   /** Durée d'une bulle (ms) ; défaut DEFAULT_BUBBLE_MS. */
   bubbleMs?: number;
   /** Horloge des bulles (ms) : celle des `receivedAt` du temps réel. */
@@ -128,7 +131,7 @@ export class LibraryController {
   private drag: Drag | null = null;
   private pinch: Pinch | null = null;
   private disposed = false;
-  private debug = { camera: '', tile: '' };
+  private debug: DebugMarks;
   private mode: ControllerMode;
   private manifest: LibraryManifest | null = null;
   /** Dernier survol signalé (évite d'appeler l'appelant à chaque pixel). */
@@ -138,6 +141,8 @@ export class LibraryController {
   private bubbleTimer: ReturnType<typeof setTimeout> | null = null;
   /** Zones interactives (`ctrl.hotspots.set(...)`) : après les avatars, avant le sol. */
   readonly hotspots: HotspotLayer;
+  /** Les gestes de la joueuse sur les meubles et le sol (lot 15). */
+  private actions: PlayerActions;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -147,6 +152,7 @@ export class LibraryController {
     this.mode = opts.mode ?? 'walk';
     this.now = opts.now ?? (() => Date.now());
     canvas.dataset.mode = this.mode;
+    this.debug = new DebugMarks(canvas);
     this.world = new LibraryWorld(opts.room, PLACEHOLDER_CATALOG);
     this.world.bubbleMs = opts.bubbleMs ?? DEFAULT_BUBBLE_MS;
     this.world.addAvatar(
@@ -160,6 +166,13 @@ export class LibraryController {
     this.renderer = new LibraryRenderer(canvas, this.images);
     this.renderer.playerId = opts.playerId;
     this.hotspots = new HotspotLayer(canvas, opts.hotspots, this);
+    this.actions = new PlayerActions(
+      this.world,
+      opts.playerId,
+      () => this.opts,
+      () => this.cam,
+      opts.interactions
+    );
     this.loop = new FrameLoop(
       (dt) => this.tick(dt),
       (s) => {
@@ -229,6 +242,7 @@ export class LibraryController {
   /** `walk` : un clic fait marcher ; `edit` : un clic est signalé, sans marcher. */
   setMode(mode: ControllerMode): void {
     if (mode === this.mode) return;
+    if (mode === 'edit') this.actions.standUp();
     this.mode = mode;
     this.canvas.dataset.mode = mode;
     this.lastHover = '';
@@ -296,6 +310,18 @@ export class LibraryController {
   /** Repère au-dessus de la joueuse (« discrète ») ; null l'efface. */
   setPlayerMarker(text: string | null): void {
     this.world.setMarker(this.opts.playerId, text);
+    this.loop.request();
+  }
+
+  /** Lot 15 : les meubles proposés (noms traduits) ; null : aucun. */
+  setInteractions(options: InteractionOptions | null): void {
+    this.actions.set(options);
+    this.loop.request();
+  }
+
+  /** « Se lever » / « Arrêter » (lot 15). */
+  standUp(): void {
+    this.actions.standUp();
     this.loop.request();
   }
 
@@ -369,36 +395,12 @@ export class LibraryController {
     this.world.update(dt);
     this.world.pruneBubbles(this.now());
     this.draw();
-    this.syncDebug();
-    for (const id of this.world.takeArrivals()) {
-      const me = id === this.opts.playerId ? this.world.avatar(id) : undefined;
-      if (me) this.opts.onPlayerArrive?.(walkerTile(me.walker), me.walker.dir);
-    }
+    this.debug.sync(this.cam, this.world, this.opts.playerId);
+    this.actions.notify(this.world.takeArrivals().includes(this.opts.playerId));
     return {
       keepGoing: this.world.isActive(),
       frameMs: performance.now() - t0,
     };
-  }
-
-  /** Repères lisibles par un test e2e (caméra, case de la joueuse, autres joueuses). */
-  private syncDebug(): void {
-    const { x, y, zoom } = this.cam;
-    const camera = `${x.toFixed(2)},${y.toFixed(2)},${zoom.toFixed(4)}`;
-    if (camera !== this.debug.camera) {
-      this.canvas.dataset.camera = camera;
-      this.debug.camera = camera;
-    }
-    const t = this.world.tileOf(this.opts.playerId);
-    const tile = t ? `${t.i},${t.j}` : '';
-    if (tile !== this.debug.tile) {
-      this.canvas.dataset.playerTile = tile;
-      this.debug.tile = tile;
-    }
-    const remotes = String(
-      this.world.avatars.filter((a) => a.kind === 'remote').length
-    );
-    if (this.canvas.dataset.remoteAvatars !== remotes)
-      this.canvas.dataset.remoteAvatars = remotes;
   }
 
   /** Zoom qui fait tenir la salle et ses murs, centrée. */
@@ -425,7 +427,7 @@ export class LibraryController {
     this.renderer.resize(r.width, r.height, window.devicePixelRatio || 1);
     // Redimensionner vide le tampon : on redessine tout de suite.
     this.draw();
-    this.syncDebug();
+    this.debug.sync(this.cam, this.world, this.opts.playerId);
   };
 
   private local(e: { clientX: number; clientY: number }): ScreenPoint {
@@ -474,7 +476,9 @@ export class LibraryController {
         }
         return;
       }
-      this.setHover(this.hotspots.hover(this.world, this.cam, p));
+      this.setHover(
+        this.hotspots.hover(this.world, this.cam, p, this.actions.hoverAt)
+      );
       return;
     }
     this.pointers.set(e.pointerId, p);
@@ -549,14 +553,12 @@ export class LibraryController {
       return;
     const spot = this.hotspots.at(this.world, this.cam, p);
     if (spot && this.opts.onHotspotTap) return this.opts.onHotspotTap(spot);
+    // Un meuble interactif : y aller, puis s'asseoir ou s'en servir.
+    if (this.actions.tap(w.x, w.y)) return this.loop.request();
     const t = pickTile(p.x, p.y, this.cam, this.world.room);
     if (!t) return;
     if (e.pointerType !== 'mouse') this.setHover(t);
-    if (!this.world.walkTo(this.opts.playerId, t)) return;
-    this.loop.request();
-    // Un appui = un message : seulement si la joueuse part vraiment.
-    const me = this.world.avatar(this.opts.playerId);
-    if (me && isWalking(me.walker)) this.opts.onPlayerWalk?.(t);
+    if (this.actions.walk(t)) this.loop.request();
   };
 
   private onCancel = (e: PointerEvent): void => {

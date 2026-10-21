@@ -47,8 +47,15 @@ vi.mock('next/dynamic', async () => {
       userId: string;
       anchor: { x: number; y: number };
     }) => void;
-    onPlayerWalk?: (goal: { i: number; j: number }) => void;
-    onPlayerArrive?: (tile: { i: number; j: number }, dir: number) => void;
+    // Lot 15 : la vue envoie elle-même la case visée et ma présence (posture
+    // comprise) par le réseau que la scène lui passe (`furniture`).
+    furniture?: {
+      room: {
+        sendMove: (gx: number, gy: number) => unknown;
+        updatePosition: (p: { gx: number; gy: number; dir: number }) => void;
+      };
+      posRef: { current: unknown };
+    } | null;
   };
   return {
     default: () =>
@@ -71,8 +78,13 @@ vi.mock('next/dynamic', async () => {
           button('stub-tap-iris', () =>
             props.onAvatarTap?.({ userId: IRIS, anchor: { x: 40, y: 60 } })
           ),
-          button('stub-walk', () => props.onPlayerWalk?.({ i: 3, j: 4 })),
-          button('stub-arrive', () => props.onPlayerArrive?.({ i: 3, j: 4 }, 3))
+          button('stub-walk', () => props.furniture?.room.sendMove(3, 4)),
+          button('stub-arrive', () => {
+            const at = { gx: 3, gy: 4, dir: 3 };
+            if (!props.furniture) return;
+            props.furniture.posRef.current = at;
+            props.furniture.room.updatePosition(at);
+          })
         );
       },
   };

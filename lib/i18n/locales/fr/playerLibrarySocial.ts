@@ -168,7 +168,7 @@ export default ns('playerLibrarySocial', {
     canvasLabel:
       'La salle en vue isométrique. Les joueuses présentes sont listées sous la vue.',
     resetView: 'Recentrer la vue',
-    hint: 'Touche le sol pour te déplacer, touche une joueuse pour la bloquer ou la signaler.',
+    hint: 'Touche le sol pour te déplacer, un meuble pour t’y asseoir ou t’en servir, une joueuse pour la bloquer ou la signaler.',
     presentTitle: 'Présentes dans la salle',
     presentCount_one: '{count} autre joueuse visible',
     presentCount_other: '{count} autres joueuses visibles',

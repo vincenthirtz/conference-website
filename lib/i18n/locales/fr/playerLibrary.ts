@@ -51,7 +51,7 @@ export default ns('playerLibrary', {
   apartmentCanvasLabel: 'Ton appartement en vue isométrique',
   apartmentLoading: 'Préparation de ton appartement…',
   apartmentHint:
-    'Touche le sol pour te déplacer, glisse pour bouger la vue. « Décorer » pour aménager.',
+    'Touche le sol pour te déplacer, un meuble pour t’y asseoir ou t’en servir, glisse pour bouger la vue. « Décorer » pour aménager.',
   apartmentResetView: 'Recentrer la vue',
   apartmentPrivate: 'Privé',
   apartmentOpen: 'Ouvert',

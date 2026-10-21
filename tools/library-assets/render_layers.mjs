@@ -7,6 +7,12 @@
 //   node tools/library-assets/render_layers.mjs --preview --only body.s3
 //   node tools/library-assets/render_layers.mjs --index          # index seul
 //   node tools/library-assets/render_layers.mjs --repack --quality 90  # recadrage serré
+//   node tools/library-assets/render_layers.mjs --poses lie,sit_low    # poses ajoutées seules
+//
+// `--poses` ne rend que ces poses (lot 15b : `lie`, `sit_low`), chacune avec
+// sa meta `<calque>@<pose>.json` et sa feuille `<calque>-<pose>.webp` ; la
+// base (idle, walk, sit : `<calque>.json`) n'est ni relue ni réécrite.
+// L'index fusionne la base et les poses ajoutées présentes.
 //
 // Les images sont recadrées SERRÉ sur leurs pixels : l'ancre au sol peut
 // tomber hors du cadre (une coiffure ne s'étire pas jusqu'aux pieds).
@@ -50,6 +56,9 @@ const TILE = { width: 64, height: 32, meters: 0.5 };
 const PIXEL_RATIO = 2;
 // Albédo des calques gris (render_avatar_layers.py, GREY_ALBEDO).
 const GREY_ALBEDO = [236, 236, 236];
+// Poses ajoutées après la base, une meta chacune (render_avatar.py,
+// POSE_GROUPS), dans l'ordre de l'index.
+const EXTRA_POSES = ['lie', 'sit_low'];
 
 function findBlender() {
   if (process.env.BLENDER) return process.env.BLENDER;
@@ -110,36 +119,59 @@ function runBlender(blender, args) {
   });
 }
 
-/** L'index des calques rendus (ceux dont la meta et les feuilles existent). */
+/**
+ * Les animations d'une meta de calque au format de l'index, ou null si une
+ * de ses feuilles manque.
+ */
+function indexAnimations(meta) {
+  const out = {};
+  for (const [name, a] of Object.entries(meta.animations)) {
+    if (!existsSync(path.join(OUT_DIR, a.file))) return null;
+    const directions = Array.from({ length: 8 }, (_, d) =>
+      Object.hasOwn(a.directions, String(d)) ? a.directions[String(d)] : null
+    );
+    out[name] = {
+      sheet: `${URL_PREFIX}/${a.file}`,
+      width: a.sheetWidth,
+      height: a.sheetHeight,
+      fps: a.fps,
+      ...(a.strideMeters ? { strideMeters: a.strideMeters } : {}),
+      directions,
+    };
+  }
+  return out;
+}
+
+/**
+ * L'index des calques rendus (ceux dont la meta et les feuilles existent) :
+ * la base, puis chaque pose ajoutée dont la meta et la feuille existent.
+ */
 async function writeIndex(spec) {
   const layers = {};
   const missing = [];
+  const missingPoses = Object.fromEntries(EXTRA_POSES.map((p) => [p, []]));
   for (const id of layerIds(spec)) {
     const metaPath = path.join(META_DIR, `${id}.json`);
     if (!existsSync(metaPath)) {
       missing.push(id);
       continue;
     }
-    const meta = JSON.parse(await readFile(metaPath, 'utf8'));
-    const entry = {};
-    for (const [name, a] of Object.entries(meta.animations)) {
-      if (!existsSync(path.join(OUT_DIR, a.file))) {
-        missing.push(id);
-        break;
-      }
-      const directions = Array.from({ length: 8 }, (_, d) =>
-        Object.hasOwn(a.directions, String(d)) ? a.directions[String(d)] : null
-      );
-      entry[name] = {
-        sheet: `${URL_PREFIX}/${a.file}`,
-        width: a.sheetWidth,
-        height: a.sheetHeight,
-        fps: a.fps,
-        ...(a.strideMeters ? { strideMeters: a.strideMeters } : {}),
-        directions,
-      };
+    const entry = indexAnimations(
+      JSON.parse(await readFile(metaPath, 'utf8'))
+    );
+    if (!entry) {
+      missing.push(id);
+      continue;
     }
-    if (!missing.includes(id)) layers[id] = entry;
+    for (const pose of EXTRA_POSES) {
+      const posePath = path.join(META_DIR, `${id}@${pose}.json`);
+      const extra = existsSync(posePath)
+        ? indexAnimations(JSON.parse(await readFile(posePath, 'utf8')))
+        : null;
+      if (extra?.[pose]) entry[pose] = extra[pose];
+      else missingPoses[pose].push(id);
+    }
+    layers[id] = entry;
   }
   const index = {
     version: 1,
@@ -153,8 +185,13 @@ async function writeIndex(spec) {
     path.join(OUT_DIR, 'layers.json'),
     `${JSON.stringify(index)}\n`
   );
+  const posesNote = EXTRA_POSES.map((p) =>
+    missingPoses[p].length
+      ? `${p} manquante pour ${missingPoses[p].length} calque(s)`
+      : `${p} complète`
+  ).join(', ');
   console.log(
-    `index : ${Object.keys(layers).length} calques${missing.length ? `, manquants : ${missing.join(', ')}` : ''}`
+    `index : ${Object.keys(layers).length} calques${missing.length ? `, manquants : ${missing.join(', ')}` : ''} ; ${posesNote}`
   );
 }
 
@@ -168,6 +205,10 @@ const { values } = parseArgs({
     // Recadre serré des feuilles d'un ancien rendu (ancre gardée dans le
     // cadre), sans nouveau rendu.
     repack: { type: 'boolean', default: false },
+    // Poses à rendre (par groupes entiers : idle,walk,sit ou lie ou sit_low),
+    // toutes par défaut. Les poses déjà rendues avec la même empreinte sont
+    // sautées.
+    poses: { type: 'string' },
   },
 });
 
@@ -200,6 +241,7 @@ if (!values.index) {
       '--quality',
       values.quality,
       ...(values.only ? ['--only', values.only] : []),
+      ...(values.poses ? ['--poses', values.poses] : []),
       ...(values.preview ? ['--preview'] : []),
       ...(values.repack ? ['--repack'] : []),
     ]);

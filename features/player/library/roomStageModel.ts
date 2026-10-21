@@ -19,11 +19,12 @@ import {
 } from './apartmentModel';
 import type { RoomDecor } from './engine/decor';
 import type { Direction } from './engine/motion';
+import type { AvatarIntent, PlayerPosture } from './engine/postures';
 import type { Tile } from './engine/projection';
 import type { BubbleContent, RemoteAvatarInput } from './engine/remotes';
 import { fixedLayoutOf } from './layouts';
 import type { PlacementSpec } from './placement';
-import type { LibraryPosition } from './realtime/connection';
+import type { LibraryPosition, LibraryRest } from './realtime/connection';
 import type { RemoteAvatar } from './realtime/roomState';
 import type { LibraryEmoteId, LibraryPhraseId } from './realtime/social';
 import type { LibraryApartmentItem } from './responses';
@@ -73,26 +74,48 @@ export function remoteBubbleOf(
 const toDirection = (dir: number): Direction =>
   Math.min(7, Math.max(0, Math.round(dir))) as Direction;
 
+/** Lot 15 : `seat` / `use` du réseau → l'intention du moteur (null : debout). */
+export function restIntentOf(r: LibraryRest): AvatarIntent | null {
+  if (r.seat) return { kind: 'seat', itemId: r.seat.item, spot: r.seat.spot };
+  return r.use ? { kind: 'use', itemId: r.use.item } : null;
+}
+
+/** Lot 15 : l'intention ou la posture de la joueuse → ce que porte le réseau. */
+export function restWireOf(
+  p: AvatarIntent | PlayerPosture | null | undefined
+): LibraryRest {
+  if (!p) return {};
+  return p.kind === 'seat'
+    ? { seat: { item: p.itemId, spot: p.spot } }
+    : { use: { item: p.itemId } };
+}
+
 /** L'état temps réel → les autres joueuses du moteur (même ordre). */
 export function toRemoteInputs(
   avatars: readonly RemoteAvatar[],
   words: SignWords
 ): RemoteAvatarInput[] {
-  return avatars.map((a) => ({
-    id: a.userId,
-    nickname: a.nickname,
-    avatarId: a.avatarId,
-    look: a.look ?? null,
-    tile: { i: a.gx, j: a.gy },
-    dir: toDirection(a.dir),
-    target: a.target
-      ? {
-          tile: { i: a.target.gx, j: a.target.gy },
-          receivedAt: a.target.receivedAt,
-        }
-      : null,
-    bubble: remoteBubbleOf(a, words),
-  }));
+  return avatars.map((a) => {
+    const rest = restIntentOf(a);
+    const aim = a.target ? restIntentOf(a.target) : null;
+    return {
+      id: a.userId,
+      nickname: a.nickname,
+      avatarId: a.avatarId,
+      look: a.look ?? null,
+      tile: { i: a.gx, j: a.gy },
+      dir: toDirection(a.dir),
+      ...(rest ? { rest } : {}),
+      target: a.target
+        ? {
+            tile: { i: a.target.gx, j: a.target.gy },
+            receivedAt: a.target.receivedAt,
+            ...(aim ? { rest: aim } : {}),
+          }
+        : null,
+      bubble: remoteBubbleOf(a, words),
+    };
+  });
 }
 
 /** Gabarit du menu d'un avatar à partir de `sm` (w-72 ; étape la plus haute). */

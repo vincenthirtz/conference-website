@@ -39,7 +39,7 @@ export type DevPeer = {
 };
 
 /** Un look composé reproductible par rang (lot 13 : la foule est composée). */
-function devLook(k: number): string {
+export function devLook(k: number): string {
   let s = (k + 1) * 2654435761;
   return encodeLibraryLook(
     randomLibraryLook(() => {

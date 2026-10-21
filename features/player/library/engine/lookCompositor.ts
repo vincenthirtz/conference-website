@@ -18,6 +18,9 @@
 // REPLIS, dans l'ordre : la bande demandée ; pour la marche pas encore prête,
 // la bande d'attente (même direction) ; sinon `false` — le renderer pose la
 // feuille de l'`avatarId` (avatarSprites.ts), puis la silhouette.
+// POSES DE REPOS (lot 15) : la première de `poseChain` que TOUS les calques
+// du look ont rendue (`lie` → `sit` → `idle`), posée sur sa place et décalée
+// de `restLift` ; la pose dessinée est notée sur l'avatar (`renderedPose`).
 
 import { decodeLibraryLook } from '@/config/library/avatarLook';
 import {
@@ -34,9 +37,15 @@ import {
   stripKeyOf,
   stripLayout,
 } from './avatarLayers';
-import { type AvatarPose, frameIndex } from './avatarSprites';
-import { type Direction, isWalking } from './motion';
+import {
+  type AvatarPose,
+  frameIndex,
+  poseChain,
+  restLift,
+} from './avatarSprites';
+import type { Direction } from './motion';
 import { gridToScreen, METERS_PER_TILE } from './projection';
+import { stanceOf } from './stance';
 import type { AvatarEntity } from './world';
 
 type Canvas2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
@@ -250,6 +259,20 @@ export class LookCompositor {
     return { canvas, cells: layout.cells };
   }
 
+  /**
+   * La première pose de `poseChain(pose)` que tous les calques du look ont
+   * rendue (index pas encore là : la pose demandée, `strip` attendra).
+   */
+  private availablePose(code: string, pose: AvatarPose): AvatarPose {
+    const index = this.index;
+    const look = index ? this.lookOf(code) : null;
+    if (!index || !look) return pose;
+    const layers = lookLayers(look);
+    for (const p of poseChain(pose))
+      if (layers.every((l) => index.layers[l.id]?.[p])) return p;
+    return 'idle';
+  }
+
   /** Le look d'une forme compacte, mémorisé (une poignée par salle). */
   private lookOf(code: string) {
     let look = this.looks.get(code);
@@ -282,13 +305,14 @@ export class LookCompositor {
     const look = this.lookOf(code);
     if (!look) return false;
     const w = a.walker;
-    const pose: AvatarPose = isWalking(w) ? 'walk' : 'idle';
+    const st = stanceOf(a);
+    const pose = this.availablePose(code, st.pose);
     let used: AvatarPose = pose;
     // La marche se décode à la demande : en attendant, on glisse en attente.
-    let strip = this.strip(code, pose, w.dir);
+    let strip = this.strip(code, pose, st.dir);
     if (!strip && pose === 'walk') {
       used = 'idle';
-      strip = this.strip(code, 'idle', w.dir);
+      strip = this.strip(code, 'idle', st.dir);
     }
     const index = this.index;
     if (!strip || !index) return false;
@@ -300,10 +324,12 @@ export class LookCompositor {
             travelledMeters: w.travelled * METERS_PER_TILE,
           })
         : 0;
-    const cell = strip.cells[stripCellIndex(used, w.dir, frame)];
+    const cell = strip.cells[stripCellIndex(used, st.dir, frame)];
     if (!cell) return false;
     const pr = index.pixelRatio;
-    const foot = gridToScreen(w.x, w.y);
+    const lift = st.surfaceM === null ? 0 : restLift(st.surfaceM, used);
+    const foot = gridToScreen(st.x, st.y, lift);
+    a.renderedPose = used;
     ctx.drawImage(
       strip.canvas as CanvasImageSource,
       cell.x,

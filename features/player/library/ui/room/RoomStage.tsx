@@ -9,7 +9,11 @@
 //      case visée (`sendMove`), l'arrivée rafraîchit ma présence
 //      (`updatePosition`), un appui sur une autre joueuse ouvre son menu ;
 //   3. sous la scène : mode discret (salle de lecture), signes, « Présentes
-//      dans la salle » — l'accès clavier aux avatars.
+//      dans la salle » — l'accès clavier aux avatars ;
+//   4. (lot 15) les meubles : un appui sur une assise, un lit, un rayonnage…
+//      y fait aller, puis s'asseoir, s'allonger ou s'en servir ; la case
+//      visée et la présence portent la posture ; « Se lever » sous la scène.
+//      Pas d'éditeur de look ici : l'armoire n'est pas proposée.
 // Une entrée refusée, une expulsion, un bannissement, une salle refermée :
 // la notice remplace la salle, avec le retour à mon appartement.
 //
@@ -192,11 +196,9 @@ function RoomStageInner({
           playerMarker={social.marker}
           bubbleMs={LIBRARY_BUBBLE_MS}
           onAvatarTap={social.onAvatarTap}
-          onPlayerWalk={(goal) => room.sendMove(goal.i, goal.j)}
-          onPlayerArrive={(tile, dir) => {
-            posRef.current = { gx: tile.i, gy: tile.j, dir };
-            room.updatePosition(posRef.current);
-          }}
+          // Lot 15 : la vue envoie la case visée et ma présence (posture
+          // comprise), et montre « Se lever » sous la scène.
+          furniture={{ room, posRef }}
           engineRef={engineRef}
         />
         <RoomOverlays social={social} room={enter.room} />

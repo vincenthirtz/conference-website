@@ -146,7 +146,7 @@ export default {
     canvasLabel:
       'The room in isometric view. The players present are listed below the view.',
     resetView: 'Recenter the view',
-    hint: 'Tap the floor to move, tap a player to block or report her.',
+    hint: 'Tap the floor to move, a piece of furniture to sit on or use it, a player to block or report her.',
     presentTitle: 'In the room',
     presentCount_one: '{count} other player visible',
     presentCount_other: '{count} other players visible',

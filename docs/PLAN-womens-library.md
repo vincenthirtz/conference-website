@@ -157,6 +157,8 @@
 | 12 | Le décor de pièce : sols, papiers peints, fenêtres, portes | 🟧 | M | site + api |
 | 13 | L'avatar personnalisable, par calques | 🟧 | L | site + api |
 | 14 | Durcissement avant la bêta (audit du 2026-10-20, P1) | 🟥 | L | api + site |
+| 15 | Interactions avec les meubles : s'asseoir, s'allonger, utiliser | 🟧 | L | site |
+| 16 | Le fantôme d'Halloween : un PNJ du hall qui inscrit à l'Event Halloween | 🟧 | M | site |
 
 **Rien n'ouvre, même en bêta, avant la fin des lots 5, 6 et 8.** Les lots 11 à 13 (ajoutés le
 2026-10-20) ne bloquent pas l'ouverture : ils avancent en parallèle.
@@ -446,6 +448,79 @@ points bloquent l'ouverture de la bêta fermée.
 - **Fini quand** une présence forgée n'apparaît pas et ne peut pas être signalée, un compte banni
   puis supprimé et recréé reste refusé, deux équipes de test entrent pendant que les autres sont
   refusées, et une nouvelle joueuse trouve son kit dans un appartement qui n'est plus vide.
+
+## Lot 15 · Interactions avec les meubles — 🟧 / L (site)
+
+Ajouté le 2026-10-21. Jusqu'ici, un meuble ne fait que bloquer la marche : `sittable` est au
+catalogue et la pose assise est rendue pour chaque avatar, mais rien ne s'en sert. Ce lot reste
+**côté site** : aucune migration, aucune route. Les postures voyagent entre navigateurs comme les
+déplacements (cosmétiques, jamais une preuve de rien).
+
+- **15a · S'asseoir et s'allonger.**
+  - Un appui sur une assise (`seating`) fait marcher jusqu'à elle, puis asseoir ; un appui sur un
+    lit (`bed`) fait s'allonger. Un appui sur le sol relève et fait marcher.
+  - Chaque famille de meubles a son **profil** (`engine/interactions.ts`, côté site, une ligne par
+    famille ; les variantes suivent leur base) : la hauteur d'assise ou de couchage, le nombre de
+    places (un canapé en a plusieurs) et leur position dans l'empreinte, en coordonnées locales à la
+    rotation 0, où l'avant du meuble est vers +gy. Une place occupée est sautée.
+  - Le dessin : l'avatar assis est posé à sa place, décalé de la différence entre la hauteur du
+    meuble et celle du rendu. Il est dessiné juste après son meuble, sauf face au mur du fond : il
+    passe alors derrière, pour que le dossier le cache. Pseudo et bulle descendent avec lui.
+  - Le réseau : `seat { item, spot }`, en option, dans la présence et dans `move`. Une cliente
+    qui ne le connaît pas voit l'avatar debout à côté du meuble. Un meuble inconnu ou déplacé
+    relève l'avatar.
+  - Un bouton « Se lever » sous la scène, pour le clavier.
+- **15b · De nouvelles poses rendues.** `lie` (allongée sur le dos, le dos à 0,55 m, les pieds vers
+  la direction) et `sit_low` (assise basse, pour un pouf ou un coussin de sol). Elles sont rendues
+  par le pipeline pour les 12 avatars et les 36 calques, dans leur propre feuille (comme `sit`),
+  **sans toucher aux poses déjà rendues**. Tant qu'une pose manque, le moteur retombe sur `sit`.
+- **15c · Utiliser un meuble, sans rien enregistrer.**
+  - L'armoire et le miroir ouvrent l'éditeur de look.
+  - Rayonnages, pupitre et piles de livres font lire, la borne d'arcade, la console, l'échiquier
+    et la cible font jouer. La cheminée et le brasero réchauffent, la radio fait écouter, la télé
+    et l'écran font regarder, et les plantes s'arrosent.
+  - L'avatar se place devant le meuble, s'oriente vers lui et porte un petit pictogramme tant qu'il
+    ne bouge pas. C'est partagé par `use { item }`, comme `seat`.
+  - Les zones déclarées (lots 7 à 9 : rayonnages de la salle de lecture, panneau du hall…) gardent
+    la priorité sur ces interactions.
+- **Plus tard (15d), avec une migration** : des états de meuble partagés et enregistrés (lampe
+  allumée, télé, cheminée), par une colonne `state` sur `library_room_items`, une route et une
+  diffusion serveur.
+- **Fini quand** deux joueuses s'assoient sur le même canapé et s'y voient l'une l'autre, que l'une
+  s'allonge sur un lit dans les 4 rotations sans flotter ni s'enfoncer, et qu'une troisième entrée
+  après coup les voit déjà assise et allongée.
+
+## Lot 16 · Le fantôme d'Halloween — 🟧 / M (site)
+
+Ajouté le 2026-10-21. C'est le premier personnage non joueur de la Library. Il fait connaître
+l'Event Halloween du 30 octobre (`halloween-2026`, inscription individuelle regroupée en équipes,
+`config/homeEventSpotlight.ts`).
+
+- **Le hall seulement** (décidé le 2026-10-21). La Grande salle de lecture reste un lieu calme, sans
+  promotion ni sursaut.
+- **Un fantôme qui se balade.** Il suit une ronde fixe entre quelques points du hall, avec des
+  pauses, en flottant (léger balancement, ombre au sol dessinée par le moteur). Sa position se
+  calcule à partir de l'heure : toutes les joueuses le voient au même endroit, sans serveur ni
+  message. Il ne bloque pas la marche.
+- **« Bouh ! »** Quand il passe tout près d'une joueuse, il le dit dans une bulle, avec une attente
+  entre deux « bouh » pour la même personne. Chaque navigateur le calcule pour les avatars qu'il
+  voit.
+- **Une citrouille fixe** est posée dans le hall. C'est une zone déclarée, comme le panneau
+  d'annonces.
+- **Un appui sur le fantôme ou sur la citrouille** ouvre l'inscription en un clic, la même que
+  l'encart de l'espace joueuse (`useEventPoolSignup` et la route `/api/tournament/{id}/pool`
+  existante). Elle montre ce qui sera envoyé avant le clic et dit « Tu es inscrite » ensuite. Si le
+  BattleTag ou l'équipe manquent, elle renvoie vers la page d'inscription. Pour le clavier, une
+  entrée sous la scène mène au même panneau.
+- **Une durée bornée** : le fantôme et la citrouille ne sont là que tant que l'événement est à
+  l'affiche (`isHomeEventVisible`, `pooledTeams`). Ils partent seuls ensuite.
+- **Le sprite** : le modèle `ghost` du set Halloween, rendu à part sans ombre cuite (il flotte),
+  hors du catalogue des meubles.
+- **Ce que le lot ne fait pas** : il n'ouvre pas la Library. L'accès reste réglé dans l'admin
+  (`owner`, `beta`, `all`) : sans ouverture avant le 30, seules les personnes admises le verront.
+- **Fini quand** deux joueuses dans le hall voient le fantôme au même endroit, qu'il fait « bouh » à
+  chacune en passant, que l'appui sur lui ou sur la citrouille inscrit en un clic, et qu'au-delà de
+  `visibleUntil` le hall redevient comme avant.
 
 ---
 

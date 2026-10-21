@@ -8,9 +8,12 @@
 //     claire, pictogramme puis mot traduit, petite pointe vers la tête ;
 //   - la bulle d'un MESSAGE du chat (lot 6, clé `chat:<id>`) : plus large
 //     (CHAT_BUBBLE_MAX_W), sur une ligne, élidée — le fil sous la scène garde
-//     le texte entier. Texte brut, dessiné tel quel.
+//     le texte entier. Texte brut, dessiné tel quel ;
+//   - (lot 15c) le PICTOGRAMME de ce qu'elle fait d'un meuble (lire, jouer…),
+//     tant qu'elle ne bouge pas : une petite pastille claire, sous la bulle.
 // Les textes arrivent traduits (le moteur n'a pas d'i18n). Ordre : du fond
 // vers l'avant, pour que la pastille d'une avatar placée devant passe devant.
+// Assise ou allongée, la tête descend avec elle (engine/stance.ts).
 
 import { isChatBubbleKey } from '../realtime/chatBubble';
 import { centerDepth } from './depthSort';
@@ -20,8 +23,8 @@ import {
   type ScreenPoint,
   worldToCanvas,
 } from './projection';
-import { AVATAR_HEIGHT, avatarBox } from './room';
-import type { AvatarEntity, LibraryWorld } from './world';
+import { stanceBox, stanceOf, type StanceSubject, stanceTopM } from './stance';
+import type { LibraryWorld } from './world';
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -87,12 +90,15 @@ export type AvatarOverlay = {
   marker: string | null;
   /** `chat` : la bulle d'un message du chat (plus large). */
   bubble: { glyph: string | null; text: string; chat?: true } | null;
+  /** Lot 15c : le pictogramme de ce qu'elle fait d'un meuble. */
+  activity?: string;
 };
 
 /** Le point au-dessus de la tête d'un avatar, en px CSS du canvas. */
-export function headPoint(a: AvatarEntity, cam: Camera): ScreenPoint {
+export function headPoint(a: StanceSubject, cam: Camera): ScreenPoint {
+  const s = stanceOf(a);
   return worldToCanvas(
-    gridToScreen(a.walker.x, a.walker.y, AVATAR_HEIGHT + HEAD_CLEARANCE_M),
+    gridToScreen(s.x, s.y, stanceTopM(a) + HEAD_CLEARANCE_M),
     cam
   );
 }
@@ -104,11 +110,14 @@ export function avatarOverlays(
 ): AvatarOverlay[] {
   const out: AvatarOverlay[] = [];
   for (const a of world.avatars) {
-    if (!a.label && !a.marker && !a.bubble) continue;
+    const p = a.posture;
+    const activity =
+      p && p.kind === 'use' ? world.activityGlyphs[p.activity] : undefined;
+    if (!a.label && !a.marker && !a.bubble && !activity) continue;
     out.push({
       id: a.id,
       head: headPoint(a, cam),
-      depth: centerDepth(avatarBox(a.walker.x, a.walker.y)),
+      depth: centerDepth(stanceBox(a)),
       label: a.label,
       marker: a.marker,
       bubble: a.bubble
@@ -118,9 +127,28 @@ export function avatarOverlays(
             ...(isChatBubbleKey(a.bubble.key) ? { chat: true as const } : {}),
           }
         : null,
+      ...(activity ? { activity } : {}),
     });
   }
   return out.sort((p, q) => p.depth - q.depth);
+}
+
+const BADGE = 24;
+
+/** La pastille d'une activité, centrée sur `cx`, posée sur `bottom`. Rend son haut. */
+function drawActivity(
+  ctx: Ctx,
+  glyph: string,
+  cx: number,
+  bottom: number
+): number {
+  const top = bottom - BADGE;
+  pill(ctx, cx - BADGE / 2, top, BADGE, BADGE, BUBBLE_BG, BUBBLE_BORDER);
+  ctx.font = `${GLYPH_FONT_PX - 2}px ${EMOJI_FONTS}`;
+  ctx.fillStyle = BUBBLE_TEXT;
+  const w = ctx.measureText(glyph).width;
+  ctx.fillText(glyph, cx - w / 2, top + BADGE / 2 + 0.5);
+  return top;
 }
 
 /** Textes élidés gardés d'une image à l'autre (mesurer coûte). */
@@ -261,6 +289,8 @@ export function drawAvatarOverlays(
     if (tag)
       bottom =
         drawTag(ctx, cache, family, tag, o.head.x, bottom, !o.label) - GAP;
+    if (o.activity)
+      bottom = drawActivity(ctx, o.activity, o.head.x, bottom) - GAP;
     if (o.bubble) drawBubble(ctx, cache, family, o.bubble, o.head.x, bottom);
   }
   ctx.restore();

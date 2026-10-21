@@ -41,7 +41,7 @@ export default {
   apartmentCanvasLabel: 'Your apartment in isometric view',
   apartmentLoading: 'Getting your apartment ready…',
   apartmentHint:
-    'Tap the floor to move, drag to pan the view. Use “Decorate” to furnish.',
+    'Tap the floor to move, a piece of furniture to sit on or use it, drag to pan the view. Use “Decorate” to furnish.',
   apartmentResetView: 'Re-center the view',
   apartmentPrivate: 'Private',
   apartmentOpen: 'Open',

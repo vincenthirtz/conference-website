@@ -7,8 +7,11 @@ Partagé par render_avatar.py (nouveaux rendus) et repack_avatars.py
 - les cadres sont rangés en étagères, dans une feuille de 4096 px au plus
   dans chaque dimension (limite de texture des GPU mobiles), avec une
   gouttière transparente entre eux pour qu'aucun échantillonnage ne déborde ;
-- `idle` et `walk` vont dans la feuille de l'avatar, `sit` dans sa propre
-  feuille, chargée seulement quand un avatar s'assoit.
+- `idle` et `walk` vont dans la feuille de l'avatar ; `sit`, `lie` et
+  `sit_low` chacune dans sa propre feuille, chargée seulement quand un avatar
+  prend la pose. Sans `idle` ni `walk` (poses ajoutées rendues seules), il n'y
+  a pas de feuille de l'avatar : la meta n'a pas de `file`, et build.mjs
+  fusionne ses animations dans l'entrée existante.
 
 Les pixels sont copiés tels quels (aucun rééchantillonnage). Les tableaux
 sont en float (0..1), lignes de HAUT en BAS.
@@ -17,7 +20,8 @@ Format d'une entrée (meta, avant que build.mjs change `file` en URL) :
   { file, sheetWidth, sheetHeight,
     animations: { idle: { fps, directions: { "0": [rect], … } },
                   walk: { fps, strideMeters, directions: … },
-                  sit:  { fps, file, sheetWidth, sheetHeight, directions: … } } }
+                  sit:  { fps, file, sheetWidth, sheetHeight, directions: … },
+                  lie, sit_low : comme sit } }
   rect = { x, y, w, h, ax, ay } : boîte dans la feuille, et ancre au sol
   DANS cette boîte, en px d'image (pixelRatio global).
 """
@@ -30,7 +34,7 @@ MAX_SHEET = 4096
 GUTTER = 2
 WIDTH_STEP = 16
 # Animations rangées dans une feuille à part (chargée à la demande).
-SEPARATE = ('sit',)
+SEPARATE = ('sit', 'lie', 'sit_low')
 
 
 def trim(frame, anchor, alpha_floor=0.0):
@@ -123,7 +127,10 @@ def pack_avatar(avatar_id, animations, save):
     [(pixels, ancre), …] } } }. `save(pixels haut en bas, nom de fichier)`
     écrit une feuille. Renvoie la meta (format 2).
     """
-    groups = {'main': [n for n in animations if n not in SEPARATE]}
+    main = [n for n in animations if n not in SEPARATE]
+    # Pas d'animation pour la feuille de l'avatar : on ne l'écrit pas (elle
+    # écraserait celle déjà rendue).
+    groups = {'main': main} if main else {}
     for name in SEPARATE:
         if name in animations:
             groups[name] = [name]

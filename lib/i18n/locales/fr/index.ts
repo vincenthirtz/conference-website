@@ -183,6 +183,7 @@ import nsPlayerErrors from './playerErrors';
 import nsSafetyPage from './safetyPage';
 import nsPlayerLibrary from './playerLibrary';
 import nsPlayerLibrarySocial from './playerLibrarySocial';
+import nsPlayerLibraryFurniture from './playerLibraryFurniture';
 import nsPlayerLibraryChat from './playerLibraryChat';
 import nsPlayerLibraryHall from './playerLibraryHall';
 import nsPlayerLibraryReadingRoom from './playerLibraryReadingRoom';
@@ -365,6 +366,7 @@ export const frDict = {
   safetyPage: nsSafetyPage.fr,
   playerLibrary: nsPlayerLibrary.fr,
   playerLibrarySocial: nsPlayerLibrarySocial.fr,
+  playerLibraryFurniture: nsPlayerLibraryFurniture.fr,
   playerLibraryChat: nsPlayerLibraryChat.fr,
   playerLibraryHall: nsPlayerLibraryHall.fr,
   playerLibraryReadingRoom: nsPlayerLibraryReadingRoom.fr,

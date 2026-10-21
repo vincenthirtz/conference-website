@@ -5,9 +5,10 @@ Lancé par render_layers.mjs, jamais à la main :
     --bundle <human_base_meshes_bundle.blend> --hdri <fichier.hdr> \
     --spec <calques.json> --out <dossier des feuilles> --meta <dossier des metas>
 
-Un avatar se compose de calques, rendus SÉPARÉMENT sur les mêmes 80 images
-(8 directions × attente, marche en 8 images, assise), avec le même squelette,
-la même caméra, la même lumière et le même cadre (donc la même ancre) :
+Un avatar se compose de calques, rendus SÉPARÉMENT sur les mêmes images
+(8 directions × attente, marche en 8 images, assise ; puis allongée et
+assise basse, lot 15b), avec le même squelette, la même caméra, la même
+lumière et, pour une même pose, le même cadre (donc la même ancre) :
   - body.<carnation>   le corps (tête, cou, avant-bras, mains, chaussures), en
                        couleur : une feuille par carnation ;
   - top.<tenue>        le haut, en NIVEAUX DE GRIS ;
@@ -41,6 +42,12 @@ REPRISE. Chaque calque terminé écrit ses feuilles puis sa meta
 (<meta>/<calque>.json, avec l'empreinte de sa spec) ; un calque dont la meta
 et les feuilles existent avec la même empreinte est sauté. Un rendu
 interrompu reprend donc là où il s'est arrêté.
+
+POSES AJOUTÉES (`--poses lie,sit_low`). idle, walk et sit forment le groupe
+de base : une meta <calque>.json, une empreinte inchangée depuis le lot 13.
+Chaque pose ajoutée a SA meta, <calque>@<pose>.json, son cadre et son
+empreinte (qui contient la définition de la pose : la retoucher ne refait
+qu'elle). Rendre une pose ne relit ni ne réécrit donc jamais la base.
 """
 
 import sys
@@ -101,7 +108,18 @@ def parse_args():
     p.add_argument('--preview', action='store_true')
     # Recadrage serré des feuilles déjà rendues (sans rendu).
     p.add_argument('--repack', action='store_true')
+    # Poses à rendre (groupes entiers de ra.POSE_GROUPS) ; toutes par défaut.
+    p.add_argument('--poses', default='')
     return p.parse_args(argv)
+
+
+def group_key(group):
+    """None pour le groupe de base (idle, walk, sit), sinon le nom de la pose."""
+    return None if group == ra.POSE_GROUPS[0] else '+'.join(group)
+
+
+def meta_name(pid, key):
+    return f'{pid}.json' if key is None else f'{pid}@{key}.json'
 
 
 # ---------------------------------------------------------------- scène
@@ -266,7 +284,20 @@ def passes(spec):
     return sorted(out, key=lambda p: (0 if p[0] in first else 1))
 
 
-def pass_hash(spec, pid, visible, holdout, rgb, args):
+def pose_signature(group):
+    """La définition des poses d'un groupe (rotations, décalage), arrondie."""
+    out = {}
+    for anim, f in ra.frames(False, group):
+        rotations, offset = ra.pose_for(anim, f)
+        out[f'{anim}.{f}'] = {
+            'rotations': {name: [round(v, 6) for row in m for v in row]
+                          for name, m in sorted(rotations.items())},
+            'offset': [round(v, 6) for v in offset],
+        }
+    return out
+
+
+def pass_hash(spec, pid, visible, holdout, rgb, args, key=None):
     parts = {
         'pipeline': PIPELINE_VERSION,
         'pass': pid,
@@ -280,12 +311,17 @@ def pass_hash(spec, pid, visible, holdout, rgb, args):
         'quality': args.quality,
         'frame': spec.get('frame'),
     }
+    # Groupe de base : empreinte du lot 13, inchangée. Pose ajoutée : sa
+    # définition en plus (la retoucher ne refait qu'elle).
+    if key is not None:
+        parts['pose'] = key
+        parts['poseDefinition'] = pose_signature(tuple(key.split('+')))
     raw = json.dumps(parts, sort_keys=True).encode('utf-8')
     return hashlib.sha1(raw).hexdigest()[:16]
 
 
-def done(meta_dir, out_dir, pid, digest):
-    path = os.path.join(meta_dir, f'{pid}.json')
+def done(meta_dir, out_dir, pid, digest, key=None):
+    path = os.path.join(meta_dir, meta_name(pid, key))
     if not os.path.exists(path):
         return False
     with open(path, encoding='utf-8') as f:
@@ -299,9 +335,10 @@ def done(meta_dir, out_dir, pid, digest):
 # ---------------------------------------------------------------- cadre
 
 
-def frame_all(scene, cam, arm, cols, plan, directions):
+def frame_points(arm, cols, plan, directions):
     """Un seul cadre pour TOUS les calques (même ancre partout) : l'union des
-    boîtes de tous les objets, toutes poses et toutes directions."""
+    boîtes de tous les objets, toutes les poses du plan et toutes directions.
+    Renvoie les points, que iso.frame_camera cadre."""
     set_layers(cols, set(cols), set())
     meshes = [o for c in cols.values() for o in c.objects if o.type == 'MESH']
     points = []
@@ -323,7 +360,7 @@ def frame_all(scene, cam, arm, cols, plan, directions):
         for d in directions:
             r = Matrix.Rotation(ra.facing(d), 3, 'Z')
             points += [r @ p for p in local]
-    return iso.frame_camera(scene, cam, points)
+    return points
 
 
 # ---------------------------------------------------------------- rendu
@@ -340,7 +377,8 @@ def to_grey(px):
 
 
 def render_pass(args, scene, arm, plan, directions, anchor, pid, is_grey, png):
-    frames = {name: {d: [] for d in directions} for name, _ in ra.ANIMATIONS}
+    # Les animations du plan, dans son ordre (celui de ra.ANIMATIONS).
+    frames = {name: {d: [] for d in directions} for name in dict.fromkeys(a for a, _f in plan)}
     colorspace = 'sRGB'
     for anim, f in plan:
         rotations, offset = ra.pose_for(anim, f)
@@ -386,15 +424,10 @@ def pack_tight(items):
 
 
 def pack_pass(args, pid, frames, colorspace):
-    """Une feuille par animation (attente, marche, assise) : une salle où l'on
-    ne fait que se tenir debout ne décode jamais la marche."""
+    """Une feuille par animation (attente, marche, assise…) : une salle où
+    l'on ne fait que se tenir debout ne décode jamais la marche."""
     meta = {'id': pid, 'tight': True, 'animations': {}}
-    timing = {
-        'idle': {'fps': 1},
-        'walk': {'fps': 10, 'strideMeters': ra.STRIDE_METERS},
-        'sit': {'fps': 1},
-    }
-    for name, _count in ra.ANIMATIONS:
+    for name in frames:
         items = []
         for d, images in frames[name].items():
             for i, (px, anchor) in enumerate(images):
@@ -406,7 +439,7 @@ def pack_pass(args, pid, frames, colorspace):
         for d, images in sorted(frames[name].items()):
             dirs[str(int(d))] = [rects[(int(d), i)] for i in range(len(images))]
         meta['animations'][name] = {
-            **timing[name],
+            **ra.TIMING[name],
             'file': file,
             'sheetWidth': int(sheet.shape[1]),
             'sheetHeight': int(sheet.shape[0]),
@@ -471,17 +504,23 @@ def main():
         repack(args, [p[0] for p in passes(spec) if not only or p[0] in only])
         return
     directions = [4, 3] if args.preview else list(range(8))
-    plan = list(ra.frames(args.preview))
+    groups = ra.parse_poses(args.poses)
 
+    # (calque, visibles, réserves, gris ?, carnation, [(groupe, clé, empreinte)])
     todo = []
     for pid, visible, holdout, is_grey, rgb in passes(spec):
         if only and pid not in only:
             continue
-        digest = pass_hash(spec, pid, visible, holdout, rgb, args)
-        if not args.preview and done(args.meta, args.out, pid, digest):
-            print(f'LIBRARY_LAYER_SKIP {pid}')
-            continue
-        todo.append((pid, visible, holdout, is_grey, rgb, digest))
+        jobs = []
+        for group in groups:
+            key = group_key(group)
+            digest = pass_hash(spec, pid, visible, holdout, rgb, args, key)
+            if not args.preview and done(args.meta, args.out, pid, digest, key):
+                print(f"LIBRARY_LAYER_SKIP {pid}{'' if key is None else '@' + key}")
+                continue
+            jobs.append((group, key, digest))
+        if jobs:
+            todo.append((pid, visible, holdout, is_grey, rgb, jobs))
     if not todo:
         print('LIBRARY_LAYERS_OK 0')
         return
@@ -489,37 +528,55 @@ def main():
     started = time.time()
     scene, cam, arm, skin_mat, cols = build(args, spec)
     scene.render.use_persistent_data = True
-    # Le cadre couvre toutes les poses : il ne dépend pas de --preview.
-    anchor, res = frame_all(scene, cam, arm, cols, list(ra.frames(False)), list(range(8)))
+    # Un cadre par groupe de poses, qui couvre toutes ses images : il ne
+    # dépend pas de --preview. Calculé avant fast_viewport (subdivision de la
+    # vue intacte) : le cadre de la base reste celui du lot 13.
+    framing = {}
+    for group in groups:
+        key = group_key(group)
+        if not any(k == key for *_rest, jobs in todo for _g, k, _d in jobs):
+            continue
+        points = frame_points(arm, cols, list(ra.frames(False, group)), list(range(8)))
+        anchor, res = iso.frame_camera(scene, cam, points)
+        framing[key] = (points, anchor, res)
+        print(f"LIBRARY_LAYERS_FRAME {'+'.join(group)} {res[0]}x{res[1]} anchor {anchor}",
+              flush=True)
     levels = fast_viewport(cols)
-    print(f'LIBRARY_LAYERS_FRAME {res[0]}x{res[1]} anchor {anchor} '
-          f'(scène prête en {time.time() - started:.0f} s)', flush=True)
+    print(f'LIBRARY_LAYERS_READY scène prête en {time.time() - started:.0f} s', flush=True)
     png = os.path.join(args.meta, '.layer.png')
     bsdf = next(n for n in skin_mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
-    for pid, visible, holdout, is_grey, rgb, digest in todo:
-        t0 = time.time()
+    count = 0
+    for pid, visible, holdout, is_grey, rgb, jobs in todo:
         if rgb is not None:
             bsdf.inputs['Base Color'].default_value = (*ra.srgb(rgb), 1.0)
         set_layers(cols, set(visible), set(holdout), levels)
-        frames, colorspace = render_pass(args, scene, arm, plan, directions, anchor,
-                                         pid, is_grey, png)
-        if args.preview:
-            preview_sheet(args, pid, frames, colorspace)
-            print(f'LIBRARY_LAYER_PREVIEW {pid} en {time.time() - t0:.0f} s', flush=True)
-            continue
-        meta = pack_pass(args, pid, frames, colorspace)
-        meta['hash'] = digest
-        meta['frame'] = {'width': res[0], 'height': res[1],
-                         'anchor': [anchor[0], anchor[1]]}
-        with open(os.path.join(args.meta, f'{pid}.json'), 'w', encoding='utf-8') as fp:
-            json.dump(meta, fp)
-        print(f'LIBRARY_LAYER_OK {pid} en {time.time() - t0:.0f} s', flush=True)
+        for group, key, digest in jobs:
+            t0 = time.time()
+            label = pid if key is None else f'{pid}@{key}'
+            points, anchor, res = framing[key]
+            if iso.frame_camera(scene, cam, points) != (anchor, res):
+                raise SystemExit(f'cadre instable pour {label}')
+            plan = list(ra.frames(args.preview, group))
+            frames, colorspace = render_pass(args, scene, arm, plan, directions, anchor,
+                                             pid, is_grey, png)
+            if args.preview:
+                preview_sheet(args, label, frames, colorspace)
+                print(f'LIBRARY_LAYER_PREVIEW {label} en {time.time() - t0:.0f} s', flush=True)
+                continue
+            meta = pack_pass(args, pid, frames, colorspace)
+            meta['hash'] = digest
+            meta['frame'] = {'width': res[0], 'height': res[1],
+                             'anchor': [anchor[0], anchor[1]]}
+            with open(os.path.join(args.meta, meta_name(pid, key)), 'w', encoding='utf-8') as fp:
+                json.dump(meta, fp)
+            count += 1
+            print(f'LIBRARY_LAYER_OK {label} en {time.time() - t0:.0f} s', flush=True)
     if os.path.exists(png):
         os.remove(png)
-    print(f'LIBRARY_LAYERS_OK {len(todo)}')
+    print(f'LIBRARY_LAYERS_OK {count}')
 
 
-def preview_sheet(args, pid, frames, colorspace):
+def preview_sheet(args, label, frames, colorspace):
     """Aperçu : les images côte à côte, sans empaquetage ni meta."""
     images = [px for anim in frames.values() for imgs in anim.values() for px, _a in imgs]
     h = max(i.shape[0] for i in images)
@@ -529,7 +586,7 @@ def preview_sheet(args, pid, frames, colorspace):
     for img in images:
         sheet[:img.shape[0], x:x + img.shape[1], :] = img
         x += img.shape[1]
-    iso.save_webp(np.flipud(sheet), os.path.join(args.meta, f'preview-{pid}.webp'), 90, colorspace)
+    iso.save_webp(np.flipud(sheet), os.path.join(args.meta, f'preview-{label}.webp'), 90, colorspace)
 
 
 main()

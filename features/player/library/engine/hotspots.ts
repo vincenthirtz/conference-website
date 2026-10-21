@@ -228,12 +228,15 @@ export class HotspotLayer {
   /**
    * Survol à la souris (`p` null : le pointeur sort). Rend la case à
    * éclairer : au pied de la zone survolée (null pour un meuble, éclairé par
-   * son contour), sinon celle du sol sous le pointeur.
+   * son contour), sinon celle du sol sous le pointeur. `furniture` (lot 15) :
+   * hors de toute zone, le meuble interactif sous le point du MONDE, montré
+   * de la même façon (main, nom de l'action, contour).
    */
   hover(
     world: HotspotWorld & { room: { w: number; d: number } },
     cam: Camera,
-    p: ScreenPoint | null
+    p: ScreenPoint | null,
+    furniture?: (sx: number, sy: number) => LibraryHotspot | null
   ): Tile | null {
     if (!p) {
       this.mark(null);
@@ -242,18 +245,22 @@ export class HotspotLayer {
     const w = canvasToWorld(p, cam);
     const spot =
       this.list.length > 0 ? hotspotAt(world, this.list, w.x, w.y) : null;
-    this.mark(spot);
+    const item = spot ? null : (furniture?.(w.x, w.y) ?? null);
+    this.mark(spot ?? item, item !== null);
+    if (item) return null;
     return spot ? footOf(spot.shape) : pickTile(p.x, p.y, cam, world.room);
   }
 
-  private mark(spot: LibraryHotspot | null): void {
+  private mark(spot: LibraryHotspot | null, furniture = false): void {
     const id = spot?.id ?? null;
     if (id === this.hovered) return;
     this.hovered = id;
     const c = this.canvas;
     c.style.cursor = spot ? 'pointer' : '';
     c.title = spot?.label ?? '';
-    c.dataset.hotspot = id ?? '';
+    c.dataset.hotspot = furniture ? '' : (id ?? '');
+    c.dataset.furniture =
+      furniture && spot?.shape.kind === 'item' ? spot.shape.itemId : '';
     this.host.setSelection(
       spot?.shape.kind === 'item' ? spot.shape.itemId : null
     );

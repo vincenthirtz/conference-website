@@ -23,6 +23,7 @@
 // arrière vers une case déjà quittée.
 
 import type { Direction } from './motion';
+import type { AvatarIntent } from './postures';
 import type { Tile } from './projection';
 
 /** Une bulle au-dessus d'une tête : pictogramme (emote) et mot, traduits. */
@@ -42,11 +43,23 @@ export type RemoteAvatarInput = {
   avatarId: string | null;
   /** Look composé annoncé (forme compacte, lot 13) ; absent : la feuille `avatarId`. */
   look?: string | null;
-  /** Case annoncée dans la présence. */
+  /** Case annoncée dans la présence (assise : sa case d'accès). */
   tile: Tile;
   dir: Direction;
-  /** Dernière case visée, datée à la RÉCEPTION (ms, horloge de l'appelant). */
-  target: { tile: Tile; receivedAt: number } | null;
+  /**
+   * Lot 15 : assise, allongée ou en train de se servir d'un meuble, d'après
+   * la présence ; absent ou null : debout.
+   */
+  rest?: AvatarIntent | null;
+  /**
+   * Dernière case visée, datée à la RÉCEPTION (ms, horloge de l'appelant) ;
+   * `rest` : ce qu'elle fera en y arrivant.
+   */
+  target: {
+    tile: Tile;
+    receivedAt: number;
+    rest?: AvatarIntent | null;
+  } | null;
   /** Bulle en cours, datée à la réception ; le moteur la retire à échéance. */
   bubble: (BubbleContent & { shownAt: number }) | null;
 };

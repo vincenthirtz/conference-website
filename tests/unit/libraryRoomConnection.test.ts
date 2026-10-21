@@ -470,3 +470,77 @@ describe('connexion — seuls les canaux SERVEUR décident', () => {
     expect(evictions).toEqual([]);
   });
 });
+
+describe('connexion — la posture (lot 15)', () => {
+  it('la case visée part avec ce que j’y ferai ; ma présence avec ma posture', async () => {
+    const { conn, sent, myPresence, advance } = setup();
+    await flush();
+    expect(conn.sendMove(3, 4, { seat: { item: 'inv-02', spot: 1 } })).toBe(
+      'sent'
+    );
+    expect(sent('move').at(-1)).toMatchObject({
+      gx: 3,
+      gy: 4,
+      seat: { item: 'inv-02', spot: 1 },
+    });
+    advance(2_000);
+    conn.updatePosition({ gx: 3, gy: 4, dir: 5, use: { item: 'shelf' } });
+    advance(2_000);
+    expect(myPresence()).toMatchObject({
+      gx: 3,
+      gy: 4,
+      use: { item: 'shelf' },
+    });
+    expect(myPresence()).not.toHaveProperty('seat');
+    // Debout à nouveau : plus de posture dans la présence.
+    advance(2_000);
+    conn.updatePosition({ gx: 3, gy: 4, dir: 5 });
+    advance(2_000);
+    expect(myPresence()).not.toHaveProperty('use');
+  });
+
+  it('une posture hors gabarit ne part pas (debout) ; jamais `seat` et `use` ensemble', async () => {
+    const { conn, sent, advance } = setup();
+    await flush();
+    conn.sendMove(1, 1, { seat: { item: 'pas un id', spot: 0 } });
+    expect(sent('move').at(-1)).not.toHaveProperty('seat');
+    expect(sent('move').at(-1)).toMatchObject({ gx: 1, gy: 1 });
+    advance(1_000);
+    conn.sendMove(2, 2, {
+      seat: { item: 'sofa', spot: 0 },
+      use: { item: 'shelf' },
+    });
+    expect(sent('move').at(-1)).toMatchObject({ seat: { item: 'sofa' } });
+    expect(sent('move').at(-1)).not.toHaveProperty('use');
+  });
+
+  it('mode discret : la posture ne part pas plus que la case', async () => {
+    const { conn, sent, myPresence } = setup('reading_room');
+    await flush();
+    expect(conn.sendMove(1, 1, { seat: { item: 'sofa', spot: 0 } })).toBe(
+      'refused'
+    );
+    conn.updatePosition({
+      gx: 1,
+      gy: 1,
+      dir: 4,
+      seat: { item: 'sofa', spot: 0 },
+    });
+    expect(sent()).toEqual([]);
+    expect(myPresence()).toBeUndefined();
+  });
+
+  it('la posture d’une autre arrive avec sa présence vérifiée', async () => {
+    const { bus, enter, conn, settle } = setup();
+    await flush();
+    bus.peerJoin(enter.topics.room, {
+      ...peer(IRIS, 'Iris'),
+      seat: { item: 'sofa', spot: 0 },
+    });
+    await settle();
+    expect(conn.getState().avatars[IRIS]?.seat).toEqual({
+      item: 'sofa',
+      spot: 0,
+    });
+  });
+});

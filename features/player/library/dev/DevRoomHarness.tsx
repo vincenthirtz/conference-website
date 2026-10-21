@@ -17,11 +17,16 @@
 // « Forged presences » pose des présences sans jeton valide (autre clé, jeton
 // d'une autre, autre salle, échu, sans jeton) : aucune ne doit apparaître,
 // ni dans la vue ni dans « Présentes dans la salle ».
+//
+// Lot 15 : « showcase » (ou `?showcase=<nom>`) pose une vitrine de meubles
+// dans leurs 4 rotations, une joueuse assise / allongée sur chaque place
+// (`./showcase.ts`) — pour caler les profils d'assise à l'œil.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   type CSSProperties,
   type ReactNode,
+  useEffect,
   useMemo,
   useReducer,
   useState,
@@ -46,6 +51,7 @@ import {
   signedPeerMeta,
   useDevPresenceSigner,
 } from './presenceSigner';
+import type { ShowcaseLayout } from './showcase';
 import { DEV_PEERS, DEV_SPECS, useSimulatedPeers } from './simulatedPeers';
 import type { FakeRealtime } from './fakeRealtime';
 
@@ -166,18 +172,25 @@ function Room({
   kind,
   entry,
   peers,
+  showcase,
 }: {
   kind: LibraryRoomKind;
   entry: EntryMode;
   peers: number;
+  showcase: ShowcaseLayout | null;
 }) {
   // Un bus neuf à chaque montage (`key`) : rien ne survit d'une démonstration
   // à l'autre.
   const [bus] = useState(createFakeRealtime);
-  const enter = useMemo(
-    () => fakeEnterResponse(kind, { items: DEV_ITEMS }),
-    [kind]
-  );
+  const enter = useMemo(() => {
+    if (!showcase) return fakeEnterResponse(kind, { items: DEV_ITEMS });
+    // Une vitrine : un appartement assez grand pour ses meubles.
+    const base = fakeEnterResponse('apartment');
+    return fakeEnterResponse('apartment', {
+      items: showcase.items,
+      room: { ...base.room, width: showcase.width, depth: showcase.depth },
+    });
+  }, [kind, showcase]);
   // Lot 14a : l'entrée simulée rend MON jeton, signé par la clé de la page.
   const enterClient = useMemo(
     () => ({
@@ -208,10 +221,34 @@ function Room({
       depth: enter.room.depth,
       items: enter.items,
     },
-    peers,
+    showcase ? 0 : peers,
     peers > 3 ? 160 : 1_400,
     signer
   );
+  // Lot 15 : la vitrine — une joueuse installée sur chaque place (à la demande).
+  useEffect(() => {
+    if (!showcase || !signer) return undefined;
+    let off = false;
+    let leave: (() => void) | null = null;
+    void import('./showcaseSitters').then((m) => {
+      if (off) return;
+      leave = m.seatShowcaseSitters(
+        bus,
+        {
+          id: enter.room.id,
+          topic: enter.topics.room,
+          width: enter.room.width,
+          depth: enter.room.depth,
+          items: enter.items,
+        },
+        signer
+      );
+    });
+    return () => {
+      off = true;
+      leave?.();
+    };
+  }, [bus, enter, showcase, signer]);
 
   const { topics } = enter;
   const inHalfHour = () => new Date(Date.now() + 30 * 60_000).toISOString();
@@ -342,6 +379,29 @@ export default function DevRoomHarness() {
   const [entry, setEntry] = useState<EntryMode>('ok');
   const [peers, setPeers] = useState(3);
   const [run, setRun] = useState(0);
+  // Lot 15 : les vitrines, chargées à la demande (`?showcase=<nom>`).
+  const [showcase, setShowcase] = useState('');
+  const [names, setNames] = useState<string[]>([]);
+  const [layout, setLayout] = useState<ShowcaseLayout | null>(null);
+  useEffect(() => {
+    void import('./showcase').then(({ SHOWCASES }) => {
+      setNames(Object.keys(SHOWCASES));
+      const s = new URLSearchParams(window.location.search).get('showcase');
+      if (s && Object.hasOwn(SHOWCASES, s)) setShowcase(s);
+    });
+  }, []);
+  useEffect(() => {
+    setLayout(null);
+    if (!showcase) return undefined;
+    let off = false;
+    void import('./showcase').then(({ SHOWCASES, showcaseRoom }) => {
+      if (!off && Object.hasOwn(SHOWCASES, showcase))
+        setLayout(showcaseRoom(SHOWCASES[showcase]));
+    });
+    return () => {
+      off = true;
+    };
+  }, [showcase]);
   // Un cache PROPRE à la démo (les gestes passent par TanStack Query).
   const [queryClient] = useState(
     () =>
@@ -386,17 +446,36 @@ export default function DevRoomHarness() {
                   <option value={29}>29 (30 avatars)</option>
                 </select>
               </label>
+              <label>
+                showcase{' '}
+                <select
+                  value={showcase}
+                  onChange={(e) => setShowcase(e.target.value)}
+                >
+                  <option value="">—</option>
+                  {names.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <DevButton onClick={() => setRun((n) => n + 1)}>
                 Re-enter
               </DevButton>
             </div>
           </section>
-          <Room
-            key={`${kind}-${entry}-${peers}-${run}`}
-            kind={kind}
-            entry={entry}
-            peers={peers}
-          />
+          {showcase && !layout ? (
+            <p role="status">Loading showcase…</p>
+          ) : (
+            <Room
+              key={`${kind}-${entry}-${peers}-${run}-${showcase}`}
+              kind={kind}
+              entry={entry}
+              peers={peers}
+              showcase={layout}
+            />
+          )}
         </div>
       </main>
     </QueryClientProvider>
