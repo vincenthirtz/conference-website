@@ -18,6 +18,7 @@ import TcgCard, { type TcgCardProps } from '@/components/tcg/TcgCard';
 import { format, useT } from '@/lib/i18n/useT';
 import nsTcgCatalog from '@/lib/i18n/locales/fr/tcgCatalog';
 import type { TcgRarity } from '@/utils/tcg/rarity';
+import { cardStats } from '@/utils/tcg/cardStats';
 
 export type AssociationCardView = {
   id: string;
@@ -129,6 +130,9 @@ export default function TcgAssociationSection({
                   description: card.description,
                 }}
                 rarity={card.rarity}
+                // Ce que VAUT la carte (pas un exemplaire) : une carte de
+                // l'association est une fan art, mêmes chiffres.
+                stats={cardStats({ kind: 'fanart', rarity: card.rarity })}
                 labels={labels}
                 fullDescription
               />

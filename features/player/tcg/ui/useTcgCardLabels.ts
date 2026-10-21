@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 import type { TcgRarity } from '@/utils/tcg/rarity';
+import { tcgCardStatsLabels } from '@/components/tcg/tcgCardStatsLabels';
 
 export function useTcgCardLabels() {
   const t = useT(nsPlayerTcg);
@@ -28,6 +29,8 @@ export function useTcgCardLabels() {
         damage: t.roleDamage,
         support: t.roleSupport,
       },
+      // Niveau, attaque, défense (lot 11) : la ligne sous la rareté.
+      stats: tcgCardStatsLabels(t),
     }),
     [t]
   );

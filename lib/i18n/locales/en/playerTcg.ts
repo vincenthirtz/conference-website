@@ -192,6 +192,17 @@ export default {
   roleDamage: 'Damage',
   roleSupport: 'Support',
 
+  // Card stats, Yu-Gi-Oh style (TCG plan 2, lot 11). Derived from the card
+  // type, its role and its rarity — never from anyone's performance.
+  statsLevel: 'Lv. {level}',
+  statsAttack: 'ATK',
+  statsDefense: 'DEF',
+  statsAria: 'Level {level}, attack {attack}, defense {defense}',
+  statsProfile: 'Stance: {profile}',
+  statsProfileAssault: 'Assault',
+  statsProfileBulwark: 'Bulwark',
+  statsProfileBalanced: 'Balanced',
+
   /* --- UX / accessibility pass (2026-09-15) --- */
 
   loadErrorTitle: 'Your collection could not be loaded right now.',

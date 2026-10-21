@@ -84,6 +84,8 @@ et le problème restant n'est plus l'information mais le **retour**.
 | 8 | Carte à partager (image OG) | 🟧 | M | site | la viralité d'un TCG passe par la capture de son tirage |
 | 9 | Tableau de bord d'engagement : cohortes, dormants, entonnoirs | 🟧 | M | api + site | tout ce qui précède doit se mesurer ailleurs que dans un client SQL |
 | 10 | Dette : figurines, e2e, colonnes héritées, docs | 🟩 | M | api + site | ce que les neuf lots laissent derrière eux |
+| 11 | Attaque et défense (prélude à l'arène de la Library) | 🟧 | M | api + site | demandé le 2026-10-21 ; l'arène ne se construit pas sans chiffres stables sur les cartes — ✅ **code livré le 2026-10-21**, migration à appliquer |
+| 12 | L'arène de la Women's Library | 🟧 | L | api + site | esquisse seulement : règles et questions ouvertes à trancher avant tout code |
 
 ---
 
@@ -345,6 +347,142 @@ octobre ?), ni les entonnoirs des échanges et de la forge. Les constats de la s
 - **`DiscordUserId` partagé** de la spec OpenAPI (`{17,20}` contre `{15,25}` dans le code).
 - **Docs** : TCG.md §4 (drop Twitch) pour la liste de récompenses, §6 pour la route `featured/[id]`,
   et le guide joueuse `/player/tcg-guide` pour les lots 3, 5, 6 à mesure qu'ils partent.
+
+## Lot 11 · Attaque et défense (prélude à l'arène de la Library) — ✅ CODE LIVRÉ (2026-10-21)
+
+**La demande.** « Une carte TCG doit comporter des points attaque/défense comme dans Yu-Gi-Oh, pour
+ensuite créer une arène de combat dans la Women's Library. » Ce lot pose les chiffres sur la carte ;
+l'arène est le lot 12.
+
+**Le piège.** Une carte, c'est souvent une PERSONNE. Des points dérivés de ses performances (rating,
+K/D, taux de victoire, votes MVP) ou tirés au hasard par joueuse classeraient deux joueuses réelles
+du même palier l'une au-dessus de l'autre, publiquement : c'est la « seconde échelle » que TCG.md
+§3 refuse, et une carte « 900 ATK » qui circule sous un nom peut rabaisser quelqu'un. Les chiffres
+ne se dérivent donc **que de ce que la carte est déjà** : son type, son rôle de jeu (un fait public,
+déjà dessiné par la figurine) et sa rareté **figée au tirage**.
+
+**La règle.** La rareté décide de la PUISSANCE (ATK + DEF) et du NIVEAU ; le type ou le rôle ne
+décide que de sa RÉPARTITION. Aucun type ne vaut plus qu'un autre à rareté égale, et même type +
+même rôle + même rareté ⇒ mêmes chiffres, au point près. La brillante ne donne **rien** (variante
+d'impression, pas un palier).
+
+| Rareté | Niveau (étoiles) | Puissance | Assaut (ATK / DEF) | Rempart | Équilibre |
+|---|---|---|---|---|---|
+| `common` | 3 | 2 400 | 1 400 / 1 000 | 1 000 / 1 400 | 1 200 / 1 200 |
+| `rare` | 4 | 3 000 | 1 800 / 1 200 | 1 200 / 1 800 | 1 500 / 1 500 |
+| `epic` | 6 | 4 000 | 2 400 / 1 600 | 1 600 / 2 400 | 2 000 / 2 000 |
+| `legendary` | 8 | 5 000 | 3 000 / 2 000 | 2 000 / 3 000 | 2 500 / 2 500 |
+
+Les magnitudes sont celles de Yu-Gi-Oh (le niveau 4 à 1 800 ATK, le niveau 8 à 3 000), et les
+niveaux tombent dans ses trois classes d'invocation : 3–4 sans sacrifice, 6 avec un, 8 avec deux —
+le lot 12 pourra s'en servir sans rien renuméroter. `common` est au niveau 3, pas 1 : un plancher,
+pas un échec.
+
+| Carte | Profil | Pourquoi |
+|---|---|---|
+| Joueuse ou héros **tank** | Rempart | le rôle qui encaisse |
+| Joueuse ou héros **dégâts** | Assaut | le rôle qui frappe |
+| Joueuse ou héros **soutien** | Équilibre | le rôle qui tient les deux |
+| Joueuse sans rôle connu (aucun héros choisi, `flex`, ou **retirée du TCG**) | Équilibre | on n'attribue pas un rôle au hasard |
+| Équipe | Équilibre | une équipe, c'est les trois rôles ensemble |
+| Map | Rempart | un terrain ne frappe pas, il se tient |
+| Mascotte | Équilibre | un compagnon, ni devant ni derrière |
+| Fan art, **association comprise** | Assaut | une image est un coup d'éclat ; l'association est une catégorie de fan art, pas un type de carte (TCG.md, « La catégorie L'association ») — et une œuvre retirée, dont la face n'est plus lisible, ne change pas de chiffres |
+
+**Le rôle d'une joueuse** est celui que montre déjà sa figurine : le rôle de son premier héros
+choisi, à défaut sa spécialité de roster (`recommendCardHero`). Celui d'un héros vient du
+registre. Une joueuse retirée (§2.4 bis) est anonyme **aussi par ses chiffres** : son rôle n'est
+pas lu, sa carte prend le profil Équilibre de sa rareté, comme toute carte sans rôle.
+
+**Figé ou dérivé ? Le rôle est figé, les chiffres sont dérivés.** Même raisonnement que la rareté
+(« la carte tirée un jour donné garde ce qu'elle valait ce jour-là ») : le rôle bouge — une
+joueuse change de héros favori ou de spécialité, et le jeu reclasse ses héros (Sombra est passée
+de Dégâts à Soutien le 2026-10-17). Sans gel, une carte en main changerait de répartition sous les
+yeux de sa propriétaire, ce que l'arène ne peut pas accepter. On fige donc **le rôle seul**, dans
+`tcg_pack_cards.card_role` (joueuses et héros), au tirage. Les chiffres, eux, restent une fonction
+pure de trois entrées figées ou immuables (type, rôle, rareté) : les stocker en plus doublerait la
+table en SQL sans rien stabiliser de plus, et la garder dans le code laisse retoucher le barème
+d'un coup avant l'ouverture de l'arène. Une fan art n'est pas indexée sur sa cible (héros ou map
+qu'elle illustre) : la cible se modifie après validation.
+
+**Ce qui a été fait.**
+
+*conference-api*
+- `utils/tcg/cardStats.ts` (pur) + `tests/unit/tcgCardStats.test.ts` : chaque type × rôle × rareté,
+  brillante sans bonus, rôle inconnu, retrait, rôle figé prioritaire sur le rôle courant.
+- Migration `database/migrations/tcg_card_role.sql` : colonne `card_role` (NULL = rôle inconnu),
+  CHECK de valeur et de type (joueuse ou héros seulement), backfill idempotent depuis le registre
+  des héros et les préférences / spécialités actuelles (le rôle du jour du tirage n'est connu de
+  personne : le backfill fige celui du jour de la migration), joueuses retirées laissées à NULL.
+- `utils/tcg/cardRoleReady.ts` : sonde de la colonne. Avant la migration, le rôle est lu **en
+  direct** comme la figurine (chiffres justes, pas encore stables) et rien n'est écrit.
+- Champ **additif** `stats { level, attack, defense, profile }` sur toutes les cartes rendues à
+  une joueuse ou une visiteuse : ouverture de paquet, collection (exemplaire de meilleure rareté),
+  vitrine (joueuse et fiche publique), « TCG en action » (tirages, carte de la semaine, vitrines
+  d'équipe), échanges (propositions et cartes). La forge fige le rôle de la carte forgée. Schéma
+  zod nommé `TcgCardStats` + OpenAPI.
+- Inchangés : la route bot (résumé sans cartes), l'image `/api/og/tcg-card` du salon #tcg (elle
+  ne reçoit pas le rôle de l'exemplaire ; l'y ajouter est un suivi), l'overlay OBS (aucune carte).
+
+*conference-website*
+- `TcgCardStatsLine` (sous la rareté de `TcgCard`) : « ★★★★ Niv. 4 » puis « ATK 1800 DEF 1200 »,
+  ligne abrégée cachée du lecteur d'écran et doublée d'une phrase entière ; la vue agrandie dit
+  le profil ; rien ne se rogne (une vignette de 100 px passe à la ligne). Collection,
+  révélation, vitrine (éditeur et fiche), « TCG en action », échanges (le bouton de sélection
+  redit les chiffres dans son nom accessible) affichent les `stats` de l'API. La fiche joueuse
+  (rôle de sa figurine), la fiche d'équipe (calculée au rendu serveur) et le catalogue `/tcg`
+  ne montrent pas un exemplaire : même module pur. L'accueil n'a pas de chiffres.
+- `shouldOptimizeCardImage` sort de `TcgCard.tsx` (déplacement tel quel, réexporté) pour que le
+  composant reste sous le plafond de taille de l'espace joueuse.
+- Libellés FR + EN (`playerTcg`), tests UI contre des réponses figées (mêmes littéraux que
+  l'API).
+
+**À faire côté humain.** Appliquer la migration (commandes dans le compte rendu), déployer
+conference-api **puis** le site. Vérification : `select card_role, count(*) from tcg_pack_cards
+group by 1` après application — aucune carte d'équipe, de map ou de fan art avec un rôle.
+
+**Fini quand** chaque carte affichée porte niveau, ATK et DEF ; deux cartes de même type, rôle et
+rareté ont les mêmes chiffres ; une joueuse qui change de héros ne change pas ses cartes déjà
+tirées ; une joueuse retirée n'est reconnaissable ni à son nom ni à ses chiffres.
+
+## Lot 12 · L'arène de la Women's Library — esquisse, non implémentée
+
+**Où.** Une salle de la Library (une porte du hall), en bêta fermée comme le reste de la Library.
+On y joue avec **sa** collection : les chiffres du lot 11, rien d'autre.
+
+**Règles proposées (Yu-Gi-Oh très simplifié, sans magie ni piège en V1).**
+- Deck de 20 cartes de sa collection (doublons permis jusqu'au nombre possédé), main de 5, une
+  pioche par tour, 4 000 points de vie.
+- Une invocation par tour : niveau 3–4 libre, niveau 6 contre un sacrifice, niveau 8 contre deux.
+  Trois emplacements sur le terrain. Une carte se pose en attaque ou en défense.
+- Combat : ATK contre ATK, la plus faible est détruite et la différence part des points de vie ;
+  ATK contre DEF, la défense détruite si l'ATK la dépasse, sans dégâts aux points de vie ; égalité,
+  rien. Attaque directe quand le terrain adverse est vide.
+- Les profils comptent sans règle de plus : un Rempart tient en défense, un Assaut se joue en
+  attaque — c'est déjà un choix de deck.
+
+**Ce qui ne bouge pas.** Aucune carte ne se perd ni ne se gagne en duel ; aucune pièce n'est mise
+en jeu (cf. « un pronostic, pas un pari » : une mise, même en pièces, changerait la nature de la
+fonctionnalité). Les faces passent par `readCardFaces` : une joueuse retirée reste anonyme sur le
+terrain de l'adversaire.
+
+**Décisions du 2026-10-21.**
+1. **Contre une PNJ d'abord** : une « gardienne de l'arène » de la Library, avec des decks fixes.
+   Rien en temps réel ni de joueuse à joueuse en v1. Le duel entre joueuses viendra plus tard, s'il
+   vient.
+2. **Un paquet par semaine** pour une victoire d'arène, jamais des pièces misées. C'est une
+   nouvelle source de cartes, pas de pièces : on la mesure comme les autres paquets.
+3. **Aucun classement public.** Chacune garde son historique de duels pour elle.
+4. Puisque l'adversaire est une PNJ, le deck d'une autre joueuse n'est jamais montré.
+   Recommandation : les decks de la PNJ n'utilisent que des cartes sans personne réelle (héros,
+   maps, équipes, mascottes), pour ne pas avoir à trancher le consentement de la vitrine (§2.6).
+5. **Le barème du lot 11 est validé**, profils des types sans rôle et table de niveaux compris. Il
+   est gelé dès l'ouverture de l'arène : le retoucher deviendra une nouvelle édition versionnée,
+   pas une correction en place.
+
+**Reste ouvert.** Les échanges et la forge restent-ils ouverts aux cartes engagées dans un deck ?
+Recommandation : oui. Un deck n'est qu'une sélection, pas un verrou : une carte qui quitte la
+collection quitte aussi le deck.
 
 ---
 

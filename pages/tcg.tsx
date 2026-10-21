@@ -56,6 +56,9 @@ import type { PublicTcgBareme } from '@/utils/tcg/publicBareme';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import type { LogoCredit as LogoCreditValue } from '@/utils/teams/logoCredit';
 import { MAP_CARD_RARITY } from '@/utils/tcg/rarity';
+// Pur, sans import à l'exécution : quelques centaines d'octets de barème.
+import { cardStats } from '@/utils/tcg/cardStats';
+import { tcgCardStatsLabels } from '@/components/tcg/tcgCardStatsLabels';
 import { format, useT } from '@/lib/i18n/useT';
 import nsTcgCatalog from '@/lib/i18n/locales/fr/tcgCatalog';
 // Les six libellés de rareté vivent déjà là : les redupliquer donnerait deux
@@ -151,6 +154,7 @@ function TcgCatalogPage({ cards, playerCount, bareme }: Props) {
     logoCredit: tc.logoCredit,
     associationCredit: tc.associationCredit,
     association: tc.cardAssociation,
+    stats: tcgCardStatsLabels(tc),
   };
 
   // Ce qu'une collection permet, une fois les cartes obtenues. Les montants
@@ -340,6 +344,13 @@ function TcgCatalogPage({ cards, playerCount, bareme }: Props) {
                           }
                   }
                   rarity={card.rarity}
+                  // Le catalogue montre ce que VAUT une carte, pas un
+                  // exemplaire : chiffres de son type et de sa rareté (aucune
+                  // joueuse ici, donc aucun rôle).
+                  stats={cardStats({
+                    kind: card.kind === 'association' ? 'fanart' : card.kind,
+                    rarity: card.rarity,
+                  })}
                   labels={cardLabels}
                 />
               </li>

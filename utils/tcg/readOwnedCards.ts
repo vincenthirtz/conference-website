@@ -28,6 +28,7 @@ import { supabaseAdmin } from '@/utils/supabase';
 import type { TcgCardKind } from './subjectKey';
 import type { TcgRarity } from './rarity';
 import { heroCardsReady, withHeroColumn } from './heroCardsReady';
+import { cardRoleReady, withCardRoleColumn } from './cardRoleReady';
 
 /** Taille d'une page de lecture : le plafond PostgREST. */
 export const READ_PAGE = 1000;
@@ -60,6 +61,13 @@ export type OwnedCardRow = {
   card_hero_slug?: string | null;
   rarity: TcgRarity;
   is_foil: boolean;
+  /**
+   * Rôle de jeu FIGÉ au tirage (joueuses et héros), qui répartit attaque et
+   * défense (`cardStats.ts`). ABSENTE de la ligne — pas `null` — tant que la
+   * migration `tcg_card_role.sql` n'est pas appliquée (`cardRoleReady`) :
+   * l'appelant retombe alors sur le rôle courant. `null` = rôle inconnu.
+   */
+  card_role?: string | null;
 };
 
 /** Colonnes d'une carte possédée, sans la colonne des héros (cf. ci-dessus). */
@@ -129,11 +137,24 @@ export async function readOpenedPackIds(
  * on pourrait vendre une carte ET la garder.
  */
 export async function readCardsOfPacks(
-  packIds: string[]
+  packIds: string[],
+  /**
+   * `withRole: false` : ne lit pas le rôle figé — pour les lecteurs qui ne
+   * montrent pas de chiffres (recyclage, forge), qui n'ont pas à sonder une
+   * migration dont ils ne se servent pas.
+   */
+  options: { withRole?: boolean } = {}
 ): Promise<ReadResult<OwnedCardRow[]>> {
   if (!supabaseAdmin) return { ok: false, error: 'supabaseAdmin absent' };
 
-  const columns = withHeroColumn(OWNED_CARD_COLUMNS, await heroCardsReady());
+  const [heroes, roles] = await Promise.all([
+    heroCardsReady(),
+    options.withRole === false ? false : cardRoleReady(),
+  ]);
+  const columns = withCardRoleColumn(
+    withHeroColumn(OWNED_CARD_COLUMNS, heroes),
+    roles
+  );
   const rows: OwnedCardRow[] = [];
   for (let i = 0; i < packIds.length; i += PACK_CHUNK) {
     const chunk = packIds.slice(i, i + PACK_CHUNK);

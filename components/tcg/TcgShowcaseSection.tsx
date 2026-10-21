@@ -20,6 +20,7 @@ import type { GameMascotSlug } from '@/utils/tcg/gameMascots';
 import { useT } from '@/lib/i18n/useT';
 import nsTcgShowcase from '@/lib/i18n/locales/fr/tcgShowcase';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
+import { tcgCardStatsLabels } from '@/components/tcg/tcgCardStatsLabels';
 
 /** La face attendue par `TcgCard`, depuis une carte de vitrine. */
 export function showcaseCardSubject(card: ShowcaseCard): TcgCardSubject {
@@ -107,6 +108,8 @@ export default function TcgShowcaseSection({
               subject={showcaseCardSubject(card)}
               rarity={card.rarity}
               isFoil={card.isFoil}
+              // Les chiffres de l'exemplaire exposé, rendus par l'API.
+              stats={card.stats ?? null}
               labels={{
                 rarity: {
                   common: tTcg.rarityCommon,
@@ -120,6 +123,7 @@ export default function TcgShowcaseSection({
                 associationCredit: tTcg.associationCredit,
                 association: tTcg.cardAssociation,
                 alternateArt: tTcg.cardAlternateArt,
+                stats: tcgCardStatsLabels(tTcg),
               }}
             />
           </li>

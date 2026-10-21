@@ -38,6 +38,7 @@ import type { LogoCredit } from '@/utils/teams/logoCredit';
 import type { FanartTargetView } from './fanart';
 import { readMapFaces } from './readMapFaces';
 import { cardSubjectKey } from './subjectKey';
+import { copyStats, statRoleFromHeroRole, type CardStats } from './cardStats';
 
 /** Cartes exposables au plus. */
 export const MAX_SHOWCASE_CARDS = 3;
@@ -101,6 +102,12 @@ export type ShowcaseCard =
       imageUrl: string | null;
       rarity: TcgRarity;
       isFoil: boolean;
+      /**
+       * Niveau, attaque, défense de l'exemplaire montré (`cardStats.ts`).
+       * Toujours rendu par l'API ; optionnel pour une vitrine composée côté
+       * client avant la fonctionnalité.
+       */
+      stats?: CardStats | null;
     }
   | {
       key: string;
@@ -114,6 +121,12 @@ export type ShowcaseCard =
       logoCredit: LogoCredit | null;
       rarity: TcgRarity;
       isFoil: boolean;
+      /**
+       * Niveau, attaque, défense de l'exemplaire montré (`cardStats.ts`).
+       * Toujours rendu par l'API ; optionnel pour une vitrine composée côté
+       * client avant la fonctionnalité.
+       */
+      stats?: CardStats | null;
     }
   | {
       key: string;
@@ -123,6 +136,12 @@ export type ShowcaseCard =
       imageUrl: string | null;
       rarity: TcgRarity;
       isFoil: boolean;
+      /**
+       * Niveau, attaque, défense de l'exemplaire montré (`cardStats.ts`).
+       * Toujours rendu par l'API ; optionnel pour une vitrine composée côté
+       * client avant la fonctionnalité.
+       */
+      stats?: CardStats | null;
     }
   | {
       key: string;
@@ -144,6 +163,12 @@ export type ShowcaseCard =
       target?: FanartTargetView | null;
       rarity: TcgRarity;
       isFoil: boolean;
+      /**
+       * Niveau, attaque, défense de l'exemplaire montré (`cardStats.ts`).
+       * Toujours rendu par l'API ; optionnel pour une vitrine composée côté
+       * client avant la fonctionnalité.
+       */
+      stats?: CardStats | null;
     }
   | {
       key: string;
@@ -152,6 +177,12 @@ export type ShowcaseCard =
       name: string | null;
       rarity: TcgRarity;
       isFoil: boolean;
+      /**
+       * Niveau, attaque, défense de l'exemplaire montré (`cardStats.ts`).
+       * Toujours rendu par l'API ; optionnel pour une vitrine composée côté
+       * client avant la fonctionnalité.
+       */
+      stats?: CardStats | null;
     }
   | {
       key: string;
@@ -162,6 +193,12 @@ export type ShowcaseCard =
       role: OverwatchRole | null;
       rarity: TcgRarity;
       isFoil: boolean;
+      /**
+       * Niveau, attaque, défense de l'exemplaire montré (`cardStats.ts`).
+       * Toujours rendu par l'API ; optionnel pour une vitrine composée côté
+       * client avant la fonctionnalité.
+       */
+      stats?: CardStats | null;
     };
 
 export type ShowcaseRow = { enabled: boolean; subjectKeys: string[] };
@@ -234,20 +271,30 @@ export async function resolveShowcaseCards(
   if (!owned.ok) return { ok: false, error: owned.error };
 
   // Meilleure rareté et brillance par sujet, sur les seuls sujets demandés.
-  const best = new Map<string, { rarity: TcgRarity; isFoil: boolean }>();
+  // Le rôle FIGÉ suit l'exemplaire de meilleure rareté (le premier lu) : ce
+  // sont SES chiffres que la vitrine montre, comme la collection.
+  const best = new Map<
+    string,
+    { rarity: TcgRarity; isFoil: boolean; role: unknown }
+  >();
   const wantedSet = new Set(wanted);
   for (const row of owned.value) {
     const key = cardSubjectKey(row);
     if (!key || !wantedSet.has(key)) continue;
     const current = best.get(key);
     if (!current) {
-      best.set(key, { rarity: row.rarity, isFoil: Boolean(row.is_foil) });
+      best.set(key, {
+        rarity: row.rarity,
+        isFoil: Boolean(row.is_foil),
+        role: row.card_role,
+      });
       continue;
     }
     if (
       RARITY_ORDER.indexOf(row.rarity) > RARITY_ORDER.indexOf(current.rarity)
     ) {
       current.rarity = row.rarity;
+      current.role = row.card_role;
     }
     current.isFoil = current.isFoil || Boolean(row.is_foil);
   }
@@ -263,6 +310,7 @@ export async function resolveShowcaseCards(
         ...(best.get(showcaseKey(subject)) as {
           rarity: TcgRarity;
           isFoil: boolean;
+          role: unknown;
         }),
       }))
   );
@@ -275,6 +323,12 @@ export type ShowcaseCardInput = {
   subject: ShowcaseSubject;
   rarity: TcgRarity;
   isFoil: boolean;
+  /**
+   * Rôle FIGÉ (brut, `tcg_pack_cards.card_role`) de l'exemplaire montré.
+   * `undefined` quand il n'a pas été lu (migration absente) ou qu'aucun
+   * exemplaire n'est en jeu (carte de la semaine) : le rôle courant sert alors.
+   */
+  role?: unknown;
 };
 
 /**
@@ -311,7 +365,7 @@ export async function buildShowcaseCards(
     ),
   ]);
 
-  return items.map(({ subject, rarity, isFoil }): ShowcaseCard => {
+  return items.map(({ subject, rarity, isFoil, role }): ShowcaseCard => {
     const key = showcaseKey(subject);
     if (subject.kind === 'player') {
       const face = playerFaces.get(subject.id);
@@ -323,6 +377,14 @@ export async function buildShowcaseCards(
         imageUrl: face?.imageUrl ?? null,
         rarity,
         isFoil,
+        // Retirée : aucun rôle lu, chiffres anonymes (`statRoleOf`).
+        stats: copyStats({
+          kind: 'player',
+          rarity,
+          frozenRole: role,
+          currentRole: face?.figureRole ?? null,
+          withdrawn: face?.withdrawn,
+        }),
       };
     }
     if (subject.kind === 'map') {
@@ -335,6 +397,7 @@ export async function buildShowcaseCards(
         imageUrl: face?.imageUrl ?? null,
         rarity,
         isFoil,
+        stats: copyStats({ kind: 'map', rarity }),
       };
     }
     if (subject.kind === 'fanart') {
@@ -353,6 +416,7 @@ export async function buildShowcaseCards(
         target: face?.target ?? null,
         rarity,
         isFoil,
+        stats: copyStats({ kind: 'fanart', rarity }),
       };
     }
     if (subject.kind === 'mascot') {
@@ -363,6 +427,7 @@ export async function buildShowcaseCards(
         name: gameMascotDisplayName(subject.id),
         rarity,
         isFoil,
+        stats: copyStats({ kind: 'mascot', rarity }),
       };
     }
     if (subject.kind === 'hero') {
@@ -374,6 +439,12 @@ export async function buildShowcaseCards(
         role: heroCardRole(subject.id),
         rarity,
         isFoil,
+        stats: copyStats({
+          kind: 'hero',
+          rarity,
+          frozenRole: role,
+          currentRole: statRoleFromHeroRole(heroCardRole(subject.id)),
+        }),
       };
     }
     const face = teamFaces.get(subject.id);
@@ -390,6 +461,7 @@ export async function buildShowcaseCards(
       logoCredit: face?.logoCredit ?? null,
       rarity,
       isFoil,
+      stats: copyStats({ kind: 'team', rarity }),
     };
   });
 }

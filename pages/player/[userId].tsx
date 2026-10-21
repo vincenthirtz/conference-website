@@ -54,6 +54,8 @@ import { socialHandleLabel, socialHref } from '@/utils/social/profileHandles';
 import { XIcon } from '@/components/Icons';
 import TcgCard from '@/components/tcg/TcgCard';
 import { cardRarity } from '@/utils/tcg/rarity';
+import { cardStats } from '@/utils/tcg/cardStats';
+import { tcgCardStatsLabels } from '@/components/tcg/tcgCardStatsLabels';
 import { readPlayerFaces } from '@/utils/tcg/readCardFaces';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 import TcgShowcaseSection from '@/components/tcg/TcgShowcaseSection';
@@ -460,6 +462,7 @@ function TcgCardSection({
   const t = useT(nsPlayerPublicProfile);
   const tTcg = useT(nsPlayerTcg);
   const { user } = useSession();
+  const rarity = cardRarity(badges);
 
   return (
     <section className="mt-8">
@@ -481,7 +484,15 @@ function TcgCardSection({
               // utils/tcg/roleFigures.ts) plutôt que l'aplat de marque.
               figure: tcgFigure,
             }}
-            rarity={cardRarity(badges)}
+            rarity={rarity}
+            // Sa carte telle qu'elle est AUJOURD'HUI (pas un exemplaire tiré) :
+            // rôle de sa figurine, rareté de ses badges — ni performance ni
+            // hasard. Un exemplaire tiré, lui, garde le rôle de son tirage.
+            stats={cardStats({
+              kind: 'player',
+              rarity,
+              role: tcgFigure?.role ?? null,
+            })}
             // La carte est déjà sur la page de son sujet : pas de lien vers
             // soi-même.
             noLink
@@ -499,6 +510,7 @@ function TcgCardSection({
                 damage: tTcg.roleDamage,
                 support: tTcg.roleSupport,
               },
+              stats: tcgCardStatsLabels(tTcg),
             }}
           />
         </div>

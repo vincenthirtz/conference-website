@@ -31,6 +31,8 @@ import type { ShowcaseCard } from '@/utils/tcg/showcase';
 import type { LogoCredit } from '@/utils/teams/logoCredit';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import type { OverwatchRole } from '@/utils/heroes/overwatch';
+import type { CardStats } from '@/utils/tcg/cardStats';
+import { tcgCardStatsLabels } from '@/components/tcg/tcgCardStatsLabels';
 import { fanartCardName, type FanartTargetView } from '@/utils/tcg/fanart';
 import { useT, format } from '@/lib/i18n/useT';
 import nsTcgShowcase from '@/lib/i18n/locales/fr/tcgShowcase';
@@ -49,8 +51,12 @@ type ShowcaseResponse = {
   publicProfileUrl: string | null;
 };
 
-/** Une carte de la collection, telle que la rend l'API (champs utiles ici). */
-type CollectionCard =
+/**
+ * Une carte de la collection, telle que la rend l'API (champs utiles ici).
+ * `stats` suit l'étalement vers la carte de vitrine : ce sont les chiffres
+ * de l'exemplaire que la vitrine montrera.
+ */
+type CollectionCard = { stats?: CardStats | null } & (
   | {
       kind: 'player';
       userId: string;
@@ -107,7 +113,8 @@ type CollectionCard =
       role: OverwatchRole | null;
       rarity: TcgRarity;
       isFoil: boolean;
-    };
+    }
+);
 
 /**
  * Une carte de collection sous la forme d'une carte de vitrine. La clé suit le
@@ -191,6 +198,7 @@ export default function TcgShowcaseEditor({
     associationCredit: tTcg.associationCredit,
     association: tTcg.cardAssociation,
     alternateArt: tTcg.cardAlternateArt,
+    stats: tcgCardStatsLabels(tTcg),
   };
 
   const apply = useCallback((data: ShowcaseResponse, keepSelection = false) => {
@@ -392,6 +400,7 @@ export default function TcgShowcaseEditor({
                     subject={showcaseCardSubject(card)}
                     rarity={card.rarity}
                     isFoil={card.isFoil}
+                    stats={card.stats ?? null}
                     labels={cardLabels}
                   />
                   <button

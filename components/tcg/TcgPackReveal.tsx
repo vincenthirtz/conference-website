@@ -55,7 +55,11 @@ import {
   type JSX,
 } from 'react';
 
-import TcgCard, { type TcgCardSubject } from '@/components/tcg/TcgCard';
+import TcgCard, {
+  type TcgCardProps,
+  type TcgCardSubject,
+} from '@/components/tcg/TcgCard';
+import type { CardStats } from '@/utils/tcg/cardStats';
 import TcgPackSachet from '@/components/tcg/TcgPackSachet';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
 import {
@@ -73,6 +77,8 @@ export type TcgRevealCard = {
   subject: TcgCardSubject;
   rarity: TcgRarity;
   isFoil: boolean;
+  /** Niveau, attaque, défense de l'exemplaire tiré ; absents ⇒ pas de ligne. */
+  stats?: CardStats | null;
   /** `true` nouvelle, `false` doublon, `null` inconnu (rien d'affiché). */
   isNew: boolean | null;
 };
@@ -96,15 +102,8 @@ export type TcgPackRevealProps = {
     openPackHint: string;
     newCard: string;
     duplicate: string;
-    card: {
-      rarity: Record<TcgRarity, string>;
-      foil: string;
-      copies: string;
-      /** Gabarit du crédit de logo ; absent ⇒ aucun crédit (cf. `TcgCard`). */
-      logoCredit?: string;
-      /** Badge de la catégorie « L'association » (cf. `TcgCard`). */
-      association?: string;
-    };
+    /** Les libellés de `TcgCard`, tels quels (crédits, rôles, chiffres…). */
+    card: TcgCardProps['labels'];
   };
 };
 
@@ -337,6 +336,7 @@ export default function TcgPackReveal({
                       subject={card.subject}
                       rarity={card.rarity}
                       isFoil={card.isFoil}
+                      stats={card.stats ?? null}
                       labels={labels.card}
                     />
                   </div>
