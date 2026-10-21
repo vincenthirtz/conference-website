@@ -25,6 +25,7 @@ import {
 import type { RoomDecor } from './decor';
 import { boxContainsScreenPoint, centerDepth, depthSort } from './depthSort';
 import type { UseActivity } from './interactions';
+import type { NpcLayer } from './npcLayer';
 import { findPath, isWalkable, type WalkGrid } from './pathfinding';
 import {
   type AvatarIntent,
@@ -130,6 +131,8 @@ export class LibraryWorld {
   bubbleMs = DEFAULT_BUBBLE_MS;
   /** Pictogramme de chaque activité (lot 15c), au-dessus de qui s'en sert. */
   activityGlyphs: Partial<Record<UseActivity, string>> = {};
+  /** Lot 16 : le PNJ de la salle (engine/npcLayer.ts) ; null : aucun. */
+  npc: NpcLayer | null = null;
   private rand: () => number;
   /** La joueuse est arrivée au bout de son trajet (vidé par `takeArrivals`). */
   private arrivals: string[] = [];

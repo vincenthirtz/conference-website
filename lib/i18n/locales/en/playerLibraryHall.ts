@@ -29,6 +29,7 @@ export default {
     hall: 'Door to the hall',
     shelf: 'Bookshelf',
     guichet: 'Help desk',
+    halloween: 'Halloween Event pumpkin',
   },
 
   board: {
@@ -123,5 +124,10 @@ export default {
 
   dialog: {
     close: 'Close',
+  },
+
+  halloween: {
+    boo: 'Boo!',
+    ghostLabel: 'The Halloween Event ghost',
   },
 };

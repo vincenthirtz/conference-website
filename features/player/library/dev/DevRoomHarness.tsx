@@ -21,7 +21,14 @@
 // Lot 15 : « showcase » (ou `?showcase=<nom>`) pose une vitrine de meubles
 // dans leurs 4 rotations, une joueuse assise / allongée sur chaque place
 // (`./showcase.ts`) — pour caler les profils d'assise à l'œil.
+//
+// Lot 16 : `?npc=halloween` fixe la saison du hall pendant l'événement —
+// citrouilles, fantôme qui flotte et fait « Bouh ! », même hors de l'affiche —
+// et le hall montre sous la scène son écran réel (`./devHalloween.tsx`, à la
+// demande) : un appui sur le fantôme ou la citrouille y ouvre le dialogue.
+// Sans paramètre, l'heure réelle décide.
 
+import dynamic from 'next/dynamic';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   type CSSProperties,
@@ -74,6 +81,11 @@ const DEV_ITEMS: LibraryApartmentItem[] = [
   { inventoryId: 'dev-04', key: 'floor_lamp', gx: 1, gy: 4, rotation: 0 },
   { inventoryId: 'dev-05', key: 'plant_tall', gx: 12, gy: 1, rotation: 0 },
 ];
+
+// Lot 16 : l'écran du hall sous la scène, chargé à la demande ; un soir de
+// l'Event Halloween, pour `?npc=halloween`.
+const DevHallExtras = dynamic(() => import('./devHalloween'), { ssr: false });
+const DEV_HALLOWEEN_AT = Date.parse('2026-10-30T20:00:00+01:00');
 
 const ROW: CSSProperties = {
   display: 'flex',
@@ -173,11 +185,13 @@ function Room({
   entry,
   peers,
   showcase,
+  seasonAt,
 }: {
   kind: LibraryRoomKind;
   entry: EntryMode;
   peers: number;
   showcase: ShowcaseLayout | null;
+  seasonAt: number | undefined;
 }) {
   // Un bus neuf à chaque montage (`key`) : rien ne survit d'une démonstration
   // à l'autre.
@@ -261,8 +275,10 @@ function Room({
           roomId={FAKE_ROOM_ID}
           specs={DEV_SPECS}
           backHref="/dev/library-apartment"
+          seasonAt={seasonAt}
         />
       </LibrarySocialProvider>
+      {kind === 'hall' && !showcase && <DevHallExtras seasonAt={seasonAt} />}
 
       <section style={PANEL} aria-label="Dev: server events">
         <strong>Server events (what conference-api would broadcast)</strong>
@@ -383,6 +399,12 @@ export default function DevRoomHarness() {
   const [showcase, setShowcase] = useState('');
   const [names, setNames] = useState<string[]>([]);
   const [layout, setLayout] = useState<ShowcaseLayout | null>(null);
+  // Lot 16 : `?npc=halloween` fixe la saison du hall pendant l'événement.
+  const [seasonAt, setSeasonAt] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('npc') === 'halloween')
+      setSeasonAt(DEV_HALLOWEEN_AT);
+  }, []);
   useEffect(() => {
     void import('./showcase').then(({ SHOWCASES }) => {
       setNames(Object.keys(SHOWCASES));
@@ -469,11 +491,12 @@ export default function DevRoomHarness() {
             <p role="status">Loading showcase…</p>
           ) : (
             <Room
-              key={`${kind}-${entry}-${peers}-${run}-${showcase}`}
+              key={`${kind}-${entry}-${peers}-${run}-${showcase}-${seasonAt}`}
               kind={kind}
               entry={entry}
               peers={peers}
               showcase={layout}
+              seasonAt={seasonAt}
             />
           )}
         </div>

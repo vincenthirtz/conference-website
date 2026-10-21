@@ -21,6 +21,7 @@ import type { RoomDecor } from './engine/decor';
 import type { Direction } from './engine/motion';
 import type { AvatarIntent, PlayerPosture } from './engine/postures';
 import type { Tile } from './engine/projection';
+import type { RoomItem } from './engine/room';
 import type { BubbleContent, RemoteAvatarInput } from './engine/remotes';
 import { fixedLayoutOf } from './layouts';
 import type { PlacementSpec } from './placement';
@@ -167,14 +168,17 @@ export type FixedScene = { decor: RoomDecor; wallHeight: number; start: Tile };
  * La SCÈNE d'une salle où l'on entre. Une salle commune (décor fixe) : ses
  * dimensions, ses meubles (id = celui du décor, rendu en `inventoryId`) et
  * `fixed` (décor, murs, arrivée). Les autres : la salle et ses meubles tels
- * qu'`enter` les rend, `fixed: null`.
+ * qu'`enter` les rend, `fixed: null`. `extra` (lot 16) : les meubles d'une
+ * saison posés en plus sur un décor fixe (les citrouilles du hall pendant
+ * l'événement d'Halloween, `halloween/hallDecor`).
  */
-export function sceneOf<
-  R extends RoomShape & { kind: LibraryRoomKind },
->(enter: {
-  room: R;
-  items: readonly LibraryApartmentItem[];
-}): {
+export function sceneOf<R extends RoomShape & { kind: LibraryRoomKind }>(
+  enter: {
+    room: R;
+    items: readonly LibraryApartmentItem[];
+  },
+  extra: readonly RoomItem[] = []
+): {
   room: R;
   items: readonly LibraryApartmentItem[];
   fixed: FixedScene | null;
@@ -184,7 +188,7 @@ export function sceneOf<
   const { room, playerStart } = layout;
   return {
     room: { ...enter.room, width: room.w, depth: room.d },
-    items: room.items.map((i) => ({
+    items: [...room.items, ...extra].map((i) => ({
       inventoryId: i.id,
       key: i.key,
       gx: i.gx,

@@ -16,6 +16,9 @@
 // caméra sur un siège à dossier (`behind`), dessinées juste avant (le dossier
 // les cache). Leur ombre passe avant le meuble. Un meuble absent du dessin
 // (caché, fantôme) : elles rejoignent le tri comme les autres.
+//
+// PNJ (lot 16, npcLayer.ts) : son ombre avec les tracés au sol, son image
+// triée avec les meubles et les avatars, sa bulle avec les leurs.
 
 import type { ImageCache, LibraryManifest, SpriteFrame } from './assets';
 import {
@@ -64,7 +67,8 @@ type Ctx = CanvasRenderingContext2D;
 
 type Drawable =
   | { kind: 'item'; box: Box3; item: RoomItem; ghost?: boolean }
-  | { kind: 'avatar'; box: Box3; avatar: AvatarEntity };
+  | { kind: 'avatar'; box: Box3; avatar: AvatarEntity }
+  | { kind: 'npc'; box: Box3 };
 
 export type RenderStats = { drawMs: number; objects: number; sprites: number };
 
@@ -455,7 +459,8 @@ export class LibraryRenderer {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    const { room } = world;
+    const { room, npc } = world;
+    npc?.step(world);
     const decor = this.manifest?.decor;
     const pr = this.manifest?.pixelRatio ?? 1;
     drawFloorEdges(ctx, room);
@@ -512,6 +517,7 @@ export class LibraryRenderer {
     }
     const player = this.playerId ? world.avatar(this.playerId) : undefined;
     if (player) drawPathDots(ctx, player);
+    npc?.drawShadow(ctx);
 
     const drawables: Drawable[] = [];
     for (const { item, ghost } of objects)
@@ -527,8 +533,15 @@ export class LibraryRenderer {
     );
     for (const avatar of free)
       drawables.push({ kind: 'avatar', avatar, box: stanceBox(avatar) });
+    // Lot 16 : le PNJ qui flotte, trié avec les meubles et les avatars.
+    const npcBox = npc?.box();
+    if (npcBox) drawables.push({ kind: 'npc', box: npcBox });
 
     for (const d of depthSort(drawables)) {
+      if (d.kind === 'npc') {
+        if (npc?.draw(ctx)) sprites++;
+        continue;
+      }
       if (d.kind === 'avatar') {
         if (this.drawAvatar(d.avatar, timeSec)) sprites++;
         continue;
@@ -564,6 +577,8 @@ export class LibraryRenderer {
       this.fontFamily,
       this.elide
     );
+    const { width, height } = this.canvas;
+    npc?.markVisible(cam, width / this.dpr, height / this.dpr);
     return {
       drawMs: performance.now() - t0,
       objects: drawables.length + flat.length,

@@ -5,7 +5,9 @@
 // de lieu).
 //
 // ORDRE DU TEST, en mode `walk` (engine/controller.ts) : une autre joueuse
-// d'abord (son image passe devant tout), PUIS les zones, PUIS le sol (marcher).
+// d'abord (son image passe devant tout), PUIS le PNJ qui flotte (lot 16,
+// `world.npc`, son appui part comme une zone), PUIS les zones, PUIS les
+// meubles interactifs (lot 15), PUIS le sol (marcher).
 // Entre zones : la plus en avant (boîte projetée), un pan de mur en dernier.
 // À la souris, le survol d'une zone met le curseur en main, son nom en
 // infobulle (`title`), et l'éclaire : le contour du meuble (`item`), sinon la
@@ -72,13 +74,30 @@ export type LibraryHotspot = {
   shape: HotspotShape;
 };
 
+/** Ce que montre le survol : une zone, un meuble, ou le PNJ (sans forme). */
+type MarkedSpot = Pick<LibraryHotspot, 'id' | 'label'> & {
+  shape?: HotspotShape;
+};
+
 /** Un appui sur une zone ; `anchor` : au-dessus d'elle, px CSS du conteneur. */
 export type HotspotTap = { id: string; anchor: ScreenPoint };
 
-/** Ce que le test lit du monde : ses meubles et son catalogue. */
+/**
+ * Lot 16 : un PNJ (engine/npcLayer.ts), visé AVANT les zones — il flotte
+ * devant elles. Son appui part comme celui d'une zone (`id`).
+ */
+export type HotspotNpc = {
+  spotAt(
+    sx: number,
+    sy: number
+  ): { id: string; label?: string; top: ScreenPoint } | null;
+};
+
+/** Ce que le test lit du monde : ses meubles, son catalogue, son PNJ. */
 export type HotspotWorld = {
   room: { items: readonly RoomItem[] };
   catalog: FurnitureCatalog;
+  npc?: HotspotNpc | null;
 };
 
 /** Hauteur d'un pavé qui ne couvre aucun meuble (une zone au sol). */
@@ -214,10 +233,12 @@ export class HotspotLayer {
     return this.list.length;
   }
 
-  /** L'appui sur un point du canvas (px CSS) : la zone visée, ou null. */
+  /** L'appui sur un point du canvas (px CSS) : le PNJ, la zone visée, ou null. */
   at(world: HotspotWorld, cam: Camera, p: ScreenPoint): HotspotTap | null {
-    if (this.list.length === 0) return null;
     const w = canvasToWorld(p, cam);
+    const npc = world.npc?.spotAt(w.x, w.y);
+    if (npc) return { id: npc.id, anchor: worldToCanvas(npc.top, cam) };
+    if (this.list.length === 0) return null;
     const spot = hotspotAt(world, this.list, w.x, w.y);
     const top = spot ? topOf(world, spot.shape) : null;
     return spot && top
@@ -243,6 +264,12 @@ export class HotspotLayer {
       return null;
     }
     const w = canvasToWorld(p, cam);
+    // Le PNJ d'abord (lot 16) : main et nom, sans case éclairée.
+    const npc = world.npc?.spotAt(w.x, w.y);
+    if (npc) {
+      this.mark({ id: `npc:${npc.id}`, label: npc.label });
+      return null;
+    }
     const spot =
       this.list.length > 0 ? hotspotAt(world, this.list, w.x, w.y) : null;
     const item = spot ? null : (furniture?.(w.x, w.y) ?? null);
@@ -251,7 +278,8 @@ export class HotspotLayer {
     return spot ? footOf(spot.shape) : pickTile(p.x, p.y, cam, world.room);
   }
 
-  private mark(spot: LibraryHotspot | null, furniture = false): void {
+  /** Une zone, un meuble, ou le PNJ (sans forme : rien à éclairer). */
+  private mark(spot: MarkedSpot | null, furniture = false): void {
     const id = spot?.id ?? null;
     if (id === this.hovered) return;
     this.hovered = id;
@@ -259,10 +287,8 @@ export class HotspotLayer {
     c.style.cursor = spot ? 'pointer' : '';
     c.title = spot?.label ?? '';
     c.dataset.hotspot = furniture ? '' : (id ?? '');
-    c.dataset.furniture =
-      furniture && spot?.shape.kind === 'item' ? spot.shape.itemId : '';
-    this.host.setSelection(
-      spot?.shape.kind === 'item' ? spot.shape.itemId : null
-    );
+    const itemId = spot?.shape?.kind === 'item' ? spot.shape.itemId : null;
+    c.dataset.furniture = furniture && itemId ? itemId : '';
+    this.host.setSelection(itemId);
   }
 }

@@ -21,18 +21,27 @@ import { LINK, TEXT_MUTED } from '../social/shared';
 
 /**
  * Les panneaux que le hall ouvre en dialogue : deux panneaux muraux (annonces,
- * tournoi en cours) et ceux de deux portes.
+ * tournoi en cours), ceux de deux portes et, pendant l'événement d'Halloween,
+ * l'inscription en un clic (lot 16, la citrouille et le fantôme).
  */
-export type HallPanel = 'board' | 'tournament' | 'apartments' | 'team_hq';
+export type HallPanel =
+  | 'board'
+  | 'tournament'
+  | 'apartments'
+  | 'team_hq'
+  | 'halloween';
 
 export type HallDoorAction =
   | { kind: 'place'; place: LibraryPlace }
-  | { kind: 'panel'; panel: Exclude<HallPanel, 'board' | 'tournament'> };
+  | {
+      kind: 'panel';
+      panel: Exclude<HallPanel, 'board' | 'tournament' | 'halloween'>;
+    };
 
 type DoorText = 'readingRoom' | 'apartments' | 'teamHq';
 
 export type HallDoor = {
-  id: Exclude<HallSpotId, 'board' | 'tournament_board'>;
+  id: Exclude<HallSpotId, 'board' | 'tournament_board' | 'halloween'>;
   /** Clés de `playerLibraryHall.doors` : `<text>` et `<text>Hint`. */
   text: DoorText;
   action: HallDoorAction;

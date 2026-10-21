@@ -186,6 +186,7 @@ import nsPlayerLibrarySocial from './playerLibrarySocial';
 import nsPlayerLibraryFurniture from './playerLibraryFurniture';
 import nsPlayerLibraryChat from './playerLibraryChat';
 import nsPlayerLibraryHall from './playerLibraryHall';
+import nsPlayerLibraryHalloween from './playerLibraryHalloween';
 import nsPlayerLibraryReadingRoom from './playerLibraryReadingRoom';
 import nsPlayerLibraryTeamHq from './playerLibraryTeamHq';
 
@@ -369,6 +370,7 @@ export const frDict = {
   playerLibraryFurniture: nsPlayerLibraryFurniture.fr,
   playerLibraryChat: nsPlayerLibraryChat.fr,
   playerLibraryHall: nsPlayerLibraryHall.fr,
+  playerLibraryHalloween: nsPlayerLibraryHalloween.fr,
   playerLibraryReadingRoom: nsPlayerLibraryReadingRoom.fr,
   playerLibraryTeamHq: nsPlayerLibraryTeamHq.fr,
 };

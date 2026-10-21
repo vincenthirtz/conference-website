@@ -11,7 +11,11 @@
 //      jamais d'import statique ici, garde :
 //      tests/unit/libraryHallTournament.test.tsx) ;
 //   3. les portes (`HallDoors`) : la Grande salle de lecture (un lieu), les
-//      appartements ouverts et les QG d'équipe (des panneaux).
+//      appartements ouverts et les QG d'équipe (des panneaux) ;
+//   4. (lot 16) pendant l'Event Halloween seulement, en tête : son entrée,
+//      qui ouvre l'inscription en un clic (`HalloweenHall`, CHARGÉ À LA
+//      DEMANDE), comme la citrouille de la vue (zone `halloween`) et le
+//      fantôme.
 // Un appui sur une zone DANS LA VUE (`layouts/hall.ts`, `HALL_HOTSPOTS`)
 // arrive par `hall/spotRequests` et ouvre le MÊME panneau, ou le même lieu.
 // Un seul panneau ouvert à la fois.
@@ -45,6 +49,10 @@ const TournamentBoardPanel = dynamic(() => import('./TournamentBoardPanel'), {
   loading: () => <TournamentOpening />,
 });
 
+// Lot 16 : l'Event Halloween (entrée, dialogue, inscription), chargé à la
+// demande dans le hall ; il ne montre rien hors de l'événement.
+const HalloweenHall = dynamic(() => import('./HalloweenHall'), { ssr: false });
+
 function TournamentOpening() {
   const t = useT(nsHall);
   return (
@@ -60,20 +68,34 @@ export type HallExtrasProps = {
   room: { kind: LibraryRoomKind };
   /** Changer de lieu ; défaut `Router.push` (les tests l'injectent). */
   navigate?: (href: string) => void;
+  /**
+   * L'instant de l'entrée (ms ; défaut : celui du montage), pour l'Event
+   * Halloween (lot 16) : son entrée et son dialogue ne sont là que pendant
+   * l'événement. Les tests le fixent.
+   */
+  nowMs?: number;
 };
 
-export default function HallExtras({ room, navigate }: HallExtrasProps) {
+export default function HallExtras({ room, navigate, nowMs }: HallExtrasProps) {
   // Sans cache joueuse (un écran hors page Next), le hall se tait au lieu de
   // lever — comme la porte des QG (lot 9).
   const queryClient = useContext(QueryClientContext);
   if (room.kind !== 'hall' || !queryClient) return null;
-  return <HallPanelView navigate={navigate} />;
+  return <HallPanelView navigate={navigate} nowMs={nowMs} />;
 }
 
-function HallPanelView({ navigate }: { navigate?: (href: string) => void }) {
+function HallPanelView({
+  navigate,
+  nowMs,
+}: {
+  navigate?: (href: string) => void;
+  nowMs?: number;
+}) {
   const t = useT(nsHall);
   const ids = useId();
   const [open, setOpen] = useState<Open | null>(null);
+  // Lot 16 : l'instant de l'entrée dans le hall, pour l'Event Halloween.
+  const [enteredAt] = useState(() => nowMs ?? Date.now());
   const go = useCallback(
     (href: string) => (navigate ? navigate(href) : void Router.push(href)),
     [navigate]
@@ -85,6 +107,8 @@ function HallPanelView({ navigate }: { navigate?: (href: string) => void }) {
       subscribeHallSpots((id) => {
         if (id === 'board') return setOpen({ panel: 'board' });
         if (id === 'tournament_board') return setOpen({ panel: 'tournament' });
+        // La citrouille et le fantôme (hors événement, `HalloweenHall` n'ouvre rien).
+        if (id === 'halloween') return setOpen({ panel: 'halloween' });
         const door = hallDoorOf(id);
         if (!door) return;
         if (door.action.kind === 'place') go(placeHref(door.action.place));
@@ -100,6 +124,15 @@ function HallPanelView({ navigate }: { navigate?: (href: string) => void }) {
 
   return (
     <div className="grid gap-6 md:grid-cols-2" data-hall="">
+      {/* Lot 16 — l'entrée, et le dialogue qu'ouvrent aussi la citrouille et
+          le fantôme : chargés à la demande, rien hors de l'événement. */}
+      <HalloweenHall
+        enteredAt={enteredAt}
+        open={open?.panel === 'halloween'}
+        onOpen={() => setOpen({ panel: 'halloween' })}
+        onClose={close}
+        headingId={panelTitle}
+      />
       <div className="flex flex-col gap-6">
         <section
           aria-labelledby={boardTitle}

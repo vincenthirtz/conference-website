@@ -32,6 +32,7 @@ export default ns('playerLibraryHall', {
     hall: 'Porte du hall',
     shelf: 'Rayonnage',
     guichet: 'Guichet',
+    halloween: 'Citrouille de l’Event Halloween',
   },
 
   board: {
@@ -129,5 +130,13 @@ export default ns('playerLibraryHall', {
 
   dialog: {
     close: 'Fermer',
+  },
+
+  // Lot 16 — le fantôme d'Halloween, dans le moteur (premier chargement) :
+  // sa bulle et son nom au survol. L'entrée sous la scène et l'inscription
+  // ont leur namespace, chargé avec elles (`playerLibraryHalloween`).
+  halloween: {
+    boo: 'Bouh !',
+    ghostLabel: 'Le fantôme de l’Event Halloween',
   },
 });

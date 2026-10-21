@@ -192,6 +192,7 @@ import enPlayerLibrarySocial from './playerLibrarySocial';
 import enPlayerLibraryFurniture from './playerLibraryFurniture';
 import enPlayerLibraryChat from './playerLibraryChat';
 import enPlayerLibraryHall from './playerLibraryHall';
+import enPlayerLibraryHalloween from './playerLibraryHalloween';
 import enPlayerLibraryReadingRoom from './playerLibraryReadingRoom';
 import enPlayerLibraryTeamHq from './playerLibraryTeamHq';
 
@@ -375,6 +376,7 @@ const enDict = {
   playerLibraryFurniture: enPlayerLibraryFurniture,
   playerLibraryChat: enPlayerLibraryChat,
   playerLibraryHall: enPlayerLibraryHall,
+  playerLibraryHalloween: enPlayerLibraryHalloween,
   playerLibraryReadingRoom: enPlayerLibraryReadingRoom,
   playerLibraryTeamHq: enPlayerLibraryTeamHq,
 };

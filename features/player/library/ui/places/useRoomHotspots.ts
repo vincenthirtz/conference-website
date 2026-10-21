@@ -3,7 +3,9 @@
 // de docs/PLAN-womens-library.md). `RoomStage` les donne au moteur ; chaque
 // lot garde ses panneaux chez lui et ne reçoit que les appuis sur SES zones :
 //   - `hall` (lot 7)         : panneau d'annonces, tableau du tournoi et
-//                              trois portes (`layouts/hall.ts`) →
+//                              trois portes (`layouts/hall.ts`), plus les
+//                              zones d'une saison (lot 16 : la citrouille de
+//                              l'Event Halloween, `halloween/hallDecor.ts`) →
 //                              `requestHallSpot` ;
 //   - `reading_room` (lot 8) : rayonnages et guichet (`readingRoom/hotspots`)
 //                              → `requestReadingRoomSpot` ; la porte du hall
@@ -39,6 +41,15 @@ export type RoomHotspots = {
   onHotspotTap: (tap: HotspotTap) => void;
 };
 
+/**
+ * Les zones qu'une SAISON ajoute (lot 16, `halloween/hallDecor.hallSeasonAt`)
+ * et, sans écran pour les ouvrir, la page où elles mènent.
+ */
+export type SeasonSpots = {
+  hotspots: readonly HotspotDecl[];
+  hrefOf?: (spotId: string) => string | null;
+};
+
 const NONE: RoomHotspots = { hotspots: [], onHotspotTap: () => {} };
 
 function named(
@@ -65,20 +76,29 @@ function readingRoomSpots(labels: SpotLabels): LibraryHotspot[] {
 /**
  * Les zones d'une sorte de salle et le routage de leurs appuis.
  * `navigate` : changer de lieu (défaut `Router.push`, lu à l'appui seulement).
+ * `season` (lot 16) : les zones de saison du hall (la citrouille pendant
+ * l'Event Halloween), posées avec les meubles qu'elles couvrent.
  */
 export function roomHotspotsOf(
   kind: LibraryRoomKind | null,
   labels: SpotLabels,
-  navigate: (href: string) => void = (href) => void Router.push(href)
+  navigate: (href: string) => void = (href) => void Router.push(href),
+  season: SeasonSpots | null = null
 ): RoomHotspots {
   switch (kind) {
     case 'hall':
       return {
-        hotspots: named(HALL_HOTSPOTS, labels),
+        hotspots: named(
+          season ? [...HALL_HOTSPOTS, ...season.hotspots] : HALL_HOTSPOTS,
+          labels
+        ),
         onHotspotTap: ({ id }) => {
-          // L'écran du hall ouvre le panneau ; sans lui, une porte mène quand même.
+          // L'écran du hall ouvre le panneau ; sans lui, une porte mène quand
+          // même, et une zone de saison à sa page.
           if (requestHallSpot(id as HallSpotId)) return;
           if (id === 'reading_room') navigate(placeHref('reading_room'));
+          const href = season?.hrefOf?.(id);
+          if (href) navigate(href);
         },
       };
     case 'reading_room':
@@ -95,14 +115,18 @@ export function roomHotspotsOf(
   }
 }
 
-/** Les zones de la salle où l'on est, traduites, stables tant que rien ne change. */
+/**
+ * Les zones de la salle où l'on est, traduites, stables tant que rien ne
+ * change. `season` : voir `roomHotspotsOf`.
+ */
 export function useRoomHotspots(
   kind: LibraryRoomKind | null,
-  navigate?: (href: string) => void
+  navigate?: (href: string) => void,
+  season: SeasonSpots | null = null
 ): RoomHotspots {
   const t = useT(nsHall);
   return useMemo(
-    () => roomHotspotsOf(kind, t.spots, navigate),
-    [kind, t.spots, navigate]
+    () => roomHotspotsOf(kind, t.spots, navigate, season),
+    [kind, t.spots, navigate, season]
   );
 }

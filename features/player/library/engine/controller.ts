@@ -17,7 +17,7 @@
 // MULTIJOUEUR (lot 5 phase B) : `syncRemoteAvatars` reçoit les autres
 // joueuses, `showPlayerBubble` / `setPlayerMarker` habillent la joueuse.
 // En `walk`, un appui vise, DANS L'ORDRE : une autre joueuse → `onAvatarTap` ;
-// une zone (lot 7, engine/hotspots.ts) → `onHotspotTap` ; un meuble
+// le PNJ (lot 16, npcLayer.ts) puis une zone (lot 7) → `onHotspotTap` ; un meuble
 // interactif (lot 15, engine/playerActions.ts : s'asseoir, s'allonger, s'en
 // servir) ; sinon le sol → marche + `onPlayerWalk` ; l'arrivée →
 // `onPlayerArrive`. En `edit`, aucune interaction (la joueuse se relève).
@@ -37,6 +37,7 @@ import type { GhostItem } from './editOverlay';
 import { headPoint } from './avatarOverlays';
 import { HotspotLayer, type HotspotTap, type LibraryHotspot } from './hotspots';
 import { FrameLoop, type FrameStats } from './loop';
+import { attachNpc, type NpcOptions } from './npcHost';
 import {
   type InteractionOptions,
   PlayerActions,
@@ -103,6 +104,8 @@ export type ControllerOptions = PlayerCallbacks & {
   /** `walk` : zones interactives (engine/hotspots.ts) ; un appui → `onHotspotTap`. */
   hotspots?: readonly LibraryHotspot[];
   onHotspotTap?: (tap: HotspotTap) => void;
+  /** Lot 16 : un PNJ (npcLayer.ts) ; son appui → `onHotspotTap`. */
+  npc?: NpcOptions | null;
 };
 
 /** Un appui sur une autre joueuse ; `anchor` : au-dessus de sa tête, px CSS du conteneur. */
@@ -182,6 +185,7 @@ export class LibraryController {
         this.opts.onStats?.({ ...s, avatars: this.world.avatars.length });
       }
     );
+    attachNpc(this.world, opts.npc, this.images, this.loop);
 
     canvas.addEventListener('pointerdown', this.onDown);
     canvas.addEventListener('pointermove', this.onMove);
@@ -377,6 +381,7 @@ export class LibraryController {
   dispose(): void {
     this.disposed = true;
     this.loop.stop();
+    this.world.npc?.dispose();
     if (this.bubbleTimer !== null) clearTimeout(this.bubbleTimer);
     this.bubbleTimer = null;
     this.ro?.disconnect();
@@ -394,11 +399,11 @@ export class LibraryController {
     const t0 = performance.now();
     this.world.update(dt);
     this.world.pruneBubbles(this.now());
-    this.draw();
+    if (!this.world.npc?.throttle(this.world.isActive())) this.draw();
     this.debug.sync(this.cam, this.world, this.opts.playerId);
     this.actions.notify(this.world.takeArrivals().includes(this.opts.playerId));
     return {
-      keepGoing: this.world.isActive(),
+      keepGoing: this.world.isActive() || !!this.world.npc?.awake(),
       frameMs: performance.now() - t0,
     };
   }

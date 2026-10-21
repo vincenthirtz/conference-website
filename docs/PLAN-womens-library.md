@@ -521,6 +521,17 @@ l'Event Halloween du 30 octobre (`halloween-2026`, inscription individuelle regr
 - **Fini quand** deux joueuses dans le hall voient le fantôme au même endroit, qu'il fait « bouh » à
   chacune en passant, que l'appui sur lui ou sur la citrouille inscrit en un clic, et qu'au-delà de
   `visibleUntil` le hall redevient comme avant.
+- **Avancement (2026-10-21, non commité)** : tout est écrit et vérifié dans le moteur, sur
+  `/dev/library-room?npc=halloween`.
+  - Sprite : `tools/library-assets/build_npc.mjs`, 8 directions, hors catalogue.
+  - Ronde fixe : 6 points, 32,6 m, un tour en 60,7 s (`halloween/ghostRoute.ts`).
+  - « Bouh » : à 1,5 m, puis 25 s d'attente pour la même joueuse (`halloween/boo.ts`).
+  - Citrouille, calque de saison : `halloween/hallDecor.ts`.
+  - Moteur : `engine/npcLayer.ts`. Le fantôme est visé avant les zones, et son appui part comme
+    celui de la citrouille (zone `halloween`).
+  - Inscription en un clic partagée avec l'encart de l'espace joueuse : `useEventOneClickSignup`.
+  - Les autres joueuses ne voient le fantôme que si la Library leur est ouverte (`owner`, `beta`,
+    `all`).
 
 ---
 

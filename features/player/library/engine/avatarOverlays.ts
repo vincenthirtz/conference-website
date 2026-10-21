@@ -10,7 +10,8 @@
 //     (CHAT_BUBBLE_MAX_W), sur une ligne, élidée — le fil sous la scène garde
 //     le texte entier. Texte brut, dessiné tel quel ;
 //   - (lot 15c) le PICTOGRAMME de ce qu'elle fait d'un meuble (lire, jouer…),
-//     tant qu'elle ne bouge pas : une petite pastille claire, sous la bulle.
+//     tant qu'elle ne bouge pas : une petite pastille claire, sous la bulle ;
+//   - (lot 16) la bulle d'un PNJ (le « Bouh ! » du fantôme, npcLayer.ts).
 // Les textes arrivent traduits (le moteur n'a pas d'i18n). Ordre : du fond
 // vers l'avant, pour que la pastille d'une avatar placée devant passe devant.
 // Assise ou allongée, la tête descend avec elle (engine/stance.ts).
@@ -130,6 +131,9 @@ export function avatarOverlays(
       ...(activity ? { activity } : {}),
     });
   }
+  // Lot 16 : le « Bouh ! » du PNJ, avec les bulles des avatars.
+  const npc = world.npc?.overlay(cam);
+  if (npc) out.push(npc);
   return out.sort((p, q) => p.depth - q.depth);
 }
 

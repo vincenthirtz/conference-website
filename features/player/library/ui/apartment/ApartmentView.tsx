@@ -23,7 +23,9 @@
 // SALLES COMMUNES (lot 7), facultatif : `fixed` remplace le décor
 // d'appartement par celui du décor fixe (`roomStageModel.sceneOf`), avec sa
 // hauteur de murs et l'arrivée ; `hotspots` / `onHotspotTap` sont les zones
-// interactives (engine/hotspots.ts).
+// interactives (engine/hotspots.ts) ; `npc` (lot 16) : un PNJ qui flotte (le
+// fantôme d'Halloween du hall, engine/npcLayer.ts), dont l'appui part comme
+// celui d'une zone. Lu à la création du contrôleur.
 //
 // MEUBLES (lot 15), facultatif : avec `furniture` (le réseau de la salle, ma
 // dernière position, l'éditeur de look s'il y en a un), la vue propose les
@@ -56,6 +58,7 @@ import {
 import type { GhostItem } from '../../engine/editOverlay';
 import type { HotspotTap, LibraryHotspot } from '../../engine/hotspots';
 import type { Direction } from '../../engine/motion';
+import type { NpcOptions } from '../../engine/npcLayer';
 import type { AvatarIntent, PlayerPosture } from '../../engine/postures';
 import type { ScreenPoint, Tile } from '../../engine/projection';
 import type { BubbleContent, RemoteAvatarInput } from '../../engine/remotes';
@@ -146,6 +149,8 @@ export type ApartmentViewProps = {
   /** Zones interactives (textes déjà traduits) et leur appui (lot 7). */
   hotspots?: readonly LibraryHotspot[];
   onHotspotTap?: (tap: HotspotTap) => void;
+  /** Lot 16 : un PNJ (textes déjà traduits) ; null : aucun. */
+  npc?: NpcOptions | null;
 };
 
 const NO_REMOTE: readonly RemoteAvatarInput[] = [];
@@ -183,6 +188,7 @@ export default function ApartmentView({
   fixed = null,
   hotspots = NO_HOTSPOTS,
   onHotspotTap,
+  npc = null,
 }: ApartmentViewProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -219,6 +225,7 @@ export default function ApartmentView({
     fixed,
     hotspots,
     onHotspotTap,
+    npc,
   };
   const latest = useRef(now);
   latest.current = now;
@@ -241,6 +248,7 @@ export default function ApartmentView({
       playerStart: scene?.start ?? apartmentStartTile(apartment, cur.specs),
       hotspots: cur.hotspots,
       onHotspotTap: (tap) => latest.current.onHotspotTap?.(tap),
+      npc: cur.npc,
       playerAvatarId: cur.avatarId,
       mode: cur.mode,
       bubbleMs: cur.bubbleMs,

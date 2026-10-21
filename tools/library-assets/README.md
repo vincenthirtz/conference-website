@@ -15,6 +15,7 @@ node tools/library-assets/build.mjs --kind avatars-repack --quality 90  # grille
 node tools/library-assets/build.mjs --kind furniture --missing   # reprise : saute ce qui est rendu
 node tools/library-assets/build.mjs --kind avatars --poses lie,sit_low --missing  # poses ajoutées (~7 min)
 node tools/library-assets/build.mjs --kind none                  # réécrit manifeste, CREDITS, brouillon
+node tools/library-assets/build_npc.mjs                          # PNJ (lot 16), hors manifeste (~10 s)
 ```
 
 Un meuble en échec (rendu, ou source illisible) n'arrête pas le build : il garde son entrée
@@ -368,6 +369,43 @@ node tools/library-assets/render_layers.mjs --index         # réécrit l'index 
   poses.
 - Aucune source nouvelle : le corps du bundle CC0 et la HDRI déjà listés (rien à ajouter à
   `CREDITS.md`).
+
+### PNJ (lot 16)
+
+Un personnage non joueur n'est **pas au catalogue** (le catalogue est celui de l'API) : il ne
+s'achète pas, ne se pose pas et ne bloque pas la marche. Il a son propre script et son propre
+index, et le manifeste ne grossit pas. Aujourd'hui un seul PNJ : le fantôme d'Halloween du hall,
+le modèle `ghost` du set Halloween (`iso_furniture.gen_ghost`).
+
+```powershell
+node tools/library-assets/build_npc.mjs                # tous les PNJ (~10 s)
+node tools/library-assets/build_npc.mjs --only ghost --samples 128
+```
+
+- **Rendu** ([render_npc.py](render_npc.py)) : même caméra, même lumière et même HDRI que les
+  meubles, mais **sans capteur d'ombre**. Un PNJ flotte, et le moteur dessine lui-même une ombre
+  douce au sol, qui rétrécit quand il monte (`engine/npcLayer.ts`).
+- **8 directions écran**, numérotées comme les avatars (`engine/motion.ts` : 0 = haut de
+  l'écran, sens horaire, 4 = face à la caméra), toutes rendues : pas de miroir, puisque la
+  lumière vient de la gauche. Un modèle généré regarde vers -y, c'est-à-dire la direction 5 ;
+  pour la direction d, il tourne de (5 − d) × 45° autour de z.
+- **Ancre** : le point du sol sous l'axe du modèle (le bas de sa silhouette posé à z = 0). Le
+  moteur pose l'image en `écran(x, y, z_vol) − ancre / pixelRatio`.
+- **Sortie** : `public/library/spike/npc/<clé>_d{0..7}.webp` et l'index `npc.json`, une ligne
+  par PNJ. Seul le hall le charge, et seulement pendant l'événement :
+
+```jsonc
+{ "version": 1, "tile": { "width": 64, "height": 32, "meters": 0.5 }, "pixelRatio": 2,
+  "npcs": { "ghost": { "h": 0.973, "rad": 0.35, "d": [ [largeur, hauteur, ax, ay], … × 8 ] } } }
+```
+
+  `h` est la hauteur (m) et `rad` le rayon au sol (m, pour l'ombre). L'image de la direction k
+  est toujours `<clé>_d<k>.webp`. Lecture : `engine/npcSprites.ts` (`parseNpcIndex`). Un index
+  d'une autre case ou mal formé ne donne pas de PNJ.
+- **Ajouter un PNJ** : un générateur dans `iso_furniture.py` (ou `iso_build.py`), une ligne dans
+  `NPCS` de [build_npc.mjs](build_npc.mjs), puis son pilote (où il est, à quelle heure) dans
+  `engine/npcLayer.ts`.
+- Aucune source nouvelle : un modèle fait maison et la HDRI déjà listée.
 
 ## Sections du manifeste écrites par d'autres lots
 
