@@ -2515,6 +2515,155 @@ export type Database = {
           },
         ]
       }
+      library_arena_decks: {
+        Row: {
+          card_keys: string[]
+          created_at: string
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          card_keys?: string[]
+          created_at?: string
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          card_keys?: string[]
+          created_at?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_arena_decks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_arena_duels: {
+        Row: {
+          end_reason: string | null
+          ended_at: string | null
+          final_turn: number | null
+          id: string
+          npc_lp: number | null
+          opponent: string
+          player_lp: number | null
+          reward_status: string | null
+          rules_version: number
+          seed: number
+          seq: number
+          started_at: string
+          state: Json
+          status: string
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          end_reason?: string | null
+          ended_at?: string | null
+          final_turn?: number | null
+          id?: string
+          npc_lp?: number | null
+          opponent: string
+          player_lp?: number | null
+          reward_status?: string | null
+          rules_version: number
+          seed: number
+          seq?: number
+          started_at?: string
+          state: Json
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          end_reason?: string | null
+          ended_at?: string | null
+          final_turn?: number | null
+          id?: string
+          npc_lp?: number | null
+          opponent?: string
+          player_lp?: number | null
+          reward_status?: string | null
+          rules_version?: number
+          seed?: number
+          seq?: number
+          started_at?: string
+          state?: Json
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_arena_duels_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_arena_rewards: {
+        Row: {
+          duel_id: string
+          granted_at: string
+          iso_week: string
+          pack_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          duel_id: string
+          granted_at?: string
+          iso_week: string
+          pack_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          duel_id?: string
+          granted_at?: string
+          iso_week?: string
+          pack_id?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_arena_rewards_duel_id_fkey"
+            columns: ["duel_id"]
+            isOneToOne: true
+            referencedRelation: "library_arena_duels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "library_arena_rewards_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: true
+            referencedRelation: "tcg_packs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "library_arena_rewards_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       library_avatars: {
         Row: {
           adult_attested_at: string | null
@@ -9753,6 +9902,10 @@ export type Database = {
           source_table: string
           target_table: string
         }[]
+      }
+      library_arena_claim_weekly_pack: {
+        Args: { p_duel_id: string; p_tenant_id: string; p_user_id: string }
+        Returns: Json
       }
       library_buy_furniture: {
         Args: {
