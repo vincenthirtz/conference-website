@@ -1,6 +1,6 @@
 {
-  "apiCommit": "1497ff08a77f824ab25b9510abe12fc6eb86991e",
-  "syncedAt": "2026-10-20T17:20:59.079Z",
+  "apiCommit": "ebc4c9a18ef948537d964fab74d3795f14fbe64f",
+  "syncedAt": "2026-10-22T11:25:45.369Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -284,6 +284,8 @@
     "utils/tcg/battlenetBackfillModel.ts",
     "utils/tcg/battlenetRewardDisplay.ts",
     "utils/tcg/cardDescription.ts",
+    "utils/tcg/cardRoleReady.ts",
+    "utils/tcg/cardStats.ts",
     "utils/tcg/cosmetics.ts",
     "utils/tcg/drawPack.ts",
     "utils/tcg/earnSources.ts",

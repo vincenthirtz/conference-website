@@ -32,6 +32,8 @@ import {
 import { gameMascotDisplayName } from './gameMascots';
 import { heroCardDisplayName, heroCardRole } from './heroCards';
 import { heroCardsReady, withHeroColumn } from './heroCardsReady';
+import { cardRoleReady } from './cardRoleReady';
+import { copyStats, statRoleFromHeroRole, type CardStats } from './cardStats';
 import type { OverwatchRole } from '@/utils/heroes/overwatch';
 import type { LogoCredit } from '@/utils/teams/logoCredit';
 import type { FanartTargetView } from './fanart';
@@ -262,11 +264,14 @@ export type CopySummary = {
   tradeableCopies: number;
   /** Meilleure rareté possédée, tous exemplaires confondus. */
   bestRarity: TcgRarity;
+  /** Rôle figé (brut) du premier exemplaire lu à la meilleure rareté. */
+  bestRole: unknown;
   /**
    * L'exemplaire ÉCHANGEABLE le moins précieux — celui qui partirait — ou
-   * `null` s'il n'y en a aucun. Même règle que la fonction SQL.
+   * `null` s'il n'y en a aucun. Même règle que la fonction SQL. `role` : son
+   * rôle figé (brut), qui répartit les chiffres montrés pour CET exemplaire.
    */
-  worstTradeable: { rarity: TcgRarity; foil: boolean } | null;
+  worstTradeable: { rarity: TcgRarity; foil: boolean; role: unknown } | null;
 };
 
 const rank = (r: TcgRarity) => RARITY_ORDER.indexOf(r);
@@ -288,15 +293,23 @@ export function summarizeCopies(
         copies: 0,
         tradeableCopies: 0,
         bestRarity: row.rarity,
+        bestRole: row.card_role,
         worstTradeable: null,
       };
       out.set(key, s);
     }
     s.copies += 1;
-    if (rank(row.rarity) > rank(s.bestRarity)) s.bestRarity = row.rarity;
+    if (rank(row.rarity) > rank(s.bestRarity)) {
+      s.bestRarity = row.rarity;
+      s.bestRole = row.card_role;
+    }
     if (row.tradeable) {
       s.tradeableCopies += 1;
-      const copy = { rarity: row.rarity, foil: Boolean(row.is_foil) };
+      const copy = {
+        rarity: row.rarity,
+        foil: Boolean(row.is_foil),
+        role: row.card_role,
+      };
       const w = s.worstTradeable;
       if (
         !w ||
@@ -316,15 +329,28 @@ export function summarizeCopies(
 
 type CardBase = { rarity: TcgRarity | null; isFoil: boolean | null };
 
+/**
+ * Ce que reçoit la mise en forme : la rareté et la brillance de l'exemplaire,
+ * et son rôle FIGÉ brut (`tcg_pack_cards.card_role`, `undefined` s'il n'a pas
+ * été lu). Le rôle ne ressort pas tel quel : il devient `stats`.
+ */
+export type CardCopyInput = CardBase & { role?: unknown };
+
+/**
+ * Rareté, brillance et chiffres de l'exemplaire. `stats` est `null` quand
+ * la rareté l'est — une carte DEMANDÉE n'a pas encore d'exemplaire désigné.
+ */
+type CardView = CardBase & { stats: CardStats | null };
+
 /** Une carte telle qu'une proposition l'affiche — mêmes champs que la collection. */
 export type TradeCardView =
-  | (CardBase & {
+  | (CardView & {
       kind: 'player';
       userId: string;
       displayName: string | null;
       imageUrl: string | null;
     })
-  | (CardBase & {
+  | (CardView & {
       kind: 'team';
       teamId: string;
       name: string | null;
@@ -334,13 +360,13 @@ export type TradeCardView =
       /** Crédit du logo (`TeamFace.logoCredit`) ; `null` sans artiste nommée. */
       logoCredit: LogoCredit | null;
     })
-  | (CardBase & {
+  | (CardView & {
       kind: 'map';
       slug: string;
       name: string | null;
       imageUrl: string | null;
     })
-  | (CardBase & {
+  | (CardView & {
       kind: 'fanart';
       fanartId: string;
       title: string | null;
@@ -357,12 +383,12 @@ export type TradeCardView =
        */
       target?: FanartTargetView | null;
     })
-  | (CardBase & {
+  | (CardView & {
       kind: 'mascot';
       slug: string;
       name: string | null;
     })
-  | (CardBase & {
+  | (CardView & {
       kind: 'hero';
       slug: string;
       name: string | null;
@@ -390,7 +416,7 @@ export type SubjectRef = {
 export async function readSubjectFaces(
   tenantId: string,
   subjects: readonly SubjectRef[]
-): Promise<(s: SubjectRef, base: CardBase) => TradeCardView> {
+): Promise<(s: SubjectRef, copy: CardCopyInput) => TradeCardView> {
   const [players, teams, maps, fanarts] = await Promise.all([
     readPlayerFaces(
       tenantId,
@@ -406,7 +432,23 @@ export async function readSubjectFaces(
       subjects.filter((s) => s.kind === 'fanart').map((s) => s.id)
     ),
   ]);
-  return (s, base) => {
+  return (s, copy) => {
+    // Le rôle brut ne ressort pas : il ne sert qu'aux chiffres. (Une carte
+    // héros a déjà son `role`, celui du registre — l'étalement l'écraserait.)
+    const base: CardBase = { rarity: copy.rarity, isFoil: copy.isFoil };
+    const statsOf = (
+      currentRole: ReturnType<typeof statRoleFromHeroRole>,
+      withdrawn?: boolean
+    ): CardStats | null =>
+      copy.rarity
+        ? copyStats({
+            kind: s.kind,
+            rarity: copy.rarity,
+            frozenRole: copy.role,
+            currentRole,
+            withdrawn,
+          })
+        : null;
     if (s.kind === 'player') {
       const f = players.get(s.id);
       return {
@@ -415,6 +457,8 @@ export async function readSubjectFaces(
         displayName: f?.displayName ?? null,
         imageUrl: f?.imageUrl ?? null,
         ...base,
+        // Retirée : aucun rôle lu, chiffres anonymes.
+        stats: statsOf(f?.figureRole ?? null, f?.withdrawn),
       };
     }
     if (s.kind === 'team') {
@@ -431,6 +475,7 @@ export async function readSubjectFaces(
         // précisément quand deux joueuses la regardent de près.
         logoCredit: f?.logoCredit ?? null,
         ...base,
+        stats: statsOf(null),
       };
     }
     if (s.kind === 'fanart') {
@@ -447,6 +492,7 @@ export async function readSubjectFaces(
         // ou de la map qu'elle illustre, et son badge.
         target: f?.target ?? null,
         ...base,
+        stats: statsOf(null),
       };
     }
     if (s.kind === 'mascot') {
@@ -457,6 +503,7 @@ export async function readSubjectFaces(
         slug: s.id,
         name: gameMascotDisplayName(s.id),
         ...base,
+        stats: statsOf(null),
       };
     }
     if (s.kind === 'hero') {
@@ -467,6 +514,7 @@ export async function readSubjectFaces(
         name: heroCardDisplayName(s.id),
         role: heroCardRole(s.id),
         ...base,
+        stats: statsOf(statRoleFromHeroRole(heroCardRole(s.id))),
       };
     }
     // `map` en dernier, et SEULEMENT pour `map`. Cette branche était le
@@ -479,6 +527,7 @@ export async function readSubjectFaces(
       name: f?.name ?? null,
       imageUrl: f?.imageUrl ?? null,
       ...base,
+      stats: statsOf(null),
     };
   };
 }
@@ -716,6 +765,15 @@ export type TradeItemRow = {
   card_hero_slug?: string | null;
   rarity: TcgRarity | null;
   is_foil: boolean | null;
+  /**
+   * Où se trouve l'exemplaire : `to_*` une fois l'échange accepté (la ligne de
+   * `tcg_pack_cards` a changé de paquet), `from_*` avant. Lus pour retrouver
+   * son RÔLE FIGÉ, que `tcg_trade_items` ne recopie pas.
+   */
+  from_pack_id?: string | null;
+  from_position?: number | null;
+  to_pack_id?: string | null;
+  to_position?: number | null;
 };
 
 export const TRADE_COLUMNS =
@@ -762,7 +820,7 @@ export async function hydrateTrades(
     .from('tcg_trade_items')
     .select(
       withHeroColumn(
-        'trade_id, side, ordinal, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil',
+        'trade_id, side, ordinal, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil, from_pack_id, from_position, to_pack_id, to_position',
         await heroCardsReady()
       )
     )
@@ -781,6 +839,7 @@ export async function hydrateTrades(
     return { ok: false };
   }
   const items = (data ?? []) as unknown as TradeItemRow[];
+  const roleOf = await readItemCopyRoles(items);
 
   const subjectOf = (i: TradeItemRow): SubjectRef | null => {
     const key = cardSubjectKey(i);
@@ -825,7 +884,11 @@ export async function hydrateTrades(
     const view = (i: TradeItemRow) => {
       const s = subjectOf(i);
       return s
-        ? faceOf(s, { rarity: i.rarity ?? null, isFoil: i.is_foil ?? null })
+        ? faceOf(s, {
+            rarity: i.rarity ?? null,
+            isFoil: i.is_foil ?? null,
+            role: roleOf(i),
+          })
         : null;
     };
     const offered = mine
@@ -870,4 +933,79 @@ export async function hydrateTrades(
   });
 
   return { ok: true, trades };
+}
+
+/**
+ * Le RÔLE FIGÉ de l'exemplaire de chaque carte d'une proposition, en une
+ * lecture : `tcg_trade_items` garde rareté et brillance de l'exemplaire, pas
+ * son rôle — on le relit sur la ligne de `tcg_pack_cards`, là où elle est
+ * (`to_*` après acceptation, `from_*` avant).
+ *
+ * BEST-EFFORT, NE LÈVE JAMAIS : une lecture en échec, une colonne pas encore
+ * migrée ou un exemplaire introuvable (recyclé ailleurs, autre échange) rendent
+ * `undefined` — les chiffres retombent alors sur le rôle courant, jamais sur
+ * un rôle inventé. Une carte DEMANDÉE en attente n'a pas d'exemplaire.
+ */
+async function readItemCopyRoles(
+  items: readonly TradeItemRow[]
+): Promise<(i: TradeItemRow) => unknown> {
+  const where = (
+    i: TradeItemRow
+  ): { packId: string; position: number } | null => {
+    if (i.to_pack_id && typeof i.to_position === 'number') {
+      return { packId: i.to_pack_id, position: i.to_position };
+    }
+    if (i.from_pack_id && typeof i.from_position === 'number') {
+      return { packId: i.from_pack_id, position: i.from_position };
+    }
+    return null;
+  };
+  const none = () => undefined;
+  if (!supabaseAdmin) return none;
+  const packIds = [
+    ...new Set(
+      items
+        .filter(
+          (i) =>
+            i.rarity &&
+            (i.subject_kind === 'player' || i.subject_kind === 'hero')
+        )
+        .map(where)
+        .filter((w): w is { packId: string; position: number } => w !== null)
+        .map((w) => w.packId)
+    ),
+  ];
+  if (packIds.length === 0 || !(await cardRoleReady())) return none;
+  try {
+    const roles = new Map<string, unknown>();
+    for (let i = 0; i < packIds.length; i += 100) {
+      const { data, error } = await supabaseAdmin
+        .from('tcg_pack_cards')
+        .select('pack_id, position, card_role')
+        .in('pack_id', packIds.slice(i, i + 100));
+      if (error) {
+        logger.warn('[tcg/trades] rôles figés illisibles: %s', error.message);
+        return none;
+      }
+      for (const row of (data ?? []) as Array<{
+        pack_id: string;
+        position: number;
+        card_role: string | null;
+      }>) {
+        roles.set(`${row.pack_id}:${row.position}`, row.card_role);
+      }
+    }
+    return (i) => {
+      const w = where(i);
+      if (!w) return undefined;
+      const key = `${w.packId}:${w.position}`;
+      return roles.has(key) ? roles.get(key) : undefined;
+    };
+  } catch (err) {
+    logger.warn(
+      '[tcg/trades] rôles figés illisibles: %s',
+      err instanceof Error ? err.message : String(err)
+    );
+    return none;
+  }
 }

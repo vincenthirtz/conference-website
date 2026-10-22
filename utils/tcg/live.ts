@@ -64,6 +64,7 @@ import {
 import { MAP_POOL_SLUGS } from './readMapFaces';
 import { GAME_MASCOT_SLUGS } from './gameMascots';
 import { heroCardsReady, withHeroColumn } from './heroCardsReady';
+import { cardRoleReady, withCardRoleColumn } from './cardRoleReady';
 import { readOwnedCardRows } from './readOwnedCards';
 import { readTeamRarities } from './readTeamRarity';
 import { cardSubjectKey, type CardSubjectRow } from './subjectKey';
@@ -364,6 +365,8 @@ type PullRow = CardSubjectRow & {
   position: number;
   rarity: TcgRarity;
   is_foil: boolean | null;
+  /** Rôle figé (`tcg_card_role.sql`) ; absent tant que la colonne n'est pas lue. */
+  card_role?: string | null;
 };
 
 /** Les derniers tirages rares de l'espace. `[]` sur échec. */
@@ -390,14 +393,22 @@ export async function readRecentRarePulls(
   if (packs.length === 0) return [];
   const packById = new Map(packs.map((p) => [p.id, p]));
 
-  // La colonne des héros n'est citée qu'une fois la migration appliquée :
-  // avant, elle ferait échouer la lecture entière (cf. `heroCardsReady`).
+  // Les colonnes des héros et du rôle figé ne sont citées qu'une fois leur
+  // migration appliquée : avant, elles feraient échouer la lecture entière
+  // (cf. `heroCardsReady`, `cardRoleReady`).
+  const [heroesReady, rolesReady] = await Promise.all([
+    heroCardsReady(),
+    cardRoleReady(),
+  ]);
   const { data: cardData, error: cardErr } = await supabaseAdmin
     .from('tcg_pack_cards')
     .select(
-      withHeroColumn(
-        'pack_id, position, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil',
-        await heroCardsReady()
+      withCardRoleColumn(
+        withHeroColumn(
+          'pack_id, position, subject_kind, card_user_id, card_team_id, card_map_slug, card_fanart_id, card_mascot_slug, rarity, is_foil',
+          heroesReady
+        ),
+        rolesReady
       )
     )
     .in(
@@ -433,6 +444,8 @@ export async function readRecentRarePulls(
         subject: x.subject,
         rarity: x.row.rarity,
         isFoil: Boolean(x.row.is_foil),
+        // Les chiffres du tirage, celui-là : son rôle figé.
+        role: x.row.card_role,
       }))
     ),
     readConsentedNames(

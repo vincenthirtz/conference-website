@@ -6829,6 +6829,7 @@ export type Database = {
           card_hero_slug: string | null
           card_map_slug: string | null
           card_mascot_slug: string | null
+          card_role: string | null
           card_team_id: string | null
           card_user_id: string | null
           is_foil: boolean
@@ -6843,6 +6844,7 @@ export type Database = {
           card_hero_slug?: string | null
           card_map_slug?: string | null
           card_mascot_slug?: string | null
+          card_role?: string | null
           card_team_id?: string | null
           card_user_id?: string | null
           is_foil?: boolean
@@ -6857,6 +6859,7 @@ export type Database = {
           card_hero_slug?: string | null
           card_map_slug?: string | null
           card_mascot_slug?: string | null
+          card_role?: string | null
           card_team_id?: string | null
           card_user_id?: string | null
           is_foil?: boolean
