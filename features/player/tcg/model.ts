@@ -23,7 +23,16 @@ export type Pack = {
   // ajoutée en base retombe silencieusement sur le libellé d'à côté.
   // `drop`, `placement`, `streak` : paquets sans match (drop Twitch, palmarès
   // de tournoi, série de check-ins — `tcg_earn_sources_drop_streak_placement.sql`).
-  source: 'victory' | 'purchase' | 'welcome' | 'drop' | 'placement' | 'streak';
+  // `arena` : le paquet de la semaine de l'arène de la Library (lot 12 de
+  // docs/PLAN-tcg-2.md).
+  source:
+    | 'victory'
+    | 'purchase'
+    | 'welcome'
+    | 'drop'
+    | 'placement'
+    | 'streak'
+    | 'arena';
   grantedAt: string;
   openedAt: string | null;
 };
@@ -52,6 +61,8 @@ export function packOriginLabel(
       return t.packFromPlacement;
     case 'streak':
       return t.packFromStreak;
+    case 'arena':
+      return t.packFromArena;
     case 'victory':
       return t.packFromVictory;
     default:

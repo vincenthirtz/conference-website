@@ -441,7 +441,7 @@ meilleure rareté possédée.
 ## 3 bis. Attaque, défense et niveau
 
 Ajouté le **2026-10-21** (lot 11 de [PLAN-tcg-2.md](./PLAN-tcg-2.md)), prélude à
-l'arène de la Women's Library (lot 12, non construit). Chaque carte porte un
+l'arène de la Women's Library (lot 12, construit le 2026-10-22). Chaque carte porte un
 **niveau** en étoiles, une **attaque** (ATK) et une **défense** (DEF), à la
 Yu-Gi-Oh — [`utils/tcg/cardStats.ts`](../utils/tcg/cardStats.ts) (conference-api,
 copié ici par la synchro), réducteur pur.
@@ -626,7 +626,11 @@ rédaction, 2026-09-15), et `collection_set` (`tcg_collection_set.sql`, **non
 appliquée** à la rédaction, 2026-09-15), et `tournament_participation`
 (`tcg_tournament_participation_reward.sql`, **non appliquée** à la rédaction,
 2026-10-12). Côté paquets, `tcg_packs.source_kind` admet `victory`, `purchase`,
-`welcome`, et avec la même migration `drop`, `placement` et `streak`.
+`welcome`, et avec la même migration `drop`, `placement` et `streak` ; puis `trade`, `forge`
+et `arena` (`library_arena.sql`, **non appliquée** à la rédaction, 2026-10-22 : le paquet
+de la semaine de l'arène de la Library — sans pièces, un par semaine ISO à l'heure de Paris,
+porté par la clé primaire de `library_arena_rewards`, et **non échangeable**, cf.
+[PLAN-tcg-2.md](./PLAN-tcg-2.md), lot 12).
 `admin_grant` est écrit par `POST /api/admin/tcg/grant` (correction tracée
 par l'équipe, `source_ref` = clé d'idempotence). Son **motif est lisible par
 la joueuse** : recopié dans `tcg_wallet_entries.note` (seule source à en porter

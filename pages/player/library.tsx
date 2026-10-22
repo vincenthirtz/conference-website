@@ -9,6 +9,9 @@
 //   /player/library?place=hall|reading_room → un lieu commun par son nom
 //                                   (lot 7) : la salle est trouvée (ou créée)
 //                                   par l'API. `room` l'emporte sur `place`.
+//   /player/library?place=arena  → l'arène (lot 12 de docs/PLAN-tcg-2.md),
+//                                   la même porte, un écran sans salle chargé
+//                                   à la demande (`PlaceScreen`).
 //
 // `noindex` comme les autres pages de l'espace : un appartement personnel n'a
 // rien à faire dans un moteur de recherche.
@@ -53,6 +56,8 @@ function PlayerLibrary() {
     return <RoomScreen key={view.roomId} roomId={view.roomId} />;
   if (view.kind === 'place')
     return <PlaceScreen key={view.place} place={view.place} />;
+  // L'arène (lot 12) : la porte des lieux ; son écran se charge à la demande.
+  if (view.kind === 'arena') return <PlaceScreen key="arena" place="arena" />;
   return <ApartmentScreen />;
 }
 

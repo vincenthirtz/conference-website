@@ -45,6 +45,8 @@ const SOURCES = [
   'welcome',
   'purchase',
   'forge',
+  // L'arène de la Library (lot 12 de docs/PLAN-tcg-2.md).
+  'arena',
 ] as const;
 
 type PackSource = (typeof SOURCES)[number];
@@ -85,6 +87,7 @@ const SOURCE_TONE: Record<PackSource, ChipTone> = {
   welcome: 'neutral',
   purchase: 'neutral',
   forge: 'neutral',
+  arena: 'brand',
 };
 
 const SOURCE_LABEL = {
@@ -95,6 +98,7 @@ const SOURCE_LABEL = {
   welcome: 'historySourceWelcome',
   purchase: 'historySourcePurchase',
   forge: 'historySourceForge',
+  arena: 'historySourceArena',
 } as const satisfies Record<PackSource, string>;
 
 /** Heure de Paris : c'est celle du direct, quel que soit le poste du staff. */

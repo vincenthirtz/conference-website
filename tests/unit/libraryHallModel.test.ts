@@ -106,6 +106,8 @@ describe('les zones du hall', () => {
       'reading_room',
       'apartments',
       'team_hq',
+      // Lot 12 de docs/PLAN-tcg-2.md — la porte de l'arène.
+      'arena',
     ]);
   });
 
@@ -165,12 +167,15 @@ describe('les zones du hall', () => {
       const p = gridToScreen(gx, gy, z);
       return hotspotAt(world, HALL_HOTSPOTS, p.x, p.y)?.id ?? null;
     };
-    const { readingRoom, teamHq, entrance } = HALL_DOORS;
+    const { readingRoom, teamHq, entrance, arena } = HALL_DOORS;
     // Le bas et le haut de la moitié gauche de la porte de la salle de lecture.
     expect(hit(readingRoom.at + 0.5, 0, 0.3)).toBe('reading_room');
     expect(hit(readingRoom.at + 0.5, 0, 2)).toBe('reading_room');
     expect(hit(teamHq.at + 1, 0, 1)).toBe('team_hq');
     expect(hit(0, entrance.at + 1, 1)).toBe('apartments');
+    // Lot 12 : la porte de l'arène, au fond du mur gauche.
+    expect(hit(0, arena.at + 1, 1)).toBe('arena');
+    expect(hit(0, arena.at + 0.5, 0.3)).toBe('arena');
     expect(hit(7.5, 1.5, 1)).toBe('board');
     // Le panneau sur toute sa largeur, puis le tableau du tournoi en son milieu.
     expect(hit(8.9, 1.5, 1.5)).toBe('board');

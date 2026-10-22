@@ -23,6 +23,7 @@ export default {
   historySourceWelcome: 'Welcome',
   historySourcePurchase: 'Purchase',
   historySourceForge: 'Forge',
+  historySourceArena: 'Arena',
   historySourceCount: '{label} ({count})',
   historyRefresh: 'Refresh',
   historyLoading: 'Loading…',

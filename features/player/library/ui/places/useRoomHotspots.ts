@@ -97,6 +97,8 @@ export function roomHotspotsOf(
           // même, et une zone de saison à sa page.
           if (requestHallSpot(id as HallSpotId)) return;
           if (id === 'reading_room') navigate(placeHref('reading_room'));
+          // Lot 12 de docs/PLAN-tcg-2.md — la porte de l'arène.
+          if (id === 'arena') navigate(placeHref('arena'));
           const href = season?.hrefOf?.(id);
           if (href) navigate(href);
         },

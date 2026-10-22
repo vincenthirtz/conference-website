@@ -333,6 +333,7 @@ export default ns('playerTcg', {
   packFromDrop: 'Récupéré en direct',
   packFromPlacement: 'Classement de tournoi',
   packFromStreak: 'Série de check-ins',
+  packFromArena: 'Victoire à l’arène de la Library',
   walletCheckinStreak: 'Série de check-ins',
   walletTournamentPlacement: 'Classement en tournoi',
   // Une fois à vie : la ligne doit dire QUEL geste l'a rapportée.
