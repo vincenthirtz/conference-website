@@ -45,6 +45,8 @@ function fullPayload() {
         drop: 3,
         placement: 1,
         streak: 2,
+        arena: 4,
+        forge: 2,
       },
       // Des non-ouverts CHOISIS pour que les taux soient parlants : la victoire
       // à 50 %, l'accueil à 0 %, le drop jamais distribué. C'est exactement la
@@ -57,6 +59,8 @@ function fullPayload() {
         drop: 0,
         placement: 1,
         streak: 2,
+        // Pas de `forge` : un paquet de forge naît ouvert.
+        arena: 1,
       },
     },
     coins: {
@@ -116,6 +120,8 @@ describe('normalizeTcgOverview — réponse nominale', () => {
       fromDrop: 3,
       fromPlacement: 1,
       fromStreak: 2,
+      fromArena: 4,
+      fromForge: 2,
       openRateBySource: {
         victory: 50,
         purchase: 100,
@@ -124,6 +130,7 @@ describe('normalizeTcgOverview — réponse nominale', () => {
         drop: 100,
         placement: 0,
         streak: 0,
+        arena: 75,
       },
     });
     expect(data.coins).toEqual({

@@ -52,7 +52,7 @@
 //
 // FORME LUE de `GET /api/admin/tcg/overview` — chaque champ est revalidé dans
 // ce module, et toute absence est gérée :
-//   packs:  { granted, opened, pending, bySource: { victory, purchase, welcome, drop, placement, streak } }
+//   packs:  { granted, opened, pending, bySource: { victory, purchase, welcome, drop, placement, streak, arena, forge } }
 //   coins:  { inCirculation, earned, spent, wallets, boosterPrice, truncated }
 //   cards:  { total, foil, byRarity, recycled, drawn, truncated }
 //   photos: { pending, approved, rejected, optedIn, revoked }
@@ -111,6 +111,9 @@ export type TcgOverviewLabels = {
   packsFromDrop: string;
   packsFromPlacement: string;
   packsFromStreak: string;
+  packsFromArena: string;
+  /** Forge : sans taux d'ouverture (un paquet de forge naît ouvert). */
+  packsFromForge: string;
 
   coinsTitle: string;
   coinsInCirculation: string;
@@ -431,6 +434,17 @@ export default function TcgOverviewPanel({ labels }: Props): JSX.Element {
                 value={num(data.packs.fromStreak)}
                 accent="gray"
                 hint={openRateHint(labels, data.packs.openRateBySource.streak)}
+              />
+              <StatCard
+                label={labels.packsFromArena}
+                value={num(data.packs.fromArena)}
+                accent="gray"
+                hint={openRateHint(labels, data.packs.openRateBySource.arena)}
+              />
+              <StatCard
+                label={labels.packsFromForge}
+                value={num(data.packs.fromForge)}
+                accent="gray"
               />
             </div>
           </WidgetCard>

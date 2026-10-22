@@ -34,6 +34,8 @@ export default {
   packsFromDrop: 'Live drops',
   packsFromPlacement: 'Tournament placement',
   packsFromStreak: 'Check-in streaks',
+  packsFromArena: 'Library arena',
+  packsFromForge: 'Forge',
 
   coinsTitle: 'Coins',
   coinsInCirculation: 'In circulation',
