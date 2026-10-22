@@ -10,7 +10,9 @@ export default {
   loading: 'Opening the arena…',
   error: 'The arena could not be opened.',
   retry: 'Try again',
-  anonymous: 'A player',
+  // Lowercase: slotted mid-sentence (“You draw a player.”); `capitalizeLead`
+  // restores the capital when it opens the sentence.
+  anonymous: 'a player',
   weekLabel: 'week {n}',
 
   tabs: {
@@ -54,6 +56,8 @@ export default {
     needDeck: 'You need a {size}-card deck to challenge the guardian.',
     activeTitle: 'Duel in progress',
     activeBody: 'Your duel against {name} is waiting for you.',
+    activeExpires:
+      'With no move from you by {date}, it will count as an abandon.',
     resume: 'Resume the duel',
     starting: 'The guardian is preparing the duel…',
     historyTitle: 'My duels',

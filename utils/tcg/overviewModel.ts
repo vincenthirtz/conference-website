@@ -56,6 +56,13 @@ export type TcgOverviewPacks = {
   fromPlacement: Count;
   /** Série de check-ins. */
   fromStreak: Count;
+  /** Victoire dans l'arène de la Women's Library (un paquet par semaine). */
+  fromArena: Count;
+  /**
+   * Carte recréée à la forge. Sans taux d'ouverture : un paquet de forge naît
+   * ouvert, son taux serait toujours 100 % et ne mesurerait rien.
+   */
+  fromForge: Count;
   /**
    * Taux d'ouverture PAR ORIGINE, en pourcentage entier — la mesure utile.
    *
@@ -78,7 +85,8 @@ export type PackSourceKey =
   | 'welcome'
   | 'drop'
   | 'placement'
-  | 'streak';
+  | 'streak'
+  | 'arena';
 
 export type TcgOverviewCoins = {
   inCirculation: Count;
@@ -296,6 +304,7 @@ export function openRates(
     'drop',
     'placement',
     'streak',
+    'arena',
   ];
   const out = {} as Record<PackSourceKey, number | null>;
   for (const key of keys) {
@@ -346,6 +355,8 @@ export function normalizeTcgOverview(raw: unknown): TcgOverview {
       fromDrop: asCount(bySource.drop),
       fromPlacement: asCount(bySource.placement),
       fromStreak: asCount(bySource.streak),
+      fromArena: asCount(bySource.arena),
+      fromForge: asCount(bySource.forge),
       openRateBySource: openRates(bySource, pendingBySource),
     },
     coins: {

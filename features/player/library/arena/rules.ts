@@ -39,6 +39,15 @@ export const ARENA_ZONES = 3;
 export const ARENA_TURN_LIMIT = 30;
 
 /**
+ * Un duel sans AUCUN coup accepté depuis 48 h est clos comme un abandon
+ * (défaite, aucune récompense) — décision du 2026-10-22. Compté depuis le
+ * dernier coup (`updated_at`), vérifié à la demande (salon, lancement, lecture,
+ * geste) : aucune tâche planifiée. Sans cette borne, un duel oublié restait
+ * « en cours » pour toujours.
+ */
+export const ARENA_IDLE_EXPIRY_MS = 48 * 60 * 60 * 1000;
+
+/**
  * Sacrifices exigés par niveau : 3–4 libres, 5–6 un, 7 et plus deux — les
  * trois classes d'invocation de Yu-Gi-Oh, où tombent exactement les niveaux
  * du barème (3, 4, 6, 8 ; `CARD_LEVEL_BY_RARITY`).

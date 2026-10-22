@@ -150,6 +150,17 @@ export function faceName(
   return id.replace(/[-_]+/g, ' ');
 }
 
+/**
+ * Le nom anonyme (« une joueuse ») s'écrit pour le MILIEU d'une phrase. Une
+ * phrase — ou une étiquette seule — qui s'ouvre sur lui prend la majuscule ;
+ * tout autre début est rendu tel quel : un pseudo en minuscules reste le sien.
+ */
+export function capitalizeLead(text: string, anonymous: string): string {
+  return anonymous && text.startsWith(anonymous)
+    ? anonymous.charAt(0).toLocaleUpperCase() + text.slice(1)
+    : text;
+}
+
 export function statsOf(
   card: Pick<ArenaCard, 'level' | 'attack' | 'defense' | 'profile'>
 ): CardStats {
@@ -373,6 +384,7 @@ export type EventWords = {
   damageGuardian: string;
   end: Record<'won' | 'lost' | 'draw' | 'abandoned', string>;
   positions: Record<ArenaPosition, string>;
+  /** En minuscule, pour le milieu d'une phrase (cf. `capitalizeLead`). */
   anonymous: string;
 };
 
@@ -390,6 +402,16 @@ export const fill = (
  * donc toujours nommables). `null` : rien à dire (fin de tour).
  */
 export function narrate(
+  event: ArenaEvent,
+  board: ArenaBoardView,
+  faces: ArenaFaces,
+  w: EventWords
+): string | null {
+  const text = narrateEvent(event, board, faces, w);
+  return text === null ? null : capitalizeLead(text, w.anonymous);
+}
+
+function narrateEvent(
   event: ArenaEvent,
   board: ArenaBoardView,
   faces: ArenaFaces,

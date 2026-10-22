@@ -12,7 +12,9 @@ export default ns('playerLibraryArena', {
   loading: 'Ouverture de l’arène…',
   error: 'L’arène n’a pas pu être ouverte.',
   retry: 'Réessayer',
-  anonymous: 'Une joueuse',
+  // En minuscule : glissé au milieu des phrases (« Tu pioches une joueuse. ») ;
+  // `capitalizeLead` remet la majuscule quand il ouvre la phrase.
+  anonymous: 'une joueuse',
   weekLabel: 'semaine {n}',
 
   tabs: {
@@ -56,6 +58,8 @@ export default ns('playerLibraryArena', {
     needDeck: 'Il te faut un deck de {size} cartes pour défier la gardienne.',
     activeTitle: 'Duel en cours',
     activeBody: 'Ton duel contre {name} t’attend.',
+    activeExpires:
+      'Sans coup de ta part d’ici {date}, il comptera comme un abandon.',
     resume: 'Reprendre le duel',
     starting: 'La gardienne prépare le duel…',
     historyTitle: 'Mes duels',

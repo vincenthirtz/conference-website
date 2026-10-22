@@ -50,10 +50,13 @@ describe('openRates', () => {
     expect(rates.welcome).toBe(0);
   });
 
-  it('couvre les six origines, même absentes', () => {
-    // L'écran affiche six tuiles : une clé manquante y ferait un trou.
+  it('couvre les sept origines, même absentes', () => {
+    // L'écran affiche une tuile par origine : une clé manquante y ferait un
+    // trou. Pas de `forge` : un paquet de forge naît ouvert, son taux ne
+    // mesurerait rien.
     const rates = openRates({}, {});
     expect(Object.keys(rates).sort()).toEqual([
+      'arena',
       'drop',
       'placement',
       'purchase',

@@ -12,6 +12,8 @@ import { Button, Card, Chip } from '@/features/ruban';
 import type { ArenaLobbyResponse } from '../../arena/responses';
 import type { ArenaOpponentId } from '../../arena/rules';
 import { weekText } from '../../arena/viewModel';
+import { useLang } from '@/lib/i18n/LanguageProvider';
+import { formatSiteDate } from '@/utils/timezone';
 import { TEXT_ERROR, TEXT_MUTED } from './styles';
 import ArenaCardFace, {
   useArenaCardLabels,
@@ -19,6 +21,14 @@ import ArenaCardFace, {
 } from './ArenaCardFace';
 
 const H2 = 'text-lg font-bold text-[var(--t1,#f4edf7)]';
+/** L'échéance d'un duel en cours (48 h après le dernier coup), heure de Paris. */
+const EXPIRES: Intl.DateTimeFormatOptions = {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  hour: '2-digit',
+  minute: '2-digit',
+};
 
 export default function ArenaLobby({
   query,
@@ -36,6 +46,7 @@ export default function ArenaLobby({
   onResume: (duelId: string, opponent: string) => void;
 }) {
   const t = useT(nsArena);
+  const { lang } = useLang();
   const labels = useArenaCardLabels();
   const profiles = useProfileNames();
 
@@ -141,6 +152,11 @@ export default function ArenaLobby({
               <p className={TEXT_MUTED}>
                 {format(t.lobby.activeBody, {
                   name: nameOf(lobby.active.opponent),
+                })}
+              </p>
+              <p className={TEXT_MUTED} data-arena-expires="">
+                {format(t.lobby.activeExpires, {
+                  date: formatSiteDate(lobby.active.expiresAt, lang, EXPIRES),
                 })}
               </p>
             </div>

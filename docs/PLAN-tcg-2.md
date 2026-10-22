@@ -636,16 +636,22 @@ une joueuse retirée reste anonyme sur le plateau ; rien d'un duel n'est visible
 `select iso_week, count(*) from library_arena_rewards group by 1` (une ligne par joueuse et par
 semaine, par construction).
 
-**Suivis connus.** La vue d'ensemble staff (`overviewModel.ts`) ne ventile ni `forge` ni `arena`
-(une ligne de plus par origine) ; les paquets d'arène ne sont pas échangeables (à rouvrir si
-l'association le souhaite) ; pas d'expiration d'un duel abandonné en cours de route (il attend
-« Reprendre » ou « Abandonner »).
+**Suivis.** Les paquets d'arène ne sont pas échangeables (à rouvrir si l'association le
+souhaite). Réglés le 2026-10-22, après la mise en ligne :
+- **Expiration** (décision : 48 h, comptée comme un abandon). Un duel en cours sans coup accepté
+  depuis 48 h (`ARENA_IDLE_EXPIRY_MS`, depuis `updated_at`) est clos comme un abandon, daté de son
+  échéance — défaite, aucune récompense, aucune migration. Vérifié à la demande (salon,
+  lancement, lecture, geste), sans tâche planifiée ; un duel échu ne bloque plus le lancement du
+  suivant. Le salon rend `active.expiresAt` et l'affiche (« Sans coup de ta part d'ici… »).
+- **Vue d'ensemble staff** : `packs.bySource` ventile `arena` et `forge` (la répartition retombe
+  sur `granted`, qui exclut les paquets techniques `trade`) ; `pendingBySource.arena` donne le
+  taux d'ouverture de l'arène. Pas de `forge` non ouverte : un paquet de forge naît ouvert.
+- **Journal** : le nom d'une joueuse anonyme s'écrit en minuscule au milieu d'une phrase (« Tu
+  pioches une joueuse. ») et prend la majuscule en tête (`capitalizeLead`, qui ne touche jamais
+  un vrai pseudo).
 
-**Bundle (mesure locale, Windows, 2026-10-22).** `/player/library` 363,9 ko (gel 361 + 3, avant :
-363,6) — l'arène n'entre pas dans le premier chargement. `/dev/library-apartment` 349,6 ko contre
-349,5 avant (porte du hall, lien des lieux, quatre libellés partagés par toutes les pages de la
-Library) : l'arrondi passe de 349 à 350 pour un gel de 346 + 3. À confirmer en CI, qui mesure
-plus bas que Windows (les overlays `don-alert` et `match` dépassent déjà en local).
+**Bundle (2026-10-22).** En local (Windows), `/player/library` 363,9 ko et `/dev/library-apartment`
+349,6 ko ; la CI de la mise en ligne a mesuré 364 et 349, dans leurs gels — rien à refiger.
 
 ---
 

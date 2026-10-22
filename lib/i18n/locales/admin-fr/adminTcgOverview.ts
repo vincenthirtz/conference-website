@@ -42,6 +42,8 @@ export default adminNs('adminTcgOverview', {
   packsFromDrop: 'Drops en direct',
   packsFromPlacement: 'Palmarès de tournoi',
   packsFromStreak: 'Séries de check-ins',
+  packsFromArena: 'Arène de la Library',
+  packsFromForge: 'Forge',
 
   coinsTitle: 'Monnaie',
   coinsInCirculation: 'En circulation',
