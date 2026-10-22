@@ -1060,6 +1060,48 @@ export const PERSONAL_DATA_TABLES: readonly PersonalDataTable[] = [
       columns: ['tenant_id', 'room_id', 'until', 'created_at'],
     },
   },
+  /* ------------------------------------ Arène de la Library (lot 12) --- */
+  // docs/PLAN-tcg-2.md, lot 12 ; migration library_arena.sql. Toutes en ON
+  // DELETE CASCADE vers auth.users : rien à exécuter à la suppression.
+  {
+    table: 'library_arena_decks',
+    columns: ['user_id'],
+    policy: { kind: 'cascade', onDelete: { user_id: 'CASCADE' } },
+    why: 'Son deck d’arène : les cartes de sa collection qu’elle a choisies (des références, jamais des images).',
+    export: { columns: ['tenant_id', 'card_keys', 'created_at', 'updated_at'] },
+  },
+  {
+    table: 'library_arena_duels',
+    columns: ['user_id'],
+    policy: { kind: 'cascade', onDelete: { user_id: 'CASCADE' } },
+    why: 'Ses duels contre la gardienne de l’arène : adversaire, issue, points de vie de fin, dates.',
+    export: {
+      // Sans `state` ni `seed` : l'état complet porte l'ordre des decks de la
+      // gardienne et sa graine secrète — des données du jeu, pas les siennes.
+      columns: [
+        'id',
+        'tenant_id',
+        'opponent',
+        'status',
+        'end_reason',
+        'final_turn',
+        'player_lp',
+        'npc_lp',
+        'reward_status',
+        'started_at',
+        'ended_at',
+      ],
+    },
+  },
+  {
+    table: 'library_arena_rewards',
+    columns: ['user_id'],
+    policy: { kind: 'cascade', onDelete: { user_id: 'CASCADE' } },
+    why: 'Les paquets gagnés à l’arène, un par semaine au plus.',
+    export: {
+      columns: ['tenant_id', 'iso_week', 'duel_id', 'pack_id', 'granted_at'],
+    },
+  },
 ];
 
 /**

@@ -32,6 +32,7 @@ export default adminNs('adminTcgPage', {
   historySourceWelcome: 'Accueil',
   historySourcePurchase: 'Achat',
   historySourceForge: 'Forge',
+  historySourceArena: 'Arène',
   historySourceCount: '{label} ({count})',
   historyRefresh: 'Actualiser',
   historyLoading: 'Lecture…',

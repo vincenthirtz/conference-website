@@ -189,6 +189,7 @@ import nsPlayerLibraryHall from './playerLibraryHall';
 import nsPlayerLibraryHalloween from './playerLibraryHalloween';
 import nsPlayerLibraryReadingRoom from './playerLibraryReadingRoom';
 import nsPlayerLibraryTeamHq from './playerLibraryTeamHq';
+import nsPlayerLibraryArena from './playerLibraryArena';
 
 export const frDict = {
   profileSummary: nsProfileSummary.fr,
@@ -373,4 +374,5 @@ export const frDict = {
   playerLibraryHalloween: nsPlayerLibraryHalloween.fr,
   playerLibraryReadingRoom: nsPlayerLibraryReadingRoom.fr,
   playerLibraryTeamHq: nsPlayerLibraryTeamHq.fr,
+  playerLibraryArena: nsPlayerLibraryArena.fr,
 };

@@ -85,7 +85,7 @@ et le problème restant n'est plus l'information mais le **retour**.
 | 9 | Tableau de bord d'engagement : cohortes, dormants, entonnoirs | 🟧 | M | api + site | tout ce qui précède doit se mesurer ailleurs que dans un client SQL |
 | 10 | Dette : figurines, e2e, colonnes héritées, docs | 🟩 | M | api + site | ce que les neuf lots laissent derrière eux |
 | 11 | Attaque et défense (prélude à l'arène de la Library) | 🟧 | M | api + site | demandé le 2026-10-21 ; l'arène ne se construit pas sans chiffres stables sur les cartes — ✅ **code livré le 2026-10-21**, migration à appliquer |
-| 12 | L'arène de la Women's Library | 🟧 | L | api + site | esquisse seulement : règles et questions ouvertes à trancher avant tout code |
+| 12 | L'arène de la Women's Library | 🟧 | L | api + site | duel contre la gardienne de l'arène, un paquet par semaine pour une victoire — ✅ **code livré le 2026-10-22**, migration à appliquer |
 
 ---
 
@@ -445,44 +445,207 @@ group by 1` après application — aucune carte d'équipe, de map ou de fan art 
 rareté ont les mêmes chiffres ; une joueuse qui change de héros ne change pas ses cartes déjà
 tirées ; une joueuse retirée n'est reconnaissable ni à son nom ni à ses chiffres.
 
-## Lot 12 · L'arène de la Women's Library — esquisse, non implémentée
+## Lot 12 · L'arène de la Women's Library — ✅ CODE LIVRÉ (2026-10-22), migration à appliquer
 
-**Où.** Une salle de la Library (une porte du hall), en bêta fermée comme le reste de la Library.
-On y joue avec **sa** collection : les chiffres du lot 11, rien d'autre.
+**Où.** Un LIEU de la Library, `/player/library?place=arena` : un écran DOM (pas le canvas), atteint
+par une porte du hall (zone de la vue et liste des portes, lot 7) et par la navigation des lieux.
+Derrière la même porte que le reste de la Library (`defineLibraryRoute` : ouverture
+`LIBRARY_ACCESS` / bêta, attestation de majorité, bannissement). On y joue avec **sa** collection :
+les chiffres du lot 11, rien d'autre.
 
-**Règles proposées (Yu-Gi-Oh très simplifié, sans magie ni piège en V1).**
-- Deck de 20 cartes de sa collection (doublons permis jusqu'au nombre possédé), main de 5, une
-  pioche par tour, 4 000 points de vie.
-- Une invocation par tour : niveau 3–4 libre, niveau 6 contre un sacrifice, niveau 8 contre deux.
-  Trois emplacements sur le terrain. Une carte se pose en attaque ou en défense.
-- Combat : ATK contre ATK, la plus faible est détruite et la différence part des points de vie ;
-  ATK contre DEF, la défense détruite si l'ATK la dépasse, sans dégâts aux points de vie ; égalité,
-  rien. Attaque directe quand le terrain adverse est vide.
-- Les profils comptent sans règle de plus : un Rempart tient en défense, un Assaut se joue en
-  attaque — c'est déjà un choix de deck.
-
-**Ce qui ne bouge pas.** Aucune carte ne se perd ni ne se gagne en duel ; aucune pièce n'est mise
-en jeu (cf. « un pronostic, pas un pari » : une mise, même en pièces, changerait la nature de la
-fonctionnalité). Les faces passent par `readCardFaces` : une joueuse retirée reste anonyme sur le
-terrain de l'adversaire.
-
-**Décisions du 2026-10-21.**
+**Décisions du 2026-10-21** (inchangées).
 1. **Contre une PNJ d'abord** : une « gardienne de l'arène » de la Library, avec des decks fixes.
    Rien en temps réel ni de joueuse à joueuse en v1. Le duel entre joueuses viendra plus tard, s'il
    vient.
 2. **Un paquet par semaine** pour une victoire d'arène, jamais des pièces misées. C'est une
    nouvelle source de cartes, pas de pièces : on la mesure comme les autres paquets.
 3. **Aucun classement public.** Chacune garde son historique de duels pour elle.
-4. Puisque l'adversaire est une PNJ, le deck d'une autre joueuse n'est jamais montré.
-   Recommandation : les decks de la PNJ n'utilisent que des cartes sans personne réelle (héros,
-   maps, équipes, mascottes), pour ne pas avoir à trancher le consentement de la vitrine (§2.6).
+4. Puisque l'adversaire est une PNJ, le deck d'une autre joueuse n'est jamais montré. Les decks de
+   la PNJ n'utilisent que des cartes **sans personne réelle**.
 5. **Le barème du lot 11 est validé**, profils des types sans rôle et table de niveaux compris. Il
-   est gelé dès l'ouverture de l'arène : le retoucher deviendra une nouvelle édition versionnée,
-   pas une correction en place.
+   est gelé dès l'ouverture de l'arène : le retoucher deviendra une nouvelle édition versionnée
+   (`rules_version` du duel), pas une correction en place.
 
-**Reste ouvert.** Les échanges et la forge restent-ils ouverts aux cartes engagées dans un deck ?
-Recommandation : oui. Un deck n'est qu'une sélection, pas un verrou : une carte qui quitte la
-collection quitte aussi le deck.
+**Tranché le 2026-10-22 (recommandation adoptée, à confirmer).** Les échanges et la forge restent
+ouverts aux cartes d'un deck. Un deck n'est qu'une **sélection**, pas un verrou : une carte qui
+quitte la collection quitte le deck au duel suivant (elle est écartée et nommée au lancement,
+jamais une erreur). Un duel EN COURS garde les cartes et les chiffres figés à son lancement.
+
+### Les règles (v1, `ARENA_RULES_VERSION = 1`)
+
+Yu-Gi-Oh très simplifié : pas de magie, pas de piège, pas d'effet.
+
+- **Deck** : 20 références de sa collection (un même sujet jusqu'au nombre d'exemplaires
+  possédés). Pour lancer un duel, le deck enregistré doit en compter 20. Au lancement, chaque
+  référence prend un exemplaire encore possédé, **les meilleurs d'abord** (rareté, puis brillance,
+  puis ordre du tirage) ; une référence sans exemplaire est **écartée** et nommée (`dropped`). Le
+  duel part s'il en reste au moins **10** (`deck_too_small` sinon).
+- **Ouverture** : pile ou face **tiré par la graine du duel** pour savoir qui commence ; chacune
+  pioche **5** cartes ; **4 000** points de vie.
+- **Tour** : la joueuse active pioche une carte en début de tour, sauf celle qui commence, à son
+  premier tour. Devoir piocher dans un deck vide **fait perdre** (deck-out). Pendant son tour, dans
+  l'ordre qu'elle veut :
+  - **une invocation** (niveau 3–4 libre ; niveau 5–6 contre **un** sacrifice ; niveau 7 et plus
+    contre **deux** — soit, avec le barème, 3–4 / 6 / 8), sur l'une des **3 zones**. Les
+    sacrifices sont ses monstres sur le terrain, choisis par elle, envoyés au cimetière ;
+  - la carte se pose **face visible**, en **attaque** ou en **défense**. **Pas de pose face
+    cachée en v1** : sans magie ni piège, une carte cachée ne cacherait qu'un chiffre, et le bluff
+    demanderait à la PNJ de bluffer aussi ;
+  - **changer la position** de chaque monstre une fois par tour — pas le tour de son invocation, et
+    pas après qu'il a attaqué ;
+  - **attaquer** avec chaque monstre en position d'attaque, une fois — **personne n'attaque au
+    tout premier tour du duel** ; un monstre invoqué ce tour peut attaquer ;
+  - finir son tour.
+- **Combat** :
+  - ATK contre un monstre en **attaque** : la plus forte ATK détruit l'autre, la différence part
+    des points de vie de la perdante ; **égalité : rien** (personne n'est détruit) ;
+  - ATK contre un monstre en **défense** : ATK > DEF le détruit, sans dégâts ; ATK < DEF, rien
+    n'est détruit et **l'attaquante perd DEF − ATK** (le « rebond » de Yu-Gi-Oh, ce qui donne au
+    Rempart sa raison d'être) ; égalité : rien ;
+  - **attaque directe** seulement quand le terrain adverse est vide : l'adversaire perd l'ATK.
+- **Fin** : points de vie à 0 → défaite immédiate ; deck-out → défaite ; après le **30ᵉ tour**
+  (15 chacune), la plus haute réserve de points de vie gagne, **égalité = match nul** ; **abandon =
+  défaite**. Un nul ou une défaite ne rapporte rien.
+- Pas de limite de main ; le cimetière est public et rien n'en revient.
+
+### La gardienne (PNJ)
+
+- **Trois decks fixes** (`npcDecks.ts`), 20 cartes chacun, **héros, maps et mascottes
+  seulement** — aucune joueuse, aucune fan art ; pas d'équipe non plus, car un deck fixe ne peut pas
+  nommer l'équipe d'un espace, et une équipe reste un groupe de personnes réelles. Même
+  composition de rareté pour les trois (8 communes, 7 rares, 4 épiques, 1 légendaire) : la
+  difficulté est fixe, seul le profil change :
+  - **Les Remparts** : tanks et maps (Rempart) ;
+  - **L'Assaut** : héros dégâts (Assaut) ;
+  - **L'Harmonie** : soutiens et mascottes (Équilibre).
+- **Une IA déterministe**, sans hasard : invoquer la plus forte carte légale (un sacrifice
+  seulement s'il améliore le terrain, les plus faibles d'abord), en attaque si son ATK dépasse
+  la plus forte ATK adverse en attaque (ou si le terrain adverse est vide), en défense sinon ;
+  passer en attaque un monstre qui a une cible favorable ; attaquer seulement quand c'est
+  favorable (détruire sans perdre, ou frapper un terrain vide), le plus fort d'abord, la cible
+  la plus forte qu'il bat ; repasser en défense un monstre qui n'a pas attaqué et que la plus
+  forte ATK adverse détruirait.
+
+### Serveur d'autorité
+
+- Un paquet est en jeu : **le duel se joue sur l'API**. Un moteur PUR et déterministe
+  (`features/player/library/arena/engine.ts`, conference-api) décide de tout ; le site en reçoit
+  une copie par la synchro et ne s'en sert que pour **prévisualiser** les gestes permis, jamais
+  pour décider.
+- **La graine** est tirée au hasard côté serveur au lancement, enregistrée avec le duel et **jamais
+  rendue** : dériver la graine de l'identifiant du duel (que la joueuse voit) lui donnerait l'ordre
+  des pioches de la gardienne. Mélanges et pile ou face en dépendent ; l'IA n'a pas de hasard.
+- **L'état** complet (decks dans l'ordre, mains) est en `jsonb` sur la ligne du duel ; la réponse
+  n'en montre qu'une **projection** : sa main, les deux terrains et cimetières, les points de vie,
+  le nombre de cartes des decks et de la main de la gardienne. Les cartes portent leur sujet et
+  leurs chiffres figés, **jamais leur face** : les faces sont relues à chaque réponse par
+  `readCardFaces` (une joueuse retirée reste anonyme sur le plateau).
+- **Un geste** = `POST …/actions { seq, action }`. `seq` est le numéro du dernier état vu :
+  différent de celui en base → `409 stale_state` (avec l'état courant) ; geste illégal → `422`
+  avec un `code` stable (`card_not_in_hand`, `already_summoned`, `wrong_tribute_count`,
+  `no_attack_first_turn`, …). L'écriture est conditionnelle au `seq` lu, et la route honore
+  `Idempotency-Key` : un double clic ne joue pas deux fois.
+- **Le tour de la gardienne** est joué par le serveur dans la même requête que « finir mon tour » ;
+  la réponse porte ses **étapes** (`steps` : l'événement et le plateau projeté après lui), que
+  l'écran rejoue une à une.
+
+### Données (migration `library_arena.sql`, conference-api)
+
+- `library_arena_decks (tenant_id, user_id, card_keys text[] ≤ 20, …)` : des **clés de sujet**
+  (`hero:tracer`, `player:<uuid>`…), comme la vitrine — pas d'exemplaire : un deck survit à un
+  échange, un recyclage ou une forge tant qu'un exemplaire du sujet reste.
+- `library_arena_duels (id, tenant_id, user_id, opponent, rules_version, seed, status, end_reason,
+  seq, state jsonb, final_turn, player_lp, npc_lp, reward_status, started_at, updated_at,
+  ended_at)` : **un seul duel actif par joueuse** (index unique partiel), cohérence statut / fin /
+  récompense en `CHECK`.
+- `library_arena_rewards (tenant_id, user_id, iso_week, duel_id, pack_id, granted_at)` : **clé
+  primaire `(tenant_id, user_id, iso_week)`** — la semaine ISO de la fin du duel, heure de Paris.
+  C'est le schéma qui garantit « un paquet par semaine », pas une relecture applicative.
+- `library_arena_claim_weekly_pack(tenant, user, duel)` : verrou du duel, puis paquet `arena` +
+  ligne de récompense **dans la même transaction** ; la semaine déjà payée → `week_already`, rien
+  n'est écrit. Rejouable sans effet (`replayed`).
+- Origine de paquet **`arena`** ajoutée aux **deux** contraintes de `tcg_packs` (listes reconstruites
+  en entier depuis `tcg_forge_and_showcase_cosmetics.sql` — relire `pg_constraint` avant
+  d'appliquer). **Aucune écriture au registre des pièces.** Les cartes d'un paquet d'arène ne sont
+  **pas échangeables** (`arena` reste hors de `TRADEABLE_PACK_SOURCES`, comme le drop et les
+  cadeaux : une source gratuite par compte serait un filon pour des comptes multiples).
+- Données personnelles : decks, duels et récompenses partent avec le compte (`ON DELETE CASCADE`)
+  et figurent à l'export (`personalDataTables.ts`).
+
+### Surface HTTP (toutes derrière `defineLibraryRoute`, `private, no-store`)
+
+| Route | Méthodes | Rôle |
+|---|---|---|
+| `/api/player/library/arena/deck` | GET, PUT | Mon deck résolu (cartes, chiffres, écartées), ma collection pour le construire, les faces. `PUT { cards }` (≤ 20 clés) : `409 not_owned` au-delà des exemplaires possédés. |
+| `/api/player/library/arena/duels` | GET, POST | GET : le salon — les trois défis, la semaine (`claimed`), le duel en cours, **mon** historique (20 derniers). POST `{ opponent }` : lancer (`409 duel_active`, `deck_incomplete`, `deck_too_small`). |
+| `/api/player/library/arena/duels/{duelId}` | GET | L'état projeté d'un de mes duels (404 sinon). Un duel gagné dont la récompense n'a pas été écrite la retente ici. |
+| `/api/player/library/arena/duels/{duelId}/actions` | POST | Un geste (`seq`, `action`) ; à la victoire, le paquet de la semaine. |
+| `/api/player/library/arena/duels/{duelId}/abandon` | POST | Abandonner : défaite, aucune récompense. |
+
+### Écran (conference-website)
+
+- `?place=arena` : **le salon** (la gardienne, ses trois défis, « paquet de la semaine : à gagner /
+  déjà gagné », l'historique privé), **le deck** (sa collection, filtres par rareté et par profil,
+  20 emplacements, enregistrer), **le duel** (sa main, trois zones de chaque côté, points de vie,
+  decks, positions, choix de la cible, tour de la gardienne rejoué pas à pas), **le résultat** (et
+  l'état de la récompense).
+- Faces = `TcgCard` avec ses chiffres. Jouable **au clavier** (chaque carte est un bouton, la cible
+  se choisit dans une liste), **une région `aria-live`** annonce chaque combat et chaque étape de la
+  gardienne, aucune information portée par la couleur seule (positions et zones écrites),
+  `prefers-reduced-motion` (pas d'animation, étapes affichées sans délai), mobile d'abord.
+- Écrans chargés **à la demande** (`next/dynamic`) : `/player/library` reste sous son gel de
+  bundle. Libellés FR + EN (`playerLibraryArena`). Tests d'interface contre des réponses figées.
+
+**Fini quand** une joueuse construit un deck de 20 cartes de sa collection, joue un duel complet
+contre la gardienne au clavier, voit chaque coup de la gardienne pas à pas, et reçoit **un** paquet
+`arena` pour sa première victoire de la semaine — la seconde victoire de la même semaine affiche
+« paquet de la semaine déjà gagné » et n'écrit rien ; un geste illégal ou rejoué ne change rien ;
+une joueuse retirée reste anonyme sur le plateau ; rien d'un duel n'est visible d'une autre.
+
+### Ce qui a été fait (2026-10-22, non commité)
+
+*conference-api*
+- `features/player/library/arena/` : `rules.ts` (constantes, formes, gestes, événements),
+  `legal.ts` (ce qui est permis, partagé avec le site), `engine.ts` (moteur pur, étapes projetées),
+  `npc.ts` (IA de la gardienne), `npcDecks.ts` (trois decks fixes), `rng.ts` (mulberry32),
+  `deck.ts` (résolution du deck contre la possession), `week.ts` (semaine ISO à Paris),
+  `schemas.ts` / `responses.ts`, `repository.ts`, `service/{faces,deck,duels}.ts`, cinq routes
+  `defineLibraryRoute` réexportées par `pages/api/player/library/arena/**`, contrats
+  (`lib/apiContracts`) et fragments OpenAPI.
+- Migration `database/migrations/library_arena.sql` (non appliquée), `schema-snapshot.json` et
+  `types/database.generated.ts` complétés à la main, registre RGPD (`personalDataTables.ts`).
+- Le journal staff des paquets (`PACK_HISTORY_SOURCES`) connaît `arena`.
+- Tests : `libraryArenaEngine.test.ts` (règles, combat, invocations, fin, projection, centaines de
+  duels simulés au hasard et IA contre IA, decks sans personne réelle, semaine),
+  `libraryArenaApi.test.ts` (routes), `libraryArenaSql.test.ts` (migration).
+
+*conference-website*
+- `?place=arena` (`roomStageModel.ts`), porte du hall au fond du mur gauche (`layouts/hall.ts`,
+  le miroir déplacé ; `HallDoors`, zone de la vue), entrée « L'arène » dans les lieux.
+- `features/player/library/arena/{client,clientContext,useArena,viewModel}.ts(x)` et
+  `ui/arena/*` (salon, deck, plateau, gestes, fin), chargés par `next/dynamic` depuis
+  `/player/library` (la porte des lieux, `PlaceScreen`). Namespace `playerLibraryArena`
+  (FR + EN). Client en mémoire qui fait tourner le moteur synchronisé
+  (`dev/fakeArenaClient.ts`, tests et démo locale ; pas de page `/dev` versionnée : elle
+  ferait passer `/player/tcg/echanges` au-dessus de son gel de bundle).
+- Le paquet `arena` a son libellé dans « Mes paquets » et dans le journal staff.
+
+**À faire côté humain.** Relire `pg_constraint` (requête en tête de la migration), appliquer
+`library_arena.sql`, déployer conference-api **puis** le site. Vérification :
+`select source_kind, count(*) from tcg_packs where source_kind = 'arena' group by 1` et
+`select iso_week, count(*) from library_arena_rewards group by 1` (une ligne par joueuse et par
+semaine, par construction).
+
+**Suivis connus.** La vue d'ensemble staff (`overviewModel.ts`) ne ventile ni `forge` ni `arena`
+(une ligne de plus par origine) ; les paquets d'arène ne sont pas échangeables (à rouvrir si
+l'association le souhaite) ; pas d'expiration d'un duel abandonné en cours de route (il attend
+« Reprendre » ou « Abandonner »).
+
+**Bundle (mesure locale, Windows, 2026-10-22).** `/player/library` 363,9 ko (gel 361 + 3, avant :
+363,6) — l'arène n'entre pas dans le premier chargement. `/dev/library-apartment` 349,6 ko contre
+349,5 avant (porte du hall, lien des lieux, quatre libellés partagés par toutes les pages de la
+Library) : l'arrondi passe de 349 à 350 pour un gel de 346 + 3. À confirmer en CI, qui mesure
+plus bas que Windows (les overlays `don-alert` et `match` dépassent déjà en local).
 
 ---
 

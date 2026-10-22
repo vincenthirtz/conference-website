@@ -1,6 +1,7 @@
 // features/player/library/ui/places/PlacesNav.tsx — la navigation « Lieux »
 // de la Women's Library (lot 7 de docs/PLAN-womens-library.md) : Mon
-// appartement · Hall · Grande salle de lecture · QG de mon équipe.
+// appartement · Hall · Grande salle de lecture · L'arène (lot 12 de
+// docs/PLAN-tcg-2.md, un écran sans salle) · QG de mon équipe.
 //
 // Les lieux communs s'ouvrent par `?place=` (la salle est trouvée, ou créée,
 // par l'API) ; le lieu où l'on est porte `aria-current="page"`. Le QG (lot 9)
@@ -20,7 +21,12 @@ import { FOCUS_RING } from '../social/shared';
 import TeamHqDoor from '../teamHq/TeamHqDoor';
 import PlaceDialog from './PlaceDialog';
 
-export type PlaceId = 'apartment' | 'hall' | 'reading_room' | 'team_hq';
+export type PlaceId =
+  | 'apartment'
+  | 'hall'
+  | 'reading_room'
+  | 'team_hq'
+  | 'arena';
 
 const APARTMENT_HREF = '/player/library';
 
@@ -46,6 +52,9 @@ export default function PlacesNav({ current }: { current: PlaceId | null }) {
       href: placeHref('reading_room'),
       label: t.places.readingRoom,
     },
+    // Lot 12 de docs/PLAN-tcg-2.md — l'arène de la gardienne.
+    // Même libellé que sa porte du hall (`doors.arena`).
+    { id: 'arena', href: placeHref('arena'), label: t.doors.arena },
   ];
   const cls = (id: PlaceId) => `${ITEM} ${id === current ? CURRENT : IDLE}`;
 

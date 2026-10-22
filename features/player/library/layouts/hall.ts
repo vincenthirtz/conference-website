@@ -1,7 +1,8 @@
 // Le hall de la Women's Library (lot 7) : 28 × 22 cases = 14 m × 11 m.
 // Décor fixe, posé en dur :
 //   - sol de marbre, murs « library » (lambris, plâtre, corniche) ;
-//   - mur gauche : fenêtres et porte d'entrée ;
+//   - mur gauche : fenêtres, porte d'entrée et, au fond, porte de l'arène
+//     (lot 12 de docs/PLAN-tcg-2.md) ;
 //   - mur droit : porte vers la Grande salle de lecture (gx 3), rayonnage
 //     encastré derrière l'accueil, porte vers les QG d'équipe (gx 22) ;
 //   - l'accueil (comptoir et sa chaise) devant le rayonnage encastré ;
@@ -15,7 +16,7 @@
 // SALLE VIVANTE (lot 7) : les dimensions sont celles que l'API donne à la
 // salle (`config/library/commonRooms.ts`, copie synchronisée) ; les ZONES
 // (`HALL_HOTSPOTS`, engine/hotspots.ts) sont le panneau d'annonces, le
-// tableau du tournoi et les trois portes, routées par
+// tableau du tournoi et les quatre portes (l'arène comprise), routées par
 // `ui/places/useRoomHotspots.ts`.
 
 import { LIBRARY_COMMON_ROOMS } from '@/config/library/commonRooms';
@@ -27,6 +28,9 @@ export const HALL_DOORS = {
   entrance: { side: 'left', at: 9 },
   readingRoom: { side: 'right', at: 3 },
   teamHq: { side: 'right', at: 22 },
+  // L'arène (lot 12 de docs/PLAN-tcg-2.md) : au fond du mur gauche, après le
+  // banc, là où pendait le miroir (déplacé entre la fenêtre et l'entrée).
+  arena: { side: 'left', at: 19 },
 } as const;
 
 /** Largeur (cases) et hauteur (m) d'une porte du manifeste (`walls.library`). */
@@ -44,6 +48,7 @@ export const HALL_SPOT_IDS = [
   'reading_room',
   'apartments',
   'team_hq',
+  'arena',
   'halloween',
 ] as const;
 export type HallSpotId = (typeof HALL_SPOT_IDS)[number];
@@ -78,6 +83,8 @@ export const HALL_HOTSPOTS: readonly (HotspotDecl & { id: HallSpotId })[] = [
     shape: door(HALL_DOORS.entrance),
   },
   { id: 'team_hq', labelKey: 'teamHq', shape: door(HALL_DOORS.teamHq) },
+  // Lot 12 de docs/PLAN-tcg-2.md — l'arène (un écran, pas une salle).
+  { id: 'arena', labelKey: 'arena', shape: door(HALL_DOORS.arena) },
 ];
 
 const items: RoomItem[] = [
@@ -125,7 +132,9 @@ const items: RoomItem[] = [
   // Décor mural.
   { id: 'painting', key: 'frame_painting', gx: 15, gy: 0, r: 0 },
   { id: 'clock', key: 'wall_clock', gx: 20, gy: 0, r: 0 },
-  { id: 'mirror', key: 'mirror', gx: 0, gy: 18, r: 1 },
+  // Le miroir a cédé sa place à la porte de l'arène (lot 12) : entre la
+  // première fenêtre et l'entrée.
+  { id: 'mirror', key: 'mirror', gx: 0, gy: 6, r: 1 },
   { id: 'portrait', key: 'frame_modern', gx: 0, gy: 11, r: 1 },
 ];
 
@@ -147,6 +156,7 @@ export const HALL_ROOM: RoomModel = {
       { at: 2, variant: 'window' },
       { at: HALL_DOORS.entrance.at, variant: 'door' },
       { at: 14, variant: 'window' },
+      { at: HALL_DOORS.arena.at, variant: 'door' },
     ],
   },
 };

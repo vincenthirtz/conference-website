@@ -16,7 +16,7 @@ import { useT } from '@/lib/i18n/useT';
 import nsHall from '@/lib/i18n/locales/fr/playerLibraryHall';
 import { Button } from '@/features/ruban';
 import type { HallSpotId } from '../../layouts/hall';
-import { type LibraryPlace, placeHref } from '../../roomStageModel';
+import { type LibraryDestination, placeHref } from '../../roomStageModel';
 import { LINK, TEXT_MUTED } from '../social/shared';
 
 /**
@@ -32,13 +32,13 @@ export type HallPanel =
   | 'halloween';
 
 export type HallDoorAction =
-  | { kind: 'place'; place: LibraryPlace }
+  | { kind: 'place'; place: LibraryDestination }
   | {
       kind: 'panel';
       panel: Exclude<HallPanel, 'board' | 'tournament' | 'halloween'>;
     };
 
-type DoorText = 'readingRoom' | 'apartments' | 'teamHq';
+type DoorText = 'readingRoom' | 'apartments' | 'teamHq' | 'arena';
 
 export type HallDoor = {
   id: Exclude<HallSpotId, 'board' | 'tournament_board' | 'halloween'>;
@@ -63,6 +63,12 @@ export const HALL_DOOR_LIST: readonly HallDoor[] = [
     id: 'team_hq',
     text: 'teamHq',
     action: { kind: 'panel', panel: 'team_hq' },
+  },
+  // Lot 12 de docs/PLAN-tcg-2.md — l'arène : un lieu sans salle (`?place=arena`).
+  {
+    id: 'arena',
+    text: 'arena',
+    action: { kind: 'place', place: 'arena' },
   },
 ];
 

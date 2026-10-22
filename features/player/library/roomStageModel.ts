@@ -205,6 +205,13 @@ export function sceneOf<R extends RoomShape & { kind: LibraryRoomKind }>(
 export type LibraryPlace = 'hall' | 'reading_room';
 
 /**
+ * Tout ce qui s'ouvre par `?place=` : les lieux communs (une SALLE, trouvée
+ * ou créée par l'API) et l'arène (lot 12 de docs/PLAN-tcg-2.md), un écran
+ * sans salle ni canevas.
+ */
+export type LibraryDestination = LibraryPlace | 'arena';
+
+/**
  * `?place=` de `/player/library` : `hall` ou `reading_room`, sinon null (rien,
  * plusieurs valeurs, autre chose).
  */
@@ -212,8 +219,8 @@ export function parsePlaceParam(value: unknown): LibraryPlace | null {
   return value === 'hall' || value === 'reading_room' ? value : null;
 }
 
-/** L'adresse d'un lieu commun (`/player/library?place=…`). */
-export function placeHref(place: LibraryPlace): string {
+/** L'adresse d'un lieu commun ou de l'arène (`/player/library?place=…`). */
+export function placeHref(place: LibraryDestination): string {
   return `/player/library?place=${place}`;
 }
 
@@ -235,7 +242,9 @@ export function parseRoomParam(value: unknown): string | null {
 export type LibraryView =
   | { kind: 'apartment' }
   | { kind: 'room'; roomId: string }
-  | { kind: 'place'; place: LibraryPlace };
+  | { kind: 'place'; place: LibraryPlace }
+  /** L'arène (lot 12 de docs/PLAN-tcg-2.md) : `?place=arena`. */
+  | { kind: 'arena' };
 
 /**
  * `?room=<uuid>` (une salle par son adresse) l'emporte sur `?place=` (un lieu
@@ -247,6 +256,7 @@ export function libraryViewOf(query: {
 }): LibraryView {
   const roomId = parseRoomParam(query.room);
   if (roomId) return { kind: 'room', roomId };
+  if (query.place === 'arena') return { kind: 'arena' };
   const place = parsePlaceParam(query.place);
   return place ? { kind: 'place', place } : { kind: 'apartment' };
 }

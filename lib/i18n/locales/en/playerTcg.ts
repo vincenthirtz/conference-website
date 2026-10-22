@@ -260,6 +260,7 @@ export default {
   packFromDrop: 'Claimed on stream',
   packFromPlacement: 'Tournament placement',
   packFromStreak: 'Check-in streak',
+  packFromArena: 'Library arena victory',
   walletCheckinStreak: 'Check-in streak',
   walletTournamentPlacement: 'Tournament placement',
   walletBattlenetVerified: 'Battle.net account verified',

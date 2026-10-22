@@ -1,6 +1,6 @@
 {
-  "apiCommit": "09ce5c34ea5d50f04f3dee2fb6da04b850e06ac2",
-  "syncedAt": "2026-10-21T14:27:30.314Z",
+  "apiCommit": "ebc4c9a18ef948537d964fab74d3795f14fbe64f",
+  "syncedAt": "2026-10-22T10:29:25.758Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -68,6 +68,9 @@
     "features/player/dashboard/schemas.ts",
     "features/player/demandes/model.ts",
     "features/player/demandes/schemas.ts",
+    "features/player/library/arena/legal.ts",
+    "features/player/library/arena/responses.ts",
+    "features/player/library/arena/rules.ts",
     "features/player/library/chat/events.ts",
     "features/player/library/chat/responses.ts",
     "features/player/library/chat/schemas.ts",
