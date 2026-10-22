@@ -47,6 +47,7 @@ import {
 } from '@/utils/tcg/live';
 import { tcgTeamImageUrl } from '@/utils/tcg/teamCardImage';
 import type { TcgRarity } from '@/utils/tcg/rarity';
+import { cardStats, type CardStats } from '@/utils/tcg/cardStats';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import {
@@ -198,6 +199,12 @@ export type TeamPageProps = {
    * comme la fiche joueuse l'est pour les cartes de joueuses.
    */
   tcgRarity: TcgRarity;
+  /**
+   * Niveau, attaque, défense de cette carte (lot 11, `utils/tcg/cardStats.ts`) :
+   * Équilibre de sa rareté — une équipe n'a pas de rôle. Calculés ICI, côté
+   * serveur, pour que la page n'embarque pas le barème dans son bundle.
+   */
+  tcgStats: CardStats;
   /**
    * Vitrines TCG ACTIVES des membres (`utils/tcg/live.ts`) : le consentement
    * est porté par la vitrine elle-même. `[]` quand aucune n'est activée.
@@ -704,6 +711,7 @@ export async function buildTeamPage(slug: string): Promise<TeamPageResult> {
       reliability,
       skillAverage,
       tcgRarity,
+      tcgStats: cardStats({ kind: 'team', rarity: tcgRarity }),
       memberShowcases,
       seo: buildTeamSeo(team),
     },

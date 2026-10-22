@@ -12,6 +12,7 @@ import type { LogoCredit } from '@/utils/teams/logoCredit';
 import type { TcgRarity } from '@/utils/tcg/rarity';
 import type { GameMascotSlug } from '@/utils/tcg/gameMascots';
 import type { OverwatchRole } from '@/utils/heroes/overwatch';
+import type { CardStats } from '@/utils/tcg/cardStats';
 import { fanartCardName, type FanartTargetView } from '@/utils/tcg/fanart';
 import type nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 
@@ -77,7 +78,15 @@ export type Engagement = {
   recyclableEngaged?: boolean;
 };
 
+/**
+ * Niveau, attaque, défense de l'exemplaire montré (lot 11, `utils/tcg/cardStats.ts`).
+ * OPTIONNEL : une réponse d'API antérieure ne le porte pas, et la carte
+ * s'affiche alors sans sa ligne de chiffres.
+ */
+export type CardStatsField = { stats?: CardStats | null };
+
 export type CollectionCard = Engagement &
+  CardStatsField &
   (
     | {
         kind: 'player';
@@ -168,67 +177,68 @@ export type CollectionCard = Engagement &
  * plus `isNew` : rendu par le serveur, OPTIONNEL parce qu'une lecture en échec
  * l'omet (et qu'une réponse d'API antérieure ne le porte pas).
  */
-export type DrawnCard = { position: number; isNew?: boolean } & (
-  | {
-      kind: 'player';
-      userId: string;
-      displayName: string | null;
-      imageUrl: string | null;
-      figure?: CardFigure | null;
-      rarity: TcgRarity;
-      isFoil: boolean;
-    }
-  | {
-      kind: 'team';
-      teamId: string;
-      name: string | null;
-      slug: string | null;
-      logoUrl: string | null;
-      cardImageUrl: string | null;
-      /** Crédit du logo — optionnel pour la même raison que `CollectionCard`. */
-      logoCredit?: LogoCredit | null;
-      rarity: TcgRarity;
-      isFoil: boolean;
-    }
-  | {
-      kind: 'map';
-      slug: string;
-      name: string | null;
-      imageUrl: string | null;
-      rarity: TcgRarity;
-      isFoil: boolean;
-    }
-  | {
-      kind: 'fanart';
-      fanartId: string;
-      title: string | null;
-      artistName: string | null;
-      artistUrl: string | null;
-      imageUrl: string | null;
-      category?: 'fanart' | 'association';
-      /** Texte « à propos » (catégorie association, rédigé par le staff). */
-      description?: string | null;
-      /** Illustration alternative — même contrat que `CollectionCard`. */
-      target?: FanartTargetView | null;
-      rarity: TcgRarity;
-      isFoil: boolean;
-    }
-  | {
-      kind: 'mascot';
-      slug: string;
-      name: string | null;
-      rarity: TcgRarity;
-      isFoil: boolean;
-    }
-  | {
-      kind: 'hero';
-      slug: string;
-      name: string | null;
-      role: OverwatchRole | null;
-      rarity: TcgRarity;
-      isFoil: boolean;
-    }
-);
+export type DrawnCard = { position: number; isNew?: boolean } & CardStatsField &
+  (
+    | {
+        kind: 'player';
+        userId: string;
+        displayName: string | null;
+        imageUrl: string | null;
+        figure?: CardFigure | null;
+        rarity: TcgRarity;
+        isFoil: boolean;
+      }
+    | {
+        kind: 'team';
+        teamId: string;
+        name: string | null;
+        slug: string | null;
+        logoUrl: string | null;
+        cardImageUrl: string | null;
+        /** Crédit du logo — optionnel pour la même raison que `CollectionCard`. */
+        logoCredit?: LogoCredit | null;
+        rarity: TcgRarity;
+        isFoil: boolean;
+      }
+    | {
+        kind: 'map';
+        slug: string;
+        name: string | null;
+        imageUrl: string | null;
+        rarity: TcgRarity;
+        isFoil: boolean;
+      }
+    | {
+        kind: 'fanart';
+        fanartId: string;
+        title: string | null;
+        artistName: string | null;
+        artistUrl: string | null;
+        imageUrl: string | null;
+        category?: 'fanart' | 'association';
+        /** Texte « à propos » (catégorie association, rédigé par le staff). */
+        description?: string | null;
+        /** Illustration alternative — même contrat que `CollectionCard`. */
+        target?: FanartTargetView | null;
+        rarity: TcgRarity;
+        isFoil: boolean;
+      }
+    | {
+        kind: 'mascot';
+        slug: string;
+        name: string | null;
+        rarity: TcgRarity;
+        isFoil: boolean;
+      }
+    | {
+        kind: 'hero';
+        slug: string;
+        name: string | null;
+        role: OverwatchRole | null;
+        rarity: TcgRarity;
+        isFoil: boolean;
+      }
+  );
 
 export type Earn = {
   matchWin: number;

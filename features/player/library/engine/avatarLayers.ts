@@ -17,8 +17,9 @@
 // render_avatar_layers.py) : on superpose corps, bas, haut, cheveux.
 //
 // UNE BANDE = les images composées d'un look pour un usage : `idle` (les 8
-// directions), `walk` (les 8 images d'UNE direction), `sit` (les 8
-// directions). On ne compose que ce qu'on dessine ; le cache garde les
+// directions), `walk` (les 8 images d'UNE direction), `sit`, `sit_low` et
+// `lie` (les 8 directions chacune ; les deux dernières, lot 15, sont
+// facultatives). On ne compose que ce qu'on dessine ; le cache garde les
 // bandes récentes dans un budget d'octets (largeur × hauteur × 4).
 
 import {
@@ -61,6 +62,9 @@ export type AvatarLayerSheets = {
   idle: LayerAnimation;
   walk?: LayerAnimation;
   sit?: LayerAnimation;
+  /** Lot 15 : assise basse et allongée, rendues après coup (repli : `sit`). */
+  sit_low?: LayerAnimation;
+  lie?: LayerAnimation;
 };
 
 export type LayerIndex = {
@@ -143,6 +147,12 @@ export function parseLayerIndex(json: unknown): LayerIndex | null {
       if (!a) ok = false;
       else entry[name] = a;
     }
+    // Les poses du lot 15 arrivent après coup : une feuille mal formée est
+    // seulement ignorée (la pose retombe sur `sit`), le calque reste.
+    for (const name of ['sit_low', 'lie'] as const) {
+      const a = raw[name] === undefined ? null : parseLayerAnimation(raw[name]);
+      if (a) entry[name] = a;
+    }
     if (ok) layers[id] = entry;
   }
   return { pixelRatio: json.pixelRatio, layers };
@@ -197,7 +207,7 @@ export function lookLayers(look: LibraryAvatarLook): LookLayer[] {
 /** Ce qu'une bande contient : un look, une animation, une direction (marche). */
 export type StripKey = { pose: AvatarPose; dir: Direction };
 
-/** `idle` et `sit` : une bande pour les 8 directions ; `walk` : une par direction. */
+/** `idle` et les poses de repos : une bande pour les 8 directions ; `walk` : une par direction. */
 export function stripKeyOf(
   code: string,
   pose: AvatarPose,

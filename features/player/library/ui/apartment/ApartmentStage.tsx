@@ -9,6 +9,12 @@
 // la vue, « Présentes dans la salle », signes, menu (bloquer, signaler,
 // expulser). Privé, aucune connexion. Une entrée refusée (Library
 // indisponible, 503…) : l'appartement reste solo, comme avant, sans message.
+//
+// MEUBLES (lot 15) : hors du mode déco, un appui sur une assise, un lit, un
+// rayonnage… y fait aller, puis s'asseoir, s'allonger ou s'en servir ;
+// l'armoire et le miroir ouvrent l'éditeur de look (`onDress`). « Se lever »
+// sous la scène. La posture part dans la présence quand l'appartement est
+// ouvert.
 
 import dynamic from 'next/dynamic';
 import { type KeyboardEvent, useCallback, useId, useMemo, useRef } from 'react';
@@ -56,6 +62,7 @@ export default function ApartmentStage({
   saveItems,
   onSaved,
   onConflict,
+  onDress,
 }: {
   apartment: LibraryApartmentResponse;
   specs: Specs;
@@ -69,6 +76,8 @@ export default function ApartmentStage({
   ) => Promise<LibraryApartmentResponse>;
   onSaved: (res: LibraryApartmentResponse) => void;
   onConflict: () => void;
+  /** Lot 15c : l'armoire ou le miroir ouvre l'éditeur de look. */
+  onDress?: () => void;
 }) {
   const t = useT(nsPlayerLibrary);
   const hintId = useId();
@@ -193,11 +202,9 @@ export default function ApartmentStage({
           playerBubble={bubbles.playerBubble}
           bubbleMs={LIBRARY_BUBBLE_MS}
           onAvatarTap={connected ? social.onAvatarTap : undefined}
-          onPlayerWalk={(goal) => room.sendMove(goal.i, goal.j)}
-          onPlayerArrive={(tile, dir) => {
-            posRef.current = { gx: tile.i, gy: tile.j, dir };
-            room.updatePosition(posRef.current);
-          }}
+          // Lot 15 : la vue envoie la case visée et ma présence (posture
+          // comprise), et montre « Se lever » sous la scène.
+          furniture={{ room, posRef, onDress }}
           engineRef={engineRef}
         />
         {room.enter && <RoomOverlays social={social} room={room.enter.room} />}

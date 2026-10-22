@@ -26,6 +26,7 @@ import nsTeamDetail from '@/lib/i18n/locales/fr/teamDetail';
 import nsOverwatchRank from '@/lib/i18n/locales/fr/overwatchRank';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
 import TcgCard from '@/components/tcg/TcgCard';
+import { tcgCardStatsLabels } from '@/components/tcg/tcgCardStatsLabels';
 import TeamLogoCredit from '@/components/Team/LogoCredit';
 import { resolveLogoCredit } from '@/utils/teams/logoCredit';
 import { XIcon } from '@/components/Icons';
@@ -97,6 +98,7 @@ export default function TeamPage({
   embedHost,
   announcementActive,
   tcgRarity,
+  tcgStats,
   memberShowcases,
 }: TeamPageProps) {
   const t = useT(nsTeamDetail);
@@ -566,6 +568,11 @@ export default function TeamPage({
                   ),
                 }}
                 rarity={tcgRarity}
+                // Ce que vaut la carte de l'équipe AUJOURD'HUI (pas un
+                // exemplaire) : Équilibre de sa rareté, calculé au rendu
+                // serveur (`buildTeamPage`). `?? null` : une page ISR
+                // générée avant le déploiement n'a pas la prop.
+                stats={tcgStats ?? null}
                 // La carte est déjà sur la page de son sujet : pas de lien
                 // vers soi-même.
                 noLink
@@ -579,6 +586,7 @@ export default function TeamPage({
                   foil: tTcg.foil,
                   copies: tTcg.copies,
                   logoCredit: tTcg.logoCredit,
+                  stats: tcgCardStatsLabels(tTcg),
                 }}
               />
             </div>

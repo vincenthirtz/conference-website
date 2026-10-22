@@ -8,6 +8,7 @@
 //   node tools/library-assets/build.mjs --only a03            # un avatar
 //   node tools/library-assets/build.mjs --only bookshelf_filled,globe
 //   node tools/library-assets/build.mjs --kind furniture --missing   # reprise
+//   node tools/library-assets/build.mjs --kind avatars --poses lie,sit_low [--missing]
 //   node tools/library-assets/build.mjs --kind none           # index seuls
 //
 // Blender : variable BLENDER, sinon la version la plus récente trouvée dans
@@ -20,7 +21,13 @@
 // ne s'écrasent donc pas : chacun ne réécrit que ce qu'il a rendu.
 //
 // `--missing` saute un meuble déjà au manifeste dont les 4 images existent :
-// un long build interrompu reprend là où il s'est arrêté.
+// un long build interrompu reprend là où il s'est arrêté. Pour un avatar, il
+// saute celui dont toutes les poses demandées sont au manifeste, feuilles
+// présentes.
+//
+// `--poses lie,sit_low` (avatars) ne rend que ces poses, par groupes entiers
+// (idle,walk,sit | lie | sit_low), et les FUSIONNE dans l'entrée existante de
+// l'avatar : ses autres animations, sa feuille et leurs rects ne bougent pas.
 
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
@@ -181,10 +188,20 @@ const { values } = parseArgs({
     'decor-samples': { type: 'string', default: '128' },
     'avatar-samples': { type: 'string', default: '48' },
     quality: { type: 'string' },
-    // Reprise : saute les meubles déjà rendus (manifeste + 4 images).
+    // Reprise : saute les meubles déjà rendus (manifeste + 4 images), et les
+    // avatars dont les poses demandées sont déjà au manifeste.
     missing: { type: 'boolean', default: false },
+    // Avatars : poses à rendre, fusionnées dans l'entrée existante.
+    poses: { type: 'string' },
   },
 });
+// Les poses rendues par render_avatar.py (ANIMATIONS), dans l'ordre.
+const AVATAR_POSES = ['idle', 'walk', 'sit', 'lie', 'sit_low'];
+const avatarPoses = values.poses
+  ? values.poses.split(',').filter(Boolean)
+  : AVATAR_POSES;
+for (const p of avatarPoses)
+  if (!AVATAR_POSES.includes(p)) throw new Error(`pose inconnue : ${p}`);
 const only = values.only ? new Set(values.only.split(',')) : null;
 const wants = (kind, id) =>
   (values.kind === 'all' || values.kind === kind) && (!only || only.has(id));
@@ -232,6 +249,9 @@ const touched = {
   walls: new Set(),
   avatars: new Set(),
 };
+// Avatars rendus avec `--poses` : entrée PARTIELLE (les animations rendues,
+// et la feuille si idle et walk en sont), fusionnée dans celle du disque.
+const avatarMerges = new Map();
 
 // Le manifeste est réécrit après chaque rendu : un long build interrompu garde
 // ce qui est déjà fait. Il est relu juste avant : un build parallèle (décor,
@@ -252,6 +272,8 @@ async function saveManifest() {
   for (const k of touched.walls) outDecor.walls[k] = decor.walls[k];
   const outAvatars = { ...(disk.avatars ?? {}) };
   for (const k of touched.avatars) outAvatars[k] = avatars[k];
+  for (const [k, patch] of avatarMerges)
+    outAvatars[k] = mergeAvatar(outAvatars[k], patch);
   const manifest = {
     ...disk,
     version: 1,
@@ -270,7 +292,8 @@ async function saveManifest() {
 /**
  * Entrée de manifeste d'un avatar empaqueté (meta de iso_pack.py) : chaque
  * `file` (feuille de l'avatar, et feuille propre d'une animation comme `sit`)
- * devient une URL `sheet`.
+ * devient une URL `sheet`. Une meta sans `file` (poses ajoutées rendues
+ * seules) donne une entrée partielle, à fusionner (mergeAvatar).
  */
 function avatarEntry(meta) {
   const { file, id: _id, animations, ...rest } = meta;
@@ -280,7 +303,35 @@ function avatarEntry(meta) {
     const { file: own, ...r } = a;
     anims[name] = own ? { sheet: url(own), ...r } : r;
   }
-  return { sheet: url(file), ...rest, animations: anims };
+  const entry = { ...rest, animations: anims };
+  return file ? { sheet: url(file), ...entry } : entry;
+}
+
+/**
+ * Une entrée partielle fusionnée dans l'entrée existante : les animations
+ * rendues remplacent les leurs (ou s'ajoutent après), les autres restent
+ * telles quelles, avec leurs rects.
+ */
+function mergeAvatar(base, patch) {
+  const { animations, ...sheet } = patch;
+  return {
+    ...(base ?? {}),
+    ...sheet,
+    animations: { ...(base?.animations ?? {}), ...animations },
+  };
+}
+
+/** Toutes les poses demandées sont au manifeste, feuilles présentes. */
+async function avatarHasPoses(id) {
+  const entry = (await readDiskManifest()).avatars?.[id];
+  if (!entry?.animations) return false;
+  return avatarPoses.every((p) => {
+    const a = entry.animations[p];
+    const sheet = a?.sheet ?? entry.sheet;
+    return Boolean(
+      a && sheet && existsSync(path.join(avatarDir, path.posix.basename(sheet)))
+    );
+  });
 }
 
 async function readMeta(dir, id) {
@@ -595,6 +646,15 @@ const base = await fetchAvatarBase(sources.avatarBase);
 credits.push({ usage: 'corps des avatars', ...base.credit });
 for (const spec of sources.avatars) {
   if (!wants('avatars', spec.id)) continue;
+  if (values.missing && (await avatarHasPoses(spec.id))) continue;
+  if (
+    values.poses &&
+    !avatarPoses.includes('idle') &&
+    !(await readDiskManifest()).avatars?.[spec.id]
+  )
+    throw new Error(
+      `${spec.id} : aucune entrée au manifeste où fusionner ${values.poses} (rendre d'abord idle,walk,sit)`
+    );
   const started = Date.now();
   runBlender(
     blender,
@@ -610,12 +670,20 @@ for (const spec of sources.avatars) {
       avatarDir,
       '--samples',
       values['avatar-samples'],
+      ...(values.poses ? ['--poses', values.poses] : []),
     ],
     `LIBRARY_AVATAR_OK ${spec.id}`
   );
   const meta = await readMeta(avatarDir, spec.id);
-  avatars[meta.id] = avatarEntry(meta);
-  touched.avatars.add(meta.id);
+  if (values.poses) {
+    // Fusion : seules les animations rendues changent.
+    const patch = avatarEntry(meta);
+    avatarMerges.set(meta.id, patch);
+    avatars[meta.id] = mergeAvatar(avatars[meta.id], patch);
+  } else {
+    avatars[meta.id] = avatarEntry(meta);
+    touched.avatars.add(meta.id);
+  }
   await saveManifest();
   console.log(`  ${meta.id} en ${Math.round((Date.now() - started) / 1000)} s`);
 }

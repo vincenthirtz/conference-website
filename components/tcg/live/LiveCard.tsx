@@ -11,6 +11,7 @@ import { showcaseCardSubject } from '@/components/tcg/TcgShowcaseSection';
 import type { ShowcaseCard } from '@/utils/tcg/showcase';
 import { useT } from '@/lib/i18n/useT';
 import nsPlayerTcg from '@/lib/i18n/locales/fr/playerTcg';
+import { tcgCardStatsLabels } from '@/components/tcg/tcgCardStatsLabels';
 
 export default function LiveCard({
   card,
@@ -23,6 +24,7 @@ export default function LiveCard({
       subject={showcaseCardSubject(card)}
       rarity={card.rarity}
       isFoil={card.isFoil}
+      stats={card.stats ?? null}
       labels={{
         rarity: {
           common: tTcg.rarityCommon,
@@ -36,6 +38,7 @@ export default function LiveCard({
         associationCredit: tTcg.associationCredit,
         association: tTcg.cardAssociation,
         alternateArt: tTcg.cardAlternateArt,
+        stats: tcgCardStatsLabels(tTcg),
       }}
     />
   );

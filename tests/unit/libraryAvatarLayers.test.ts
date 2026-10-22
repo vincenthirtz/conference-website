@@ -37,6 +37,7 @@ import {
   type LookCanvas,
 } from '../../features/player/library/engine/lookCompositor';
 import { createWalker } from '../../features/player/library/engine/motion';
+import { gridToScreen } from '../../features/player/library/engine/projection';
 import {
   type AvatarEntity,
   LibraryWorld,
@@ -165,6 +166,9 @@ function entity(look: string | null, walking = false): AvatarEntity {
     marker: null,
     bubble: null,
     lastTargetAt: null,
+    posture: null,
+    intent: null,
+    renderedPose: null,
   };
 }
 
@@ -537,5 +541,99 @@ describe('le monde porte le look', () => {
     expect(world.avatar(remote.id)?.look).toBe(CODE);
     world.syncRemoteAvatars([remote], 1);
     expect(world.avatar(remote.id)?.look).toBeNull();
+  });
+});
+
+/* ------------------------------------------- lot 15 : lie et sit_low --- */
+
+/** Un index dont chaque calque a aussi (ou non) `lie` et `sit_low`. */
+function indexWithRest(look: LibraryAvatarLook, rest: boolean) {
+  const idx = indexFor(look);
+  if (!rest) return idx;
+  const layers = Object.fromEntries(
+    Object.entries(idx.layers).map(([id, l]) => [
+      id,
+      {
+        ...l,
+        lie: anim(`${id}-lie.webp`, 1),
+        sit_low: anim(`${id}-sit_low.webp`, 1),
+      },
+    ])
+  );
+  return { ...idx, layers };
+}
+
+/** Assise (ou allongée) sur une place en (2.5, 3.5), surface `surfaceM`. */
+function seated(pose: 'sit' | 'sit_low' | 'lie', surfaceM: number) {
+  const e = entity(CODE);
+  e.posture = {
+    kind: 'seat',
+    itemId: 'bed',
+    spot: 0,
+    pose,
+    x: 2.5,
+    y: 3.5,
+    dir: 5,
+    surfaceM,
+    behind: false,
+    sig: 'bed@1,1,0',
+  };
+  return e;
+}
+
+describe('lot 15 — parseLayerIndex et les poses de repos', () => {
+  it('lit `lie` et `sit_low` quand ils sont là, les laisse absents sinon', () => {
+    const withRest = parseLayerIndex(indexWithRest(LOOK, true));
+    expect(withRest?.layers['body.s3'].lie?.sheet.src).toContain('-lie.webp');
+    expect(withRest?.layers['body.s3'].sit_low).toBeDefined();
+    const without = parseLayerIndex(indexWithRest(LOOK, false));
+    expect(without?.layers['body.s3'].lie).toBeUndefined();
+    expect(without?.layers['body.s3'].sit).toBeDefined();
+  });
+
+  it('une feuille `lie` mal formée est ignorée : le calque reste (repli `sit`)', () => {
+    const idx = indexWithRest(LOOK, true) as {
+      layers: Record<string, Record<string, unknown>>;
+    };
+    idx.layers['body.s3'].lie = { sheet: 'https://evil.example/x.webp' };
+    const parsed = parseLayerIndex(idx);
+    expect(parsed?.layers['body.s3']).toBeDefined();
+    expect(parsed?.layers['body.s3'].lie).toBeUndefined();
+    expect(parsed?.layers['body.s3'].sit_low).toBeDefined();
+  });
+});
+
+describe('lot 15 — LookCompositor et les poses de repos', () => {
+  it('`lie` absent de l’index : la bande `sit`, posée sur la place et décalée', async () => {
+    const { comp, requested } = harness({ index: indexWithRest(LOOK, false) });
+    const { ctx, calls } = fakeCtx();
+    const e = seated('lie', 0.52);
+    comp.draw(ctx, e, 1);
+    await flush();
+    expect(comp.draw(ctx, e, 2)).toBe(true);
+    expect(e.renderedPose).toBe('sit');
+    expect(requested.some((s) => s.includes('-sit.webp'))).toBe(true);
+    expect(requested.some((s) => s.includes('-lie'))).toBe(false);
+    // L'ancre est sous la place, montée de 0,52 − 0,45 m.
+    const [, , , sw, , dx, dy] = calls.at(-1) as number[];
+    expect(sw).toBeGreaterThan(0);
+    const foot = gridToScreen(2.5, 3.5, 0.07);
+    expect(dx).toBeLessThan(foot.x);
+    expect(dy).toBeLessThan(foot.y);
+  });
+
+  it('`lie` et `sit_low` présents : leurs propres bandes', async () => {
+    const { comp, requested } = harness({ index: indexWithRest(LOOK, true) });
+    const { ctx } = fakeCtx();
+    const lying = seated('lie', 0.55);
+    comp.draw(ctx, lying, 1);
+    await flush();
+    expect(comp.draw(ctx, lying, 2)).toBe(true);
+    expect(lying.renderedPose).toBe('lie');
+    const low = seated('sit_low', 0.25);
+    expect(comp.draw(ctx, low, 3)).toBe(true);
+    expect(low.renderedPose).toBe('sit_low');
+    expect(requested.some((s) => s.includes('-lie.webp'))).toBe(true);
+    expect(requested.some((s) => s.includes('-sit_low.webp'))).toBe(true);
   });
 });

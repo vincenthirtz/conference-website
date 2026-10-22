@@ -3,7 +3,14 @@
 // lot 5 phase B : `syncRemoteAvatars`) et des bots qui flânent pour mesurer
 // les FPS (`bot`). Bulles d'emote et de phrase au-dessus des têtes, datées
 // sur l'horloge de l'appelant (ms) : le monde ne lit aucune horloge.
+//
+// POSTURES (lot 15, engine/postures.ts) : un avatar marche vers la case
+// d'accès d'un meuble avec une INTENTION (`intent`), et s'y assoit, s'y
+// allonge ou s'en sert en arrivant (`posture`). Il reste logiquement sur sa
+// case d'accès ; une nouvelle marche le relève, un meuble déplacé ou retiré
+// aussi.
 
+import type { AvatarPose } from './avatarSprites';
 import {
   advanceWalker,
   createWalker,
@@ -17,17 +24,30 @@ import {
 } from './motion';
 import type { RoomDecor } from './decor';
 import { boxContainsScreenPoint, centerDepth, depthSort } from './depthSort';
+import type { UseActivity } from './interactions';
+import type { NpcLayer } from './npcLayer';
 import { findPath, isWalkable, type WalkGrid } from './pathfinding';
+import {
+  type AvatarIntent,
+  type FurniturePlan,
+  intentOf,
+  intentValid,
+  type Posture,
+  postureDirection,
+  postureValid,
+  sameIntent,
+  settle,
+} from './postures';
 import { metersToTiles, type Tile } from './projection';
 import {
   type BubbleContent,
   hueOf,
+  PRESENCE_GRACE_MS,
   planRemoteStep,
   type RemoteAvatarInput,
   type RemoteStep,
 } from './remotes';
 import {
-  avatarBox,
   buildWalkGrid,
   inRoom,
   itemBox,
@@ -37,6 +57,7 @@ import {
   type RoomItem,
   type RoomModel,
 } from './room';
+import { stanceBox } from './stance';
 
 export type AvatarKind = 'player' | 'remote' | 'bot';
 
@@ -67,6 +88,12 @@ export type AvatarEntity = {
   bubble: AvatarBubble | null;
   /** Autre joueuse : `receivedAt` de la dernière case visée suivie. */
   lastTargetAt: number | null;
+  /** Assise, allongée ou en train de se servir d'un meuble ; null : debout. */
+  posture: Posture | null;
+  /** Ce qu'elle fera en arrivant ; null : rien. */
+  intent: AvatarIntent | null;
+  /** La pose dessinée à la dernière image (repli compris), écrite par le rendu. */
+  renderedPose: AvatarPose | null;
 };
 
 /** Durée d'une bulle par défaut (celle du temps réel : LIBRARY_BUBBLE_MS). */
@@ -102,9 +129,15 @@ export class LibraryWorld {
   avatarIds: string[] = [];
   /** Durée d'affichage d'une bulle (ms). */
   bubbleMs = DEFAULT_BUBBLE_MS;
+  /** Pictogramme de chaque activité (lot 15c), au-dessus de qui s'en sert. */
+  activityGlyphs: Partial<Record<UseActivity, string>> = {};
+  /** Lot 16 : le PNJ de la salle (engine/npcLayer.ts) ; null : aucun. */
+  npc: NpcLayer | null = null;
   private rand: () => number;
   /** La joueuse est arrivée au bout de son trajet (vidé par `takeArrivals`). */
   private arrivals: string[] = [];
+  /** La posture annoncée par la présence de chaque autre joueuse (lot 15). */
+  private remoteRest = new Map<string, AvatarIntent>();
 
   constructor(room: RoomModel, catalog: FurnitureCatalog, seed = 42) {
     this.room = { ...room, items: room.items.map((i) => ({ ...i })) };
@@ -113,20 +146,40 @@ export class LibraryWorld {
     this.rand = mulberry32(seed);
   }
 
-  /** Change de catalogue (manifeste chargé) : les empreintes peuvent bouger. */
+  /**
+   * Change de catalogue (manifeste chargé) : les empreintes peuvent bouger,
+   * donc les places aussi — chacune se réinstalle (lot 15), les autres
+   * joueuses d'après leur dernière présence.
+   */
   setCatalog(catalog: FurnitureCatalog): void {
     this.catalog = catalog;
     this.grid = buildWalkGrid(this.room, catalog);
+    for (const a of this.avatars) {
+      if (isWalking(a.walker)) continue;
+      const want =
+        a.kind === 'remote'
+          ? (this.remoteRest.get(a.id) ?? null)
+          : intentOf(a.posture);
+      if (!want) continue;
+      a.posture = null;
+      a.intent = want;
+      this.settleIntent(a);
+    }
   }
 
   /**
    * Remplace les meubles posés (mode déco, enregistrement) : la grille de
    * marche est reconstruite. Un avatar qui se retrouve sur une case
    * désormais occupée n'est pas déplacé : il en ressort au prochain trajet.
+   * Celle dont le meuble a bougé ou disparu se relève (lot 15).
    */
   setRoomItems(items: readonly RoomItem[]): void {
     this.room = { ...this.room, items: items.map((i) => ({ ...i })) };
     this.grid = buildWalkGrid(this.room, this.catalog);
+    for (const a of this.avatars) {
+      if (a.posture && !postureValid(this, a.posture)) a.posture = null;
+      if (a.intent && !intentValid(this, a.intent)) a.intent = null;
+    }
   }
 
   /** Change le sol et les murs (réglages de l'appartement). */
@@ -219,7 +272,14 @@ export class LibraryWorld {
   private pushAvatar(
     a: Omit<
       AvatarEntity,
-      'label' | 'marker' | 'bubble' | 'lastTargetAt' | 'look'
+      | 'label'
+      | 'marker'
+      | 'bubble'
+      | 'lastTargetAt'
+      | 'look'
+      | 'posture'
+      | 'intent'
+      | 'renderedPose'
     >
   ): AvatarEntity {
     const full: AvatarEntity = {
@@ -229,6 +289,9 @@ export class LibraryWorld {
       marker: null,
       bubble: null,
       lastTargetAt: null,
+      posture: null,
+      intent: null,
+      renderedPose: null,
     };
     this.avatars.push(full);
     return full;
@@ -251,8 +314,10 @@ export class LibraryWorld {
     this.avatars = this.avatars.filter(
       (a) => a.kind !== 'remote' || wanted.has(a.id)
     );
+    this.remoteRest.clear();
     for (const input of list) {
       if (!inRoom(this.room, input.tile)) continue;
+      if (input.rest) this.remoteRest.set(input.id, input.rest);
       let a = this.avatar(input.id);
       if (a && a.kind !== 'remote') continue;
       if (!a) {
@@ -270,6 +335,7 @@ export class LibraryWorld {
       a.avatarId = this.knownAvatarId(input.avatarId);
       a.look = input.look ?? null;
       a.bubble = this.bubbleFrom(input.bubble, a.bubble, now);
+      const prevTargetAt = a.lastTargetAt;
       const plan = planRemoteStep({
         current: walkerTile(a.walker),
         walking: isWalking(a.walker),
@@ -278,8 +344,40 @@ export class LibraryWorld {
         now,
       });
       a.lastTargetAt = plan.lastTargetAt;
+      if (plan.step.kind === 'none') {
+        this.reconcileRest(a, input, now);
+        continue;
+      }
+      // Lot 15 : une case visée NEUVE porte son intention (`move`), une
+      // présence rejointe la sienne (s'asseoir en arrivant).
+      const want =
+        plan.lastTargetAt !== prevTargetAt
+          ? (input.target?.rest ?? null)
+          : (input.rest ?? null);
       this.applyStep(a, plan.step);
+      a.intent = want;
+      if (!isWalking(a.walker)) this.settleIntent(a);
     }
+  }
+
+  /**
+   * À l'arrêt, sur la case de sa présence : la posture annoncée (assise,
+   * usage) est prise, ou quittée. Pas pendant le délai de grâce d'une case
+   * visée récente (la présence peut être en retard sur elle).
+   */
+  private reconcileRest(
+    a: AvatarEntity,
+    input: RemoteAvatarInput,
+    now: number
+  ): void {
+    if (isWalking(a.walker)) return;
+    const t = input.target;
+    if (t && now - t.receivedAt < PRESENCE_GRACE_MS) return;
+    const want = input.rest ?? null;
+    if (sameIntent(intentOf(a.posture), want)) return;
+    a.posture = null;
+    a.intent = want;
+    this.settleIntent(a);
   }
 
   private applyStep(a: AvatarEntity, step: RemoteStep): void {
@@ -288,7 +386,37 @@ export class LibraryWorld {
     this.placeAvatar(a.id, step.tile);
   }
 
-  /** Pose un avatar sur une case, sans marcher (trajet effacé). */
+  /** L'intention réalisée (assise, usage), sinon debout ; la direction suit. */
+  private settleIntent(a: AvatarEntity): Posture | null {
+    const intent = a.intent;
+    a.intent = null;
+    a.posture = intent ? settle(this, a, intent) : null;
+    if (a.posture) a.walker.dir = postureDirection(this, a, a.posture);
+    return a.posture;
+  }
+
+  /**
+   * Marche vers la case d'un meuble (lot 15), puis s'y installe en arrivant
+   * — tout de suite si elle y est déjà. false : case inaccessible.
+   */
+  interact(id: string, plan: FurniturePlan): boolean {
+    const a = this.avatar(id);
+    if (!a || !this.walkTo(id, plan.goal)) return false;
+    a.intent = plan.intent;
+    if (!isWalking(a.walker)) this.settleIntent(a);
+    return true;
+  }
+
+  /** Se relève (ou cesse de se servir d'un meuble). true si elle ne l'était pas déjà. */
+  standUp(id: string): boolean {
+    const a = this.avatar(id);
+    if (!a || (!a.posture && !a.intent)) return false;
+    a.posture = null;
+    a.intent = null;
+    return true;
+  }
+
+  /** Pose un avatar sur une case, sans marcher (trajet effacé, debout). */
   placeAvatar(id: string, tile: Tile, dir?: Direction): boolean {
     const a = this.avatar(id);
     if (!a || !inRoom(this.room, tile)) return false;
@@ -296,6 +424,8 @@ export class LibraryWorld {
     a.walker.x = c.x;
     a.walker.y = c.y;
     a.walker.path = [];
+    a.posture = null;
+    a.intent = null;
     if (dir !== undefined) a.walker.dir = dir;
     return true;
   }
@@ -356,7 +486,8 @@ export class LibraryWorld {
    * L'avatar dont la boîte projetée est sous le point `(sx, sy)` du monde, le
    * plus en avant ; seulement parmi `kinds` (par défaut : les autres
    * joueuses). Passe AVANT les meubles et le sol : une joueuse à moitié
-   * cachée par un rayonnage reste visable.
+   * cachée par un rayonnage reste visable. Assise ou allongée, sa boîte suit
+   * sa pose (lot 15).
    */
   avatarAtScreen(
     sx: number,
@@ -367,7 +498,7 @@ export class LibraryWorld {
     let bestDepth = Number.NEGATIVE_INFINITY;
     for (const a of this.avatars) {
       if (!kinds.includes(a.kind)) continue;
-      const box = avatarBox(a.walker.x, a.walker.y);
+      const box = stanceBox(a);
       if (!boxContainsScreenPoint(box, sx, sy)) continue;
       const depth = centerDepth(box);
       if (depth > bestDepth) {
@@ -385,13 +516,18 @@ export class LibraryWorld {
     return out;
   }
 
-  /** Envoie un avatar vers une case. false si elle est inaccessible. */
+  /**
+   * Envoie un avatar vers une case. false si elle est inaccessible. Partir
+   * relève (lot 15) et oublie l'intention précédente.
+   */
   walkTo(id: string, goal: Tile): boolean {
     const a = this.avatar(id);
     if (!a || !inRoom(this.room, goal)) return false;
     const from = headingTile(a.walker);
     const path = findPath(this.grid, from, goal);
     if (!path) return false;
+    a.posture = null;
+    a.intent = null;
     setWalkerPath(a.walker, path);
     return true;
   }
@@ -433,9 +569,11 @@ export class LibraryWorld {
     for (const a of this.avatars) {
       if (advanceWalker(a.walker, dt)) {
         changed = true;
-        if (a.isBot && !isWalking(a.walker)) a.wait = 0.4 + this.rand() * 2;
-        if (a.kind === 'player' && !isWalking(a.walker))
-          this.arrivals.push(a.id);
+        if (isWalking(a.walker)) continue;
+        // Arrivée : l'intention se réalise (lot 15).
+        if (a.intent) this.settleIntent(a);
+        if (a.isBot) a.wait = 0.4 + this.rand() * 2;
+        if (a.kind === 'player') this.arrivals.push(a.id);
         continue;
       }
       if (!a.isBot) continue;

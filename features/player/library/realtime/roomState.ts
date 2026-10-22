@@ -16,7 +16,9 @@
 //   - une case hors de la salle est jetée ;
 //   - (lot 14a) la présence reçue est déjà VÉRIFIÉE (`./presenceVerifier.ts`) :
 //     pseudo, avatar et look viennent du jeton ; un avatar dont le jeton
-//     échoit disparaît au `tick` suivant.
+//     échoit disparaît au `tick` suivant ;
+//   - (lot 15) `seat` / `use` : la posture annoncée dans la présence, et
+//     celle que vise un `move` (cosmétiques ; le moteur juge s'ils tiennent).
 
 import type { LibraryEmoteId, LibraryPhraseId } from './social';
 import { LIBRARY_BUBBLE_MS } from './social';
@@ -24,6 +26,8 @@ import type {
   LibraryEmotePayload,
   LibraryMovePayload,
   LibraryPhrasePayload,
+  LibrarySeatRef,
+  LibraryUseRef,
 } from './payloads';
 import type { VerifiedPresenceEntry } from './presenceVerifier';
 
@@ -45,8 +49,20 @@ export type RemoteAvatar = {
   gx: number;
   gy: number;
   dir: number;
-  /** Dernière case VISÉE (broadcast `move`) : le moteur y fait marcher l'avatar. */
-  target: { gx: number; gy: number; receivedAt: number } | null;
+  /** Lot 15 : assise / allongée, ou en train de se servir d'un meuble (présence). */
+  seat?: LibrarySeatRef;
+  use?: LibraryUseRef;
+  /**
+   * Dernière case VISÉE (broadcast `move`) : le moteur y fait marcher
+   * l'avatar ; `seat` / `use` : ce qu'elle y fera (lot 15).
+   */
+  target: {
+    gx: number;
+    gy: number;
+    receivedAt: number;
+    seat?: LibrarySeatRef;
+    use?: LibraryUseRef;
+  } | null;
   emote: { id: LibraryEmoteId; receivedAt: number } | null;
   phrase: { id: LibraryPhraseId; receivedAt: number } | null;
 };
@@ -120,6 +136,15 @@ function inRoom(state: RoomSocialState, gx: number, gy: number): boolean {
   return gx < state.room.width && gy < state.room.depth;
 }
 
+/** `seat` ou `use` (jamais les deux : `seat` l'emporte), seulement s'ils sont là. */
+function restOf(p: { seat?: LibrarySeatRef; use?: LibraryUseRef }): {
+  seat?: LibrarySeatRef;
+  use?: LibraryUseRef;
+} {
+  if (p.seat) return { seat: { item: p.seat.item, spot: p.seat.spot } };
+  return p.use ? { use: { item: p.use.item } } : {};
+}
+
 function without<T>(record: Record<string, T>, key: string): Record<string, T> {
   if (!(key in record)) return record;
   const { [key]: _gone, ...rest } = record;
@@ -150,6 +175,7 @@ export function roomSocialReducer(
           gx: entry.gx,
           gy: entry.gy,
           dir: entry.dir,
+          ...restOf(entry),
           target: known?.target ?? null,
           emote: known?.emote ?? null,
           phrase: known?.phrase ?? null,
@@ -173,7 +199,12 @@ export function roomSocialReducer(
           ...state.avatars,
           [payload.userId]: {
             ...avatar,
-            target: { gx: payload.gx, gy: payload.gy, receivedAt: now },
+            target: {
+              gx: payload.gx,
+              gy: payload.gy,
+              receivedAt: now,
+              ...restOf(payload),
+            },
           },
         },
         lastMoveAt: { ...state.lastMoveAt, [payload.userId]: payload.at },

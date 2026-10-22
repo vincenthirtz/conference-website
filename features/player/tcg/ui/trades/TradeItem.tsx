@@ -31,6 +31,8 @@ function TradeCards({
               subject={subjectOf(card)}
               rarity={card.rarity ?? 'common'}
               isFoil={card.isFoil ?? false}
+              // `null` pour une carte demandée sans exemplaire désigné.
+              stats={card.stats ?? null}
               noLink
               labels={labels}
             />

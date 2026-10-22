@@ -9,7 +9,7 @@
 //      salle ; « Décorer » ouvre le mode déco (ApartmentStage) ;
 //   3. LES PANNEAUX : boutique, meubles (posés / rangés), avatar, réglages.
 
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react';
 import { format, useT } from '@/lib/i18n/useT';
 import nsPlayerLibrary from '@/lib/i18n/locales/fr/playerLibrary';
 import { TcgAmount } from '@/components/tcg/TcgCoin';
@@ -36,6 +36,18 @@ export default function ApartmentScreen() {
   const actions = useLibraryActions();
   const manifest = useLibraryManifest(home.gate === 'ready');
   const [tab, setTab] = useState<TabId>('shop');
+  // Lot 15c — l'armoire ou le miroir : l'onglet Avatar, montré et au focus.
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const openLookEditor = useCallback(() => {
+    setTab('avatar');
+    requestAnimationFrame(() => {
+      const el = tabsRef.current?.querySelector<HTMLElement>(
+        '[role="tab"][aria-selected="true"]'
+      );
+      el?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      el?.focus({ preventScroll: true });
+    });
+  }, []);
 
   const { me, catalog, apartment } = home;
   // Lot 14d : le kit de bienvenue, dit une fois.
@@ -177,6 +189,7 @@ export default function ApartmentScreen() {
             saveItems={actions.saveItems}
             onSaved={actions.applySavedApartment}
             onConflict={() => void actions.reloadApartment()}
+            onDress={openLookEditor}
           />
           <p className="flex flex-wrap gap-x-3 text-xs text-[var(--t3,#a39ba6)]">
             <span data-testid="library-apartment-access">
@@ -187,12 +200,14 @@ export default function ApartmentScreen() {
             <span>{t.apartmentHint}</span>
           </p>
         </section>
-        <LibraryTabs
-          tabs={tabs}
-          active={tab}
-          onChange={(id) => setTab(id as TabId)}
-          label={t.panelsLabel}
-        />
+        <div ref={tabsRef}>
+          <LibraryTabs
+            tabs={tabs}
+            active={tab}
+            onChange={(id) => setTab(id as TabId)}
+            label={t.panelsLabel}
+          />
+        </div>
       </div>
     );
   }

@@ -44,6 +44,8 @@ import {
   LibraryEmotePayload,
   LibraryMovePayload,
   LibraryPhrasePayload,
+  LibrarySeatRef,
+  LibraryUseRef,
   parsePeerPayload,
 } from './payloads';
 import { createVerifiedPresence } from './presenceVerifier';
@@ -123,7 +125,15 @@ export type LibraryConnectionStatus =
   | 'error'
   | 'closed';
 
-export type LibraryPosition = { gx: number; gy: number; dir: number };
+/** Ce qu'un avatar fait d'un meuble (lot 15), dans la présence ou un `move`. */
+export type LibraryRest = { seat?: LibrarySeatRef; use?: LibraryUseRef };
+
+/** Ma case (assise : ma case d'accès), ma direction et ma posture. */
+export type LibraryPosition = {
+  gx: number;
+  gy: number;
+  dir: number;
+} & LibraryRest;
 
 export type LibraryEnterContext = Pick<
   LibraryEnterResponse,
@@ -161,8 +171,8 @@ export type LibraryRoomConnection = {
   setVisible(visible: boolean): Promise<void>;
   /** La case où je me trouve (arrivée) : rafraîchit ma présence, au plus chaque seconde. */
   updatePosition(position: LibraryPosition): void;
-  /** La case que je vise (un clic = un message). */
-  sendMove(gx: number, gy: number): SendMoveResult;
+  /** La case que je vise (un clic = un message) ; `rest` : ce que j'y ferai. */
+  sendMove(gx: number, gy: number, rest?: LibraryRest): SendMoveResult;
   sendEmote(emote: LibraryEmoteId): boolean;
   sendPhrase(phrase: LibraryPhraseId): boolean;
   /**
@@ -180,6 +190,18 @@ export type LibraryRoomConnection = {
   getState(): RoomSocialState;
   close(): Promise<void>;
 };
+
+/**
+ * Ma posture telle qu'elle part (lot 15) : `seat` OU `use`, seulement s'il
+ * passe le schéma que liront les autres (sinon rien : debout).
+ */
+function validRest(r: LibraryRest): LibraryRest {
+  if (r.seat && LibrarySeatRef.safeParse(r.seat).success)
+    return { seat: { item: r.seat.item, spot: r.seat.spot } };
+  if (r.use && LibraryUseRef.safeParse(r.use).success)
+    return { use: { item: r.use.item } };
+  return {};
+}
 
 /** Une fin d'expulsion / de bannissement ISO → ms, ou `null` (inconnue / définitif). */
 function untilMs(until: string | null): number | null {
@@ -216,7 +238,7 @@ export function createLibraryRoomConnection(
   const moveGate = createGate(MOVE_MIN_INTERVAL_MS);
   const socialGate = createGate(SOCIAL_MIN_INTERVAL_MS);
   const presenceGate = createGate(PRESENCE_MIN_INTERVAL_MS);
-  let pendingMove: { gx: number; gy: number } | null = null;
+  let pendingMove: ({ gx: number; gy: number } & LibraryRest) | null = null;
   let moveTimer: unknown = null;
   let presenceTimer: unknown = null;
 
@@ -259,6 +281,7 @@ export function createLibraryRoomConnection(
       gy: position.gy,
       dir: position.dir,
       ticket: presence.ticket(),
+      ...validRest(position),
     };
   }
 
@@ -458,8 +481,15 @@ export function createLibraryRoomConnection(
       return;
     }
     const { gx, gy } = pendingMove;
+    const rest = validRest(pendingMove);
     pendingMove = null;
-    broadcast(LIBRARY_PEER_EVENTS.move, { userId: me.userId, gx, gy, at: t });
+    broadcast(LIBRARY_PEER_EVENTS.move, {
+      userId: me.userId,
+      gx,
+      gy,
+      at: t,
+      ...rest,
+    });
   }
 
   function flushPresence() {
@@ -502,7 +532,7 @@ export function createLibraryRoomConnection(
       else presenceTimer = setTimer(flushPresence, presenceGate.waitFor(t));
     },
 
-    sendMove(gx, gy) {
+    sendMove(gx, gy, rest) {
       if (!canSend()) return 'refused';
       if (
         !Number.isInteger(gx) ||
@@ -514,7 +544,7 @@ export function createLibraryRoomConnection(
       ) {
         return 'refused';
       }
-      pendingMove = { gx, gy };
+      pendingMove = { gx, gy, ...rest };
       if (moveTimer !== null) return 'queued';
       const t = now();
       if (moveGate.waitFor(t) === 0) {

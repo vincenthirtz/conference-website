@@ -247,6 +247,19 @@ export default ns('playerTcg', {
   roleDamage: 'Dégâts',
   roleSupport: 'Soutien',
 
+  // Attaque, défense et niveau, à la Yu-Gi-Oh (PLAN-tcg-2, lot 11). Dérivés du
+  // type de carte, de son rôle et de sa rareté — jamais d'une performance.
+  // « ATK » / « DEF » restent l'abréviation du genre ; le lecteur d'écran
+  // entend la phrase entière (`statsAria`).
+  statsLevel: 'Niv. {level}',
+  statsAttack: 'ATK',
+  statsDefense: 'DEF',
+  statsAria: 'Niveau {level}, attaque {attack}, défense {defense}',
+  statsProfile: 'Profil : {profile}',
+  statsProfileAssault: 'Assaut',
+  statsProfileBulwark: 'Rempart',
+  statsProfileBalanced: 'Équilibre',
+
   /* --- Passe UX / accessibilité (2026-09-15) --- */
 
   // Chargement et erreur. Une lecture ratée ne doit JAMAIS s'afficher comme une

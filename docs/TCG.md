@@ -438,6 +438,99 @@ Rareté et brillant sont **figés au tirage** dans `tcg_pack_cards` : le palmar�
 Deux exemplaires du même sujet peuvent donc différer — la collection affiche la
 meilleure rareté possédée.
 
+## 3 bis. Attaque, défense et niveau
+
+Ajouté le **2026-10-21** (lot 11 de [PLAN-tcg-2.md](./PLAN-tcg-2.md)), prélude à
+l'arène de la Women's Library (lot 12, non construit). Chaque carte porte un
+**niveau** en étoiles, une **attaque** (ATK) et une **défense** (DEF), à la
+Yu-Gi-Oh — [`utils/tcg/cardStats.ts`](../utils/tcg/cardStats.ts) (conference-api,
+copié ici par la synchro), réducteur pur.
+
+**Ce sont des chiffres sur une personne, donc ils ne disent rien d'elle.** Des
+points tirés d'une performance (rating, K/D, taux de victoire, votes MVP) ou d'un
+hasard propre à chaque joueuse classeraient publiquement deux joueuses du même
+palier : c'est exactement la seconde échelle que la section 3 refuse, et une
+carte « 900 ATK » qui circule sous un nom peut rabaisser quelqu'un. Les chiffres
+ne viennent donc que de ce que la carte est déjà :
+
+- la **rareté** de l'exemplaire (figée au tirage) fixe la **puissance**
+  (ATK + DEF) et le **niveau** — c'est l'échelle existante, et elle seule ;
+- le **type**, ou le **rôle de jeu** d'une joueuse ou d'un héros, ne fixe que la
+  **répartition** de cette puissance.
+
+Même type + même rôle + même rareté ⇒ mêmes chiffres, au point près ; aucun
+profil ne vaut plus qu'un autre à rareté égale. **La brillante ne donne rien**
+(variante d'impression, pas un palier).
+
+| Rareté | Niveau | Puissance | Assaut (ATK / DEF) | Rempart | Équilibre |
+| --- | --- | --- | --- | --- | --- |
+| `common` | 3 | 2 400 | 1 400 / 1 000 | 1 000 / 1 400 | 1 200 / 1 200 |
+| `rare` | 4 | 3 000 | 1 800 / 1 200 | 1 200 / 1 800 | 1 500 / 1 500 |
+| `epic` | 6 | 4 000 | 2 400 / 1 600 | 1 600 / 2 400 | 2 000 / 2 000 |
+| `legendary` | 8 | 5 000 | 3 000 / 2 000 | 2 000 / 3 000 | 2 500 / 2 500 |
+
+Les magnitudes sont celles du jeu de référence (1 800 ATK au niveau 4, 3 000 au
+niveau 8) et les niveaux tombent dans ses trois classes d'invocation (3–4 sans
+sacrifice, 6 avec un, 8 avec deux). `common` est au niveau 3 : un plancher, pas
+un échec.
+
+| Carte | Profil |
+| --- | --- |
+| Joueuse ou héros tank | Rempart |
+| Joueuse ou héros dégâts | Assaut |
+| Joueuse ou héros soutien | Équilibre |
+| Joueuse sans rôle connu (aucun héros choisi, `flex`) ou **retirée** | Équilibre |
+| Équipe, mascotte | Équilibre |
+| Map | Rempart |
+| Fan art, association comprise | Assaut |
+
+**Le rôle d'une joueuse** est celui que dessine déjà sa figurine
+(`recommendCardHero` : son premier héros choisi, à défaut sa spécialité de
+roster) ; celui d'un héros vient du registre. Aucune information nouvelle n'est
+donc exposée. L'association est une catégorie de fan art, pas un type
+(« La catégorie L'association ») : mêmes chiffres, et une œuvre retirée — dont
+la face n'est plus lisible — n'en change pas.
+
+**Le rôle est figé au tirage ; les chiffres sont dérivés.** Même raisonnement
+que la rareté : le rôle bouge — une joueuse change de héros favori ou de
+spécialité, et le jeu reclasse ses héros (Sombra, Dégâts → Soutien, le
+2026-10-17). `tcg_pack_cards.card_role` (migration
+[`tcg_card_role.sql`](https://github.com/vincenthirtz/conference-api/blob/main/database/migrations/tcg_card_role.sql))
+garde le rôle de chaque exemplaire de joueuse ou de héros, écrit à
+l'ouverture du paquet, complété par l'API après une forge (la fonction SQL
+n'en sait rien), et voyage avec la ligne lors d'un échange. Les chiffres, eux,
+ne sont pas stockés : une fonction pure de trois entrées figées ou immuables
+est aussi stable, et le barème reste réglable d'un coup tant que l'arène n'est
+pas ouverte. Le backfill de la migration fige le rôle **du jour de la
+migration** (celui du jour du tirage n'a été noté nulle part). Avant la
+migration, la sonde `cardRoleReady` laisse les chiffres suivre le rôle
+**courant** — justes, pas encore stables.
+
+**Le retrait vaut aussi pour les chiffres.** Une joueuse retirée (§2.4 bis) a
+une face anonyme ; un rôle lu sur sa carte la rendrait recoupable (« la
+légendaire tank anonyme »). `statRoleOf` ne lit aucun rôle d'une joueuse
+retirée, figé ou non : sa carte prend l'Équilibre de sa rareté, comme toute carte
+sans rôle, et le backfill ne renseigne pas ses cartes. Si elle revient, ses
+exemplaires figés retrouvent leurs chiffres.
+
+**Où les chiffres sortent.** Champ additif `stats { level, attack, defense,
+profile }` (schéma zod nommé `TcgCardStats`) sur toute carte rendue à une joueuse
+ou une visiteuse : ouverture de paquet, collection (l'exemplaire montré est le
+premier lu à la meilleure rareté), vitrine (joueuse et fiche publique), « TCG en
+action » (tirages, carte de la semaine, vitrines d'équipe), échanges (le rôle
+d'une carte proposée est relu sur sa ligne de `tcg_pack_cards` ; une carte
+demandée sans exemplaire n'a pas de chiffres). La fiche joueuse, la fiche
+d'équipe et le catalogue `/tcg` ne montrent pas un exemplaire : la page calcule
+les chiffres avec le même module (rôle de la figurine, rareté du jour). **Pas de
+chiffres** dans la route bot (résumé sans cartes), l'annonce `tcg.rare_pulled`
+(champs choisis un à un), l'image `/api/og/tcg-card` (elle ne reçoit pas le rôle
+de l'exemplaire), l'overlay OBS (aucune carte) ni l'accueil.
+
+**Côté écran**, `TcgCard` écrit « ★★★★ Niv. 4 » puis « ATK 1800 DEF 1200 » sous
+la rareté ; cette ligne abrégée est cachée du lecteur d'écran et doublée d'une
+phrase entière (« Niveau 4, attaque 1800, défense 1200 »). La vue agrandie dit le
+profil. Les valeurs passent à la ligne plutôt que d'être tronquées.
+
 ## 4. L'économie
 
 Deux voies pour obtenir un paquet : le **gagner** (une victoire, un paquet) ou
@@ -1547,7 +1640,7 @@ direct, tout passe par les routes serveur.
 | -------------------- | ---------------------- | ----------------------------------------------------- |
 | `tcg_player_cards`   | `(tenant_id, user_id)` | consentement + photo modérée d'une joueuse            |
 | `tcg_packs`          | `id`                   | un paquet : `victory`, `purchase`, `welcome`, `drop`, `placement` ou `streak` |
-| `tcg_pack_cards`     | `(pack_id, position)`  | contenu figé d'un paquet ouvert                       |
+| `tcg_pack_cards`     | `(pack_id, position)`  | contenu figé d'un paquet ouvert : sujet, rareté, brillance et, pour une joueuse ou un héros, `card_role` (rôle de jeu figé, §3 bis ; `tcg_card_role.sql`) |
 | `tcg_wallets`        | `(tenant_id, user_id)` | solde — **cache** du registre, `CHECK (balance >= 0)` |
 | `tcg_wallet_entries` | `id`                   | registre des mouvements — **source de vérité**        |
 | `tcg_showcases`      | `(tenant_id, user_id)` | vitrine opt-in : `enabled` (défaut `false`) + ≤ 3 références de sujet (`tcg_showcases.sql`, **non appliquée** au 2026-09-15) |
@@ -1692,6 +1785,10 @@ Quelques conventions transverses :
   `WITHDRAWAL_UNAVAILABLE`, `SCRIM_CLOSED`,
   `sets_unreadable`, `invalid_body`, `invalid_card`, `not_owned`) : c'est
   l'interface qui traduit, le message n'est qu'un repli.
+- **`stats` sur chaque carte (2026-10-21).** Ouverture, collection, vitrine,
+  « TCG en action », échanges rendent `stats { level, attack, defense, profile }`
+  (§3 bis), champ additif : une réponse d'avant se lit toujours, et l'écran
+  n'affiche simplement pas de ligne de chiffres.
 - **L'API rend le fait, l'interface le formule.** `sourceKind` part brut, jamais
   un libellé : traduire au serveur l'obligerait à connaître la langue de la
   lectrice et figerait le vocabulaire à deux endroits.

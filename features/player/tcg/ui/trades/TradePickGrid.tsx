@@ -54,10 +54,23 @@ export default function TradePickGrid({
               aria-pressed={isPicked}
               disabled={unavailable || busy !== null}
               onClick={() => onToggle(side, key)}
-              aria-label={format(t.pickAria, {
-                name: nameOf(card) ?? t.unnamedCard,
-                rarity: labels.rarity[rarity],
-              })}
+              // Le nom accessible REMPLACE le contenu du bouton : les chiffres
+              // de la carte y sont donc redits, sinon on ne les entendrait pas.
+              aria-label={[
+                format(t.pickAria, {
+                  name: nameOf(card) ?? t.unnamedCard,
+                  rarity: labels.rarity[rarity],
+                }),
+                card.stats
+                  ? format(labels.stats.aria, {
+                      level: card.stats.level,
+                      attack: card.stats.attack,
+                      defense: card.stats.defense,
+                    })
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(', ')}
               className={`block min-h-11 w-full rounded-xl text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--or,#b467d1)] disabled:cursor-not-allowed disabled:opacity-40 ${
                 isPicked
                   ? 'ring-2 ring-[var(--lf,#7fca65)] ring-offset-2 ring-offset-[var(--canvas,#07030a)]'
@@ -68,6 +81,7 @@ export default function TradePickGrid({
                 subject={subjectOf(card)}
                 rarity={rarity}
                 isFoil={card.isFoil ?? false}
+                stats={card.stats ?? null}
                 noLink
                 insideInteractive
                 labels={labels}

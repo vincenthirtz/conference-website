@@ -9,7 +9,14 @@
 //      case visée (`sendMove`), l'arrivée rafraîchit ma présence
 //      (`updatePosition`), un appui sur une autre joueuse ouvre son menu ;
 //   3. sous la scène : mode discret (salle de lecture), signes, « Présentes
-//      dans la salle » — l'accès clavier aux avatars.
+//      dans la salle » — l'accès clavier aux avatars ;
+//   4. (lot 15) les meubles : un appui sur une assise, un lit, un rayonnage…
+//      y fait aller, puis s'asseoir, s'allonger ou s'en servir ; la case
+//      visée et la présence portent la posture ; « Se lever » sous la scène.
+//      Pas d'éditeur de look ici : l'armoire n'est pas proposée ;
+//   5. (lot 16) la saison, lue à l'entrée et à la demande
+//      (`../hall/useHallSeason`) : pendant l'Event Halloween, les citrouilles
+//      du hall, leur zone et le fantôme.
 // Une entrée refusée, une expulsion, un bannissement, une salle refermée :
 // la notice remplace la salle, avec le retour à mon appartement.
 //
@@ -36,6 +43,7 @@ import { socialNoticeOf } from '../../socialModel';
 import type { LibraryEnterResponse } from '../../socialResponses';
 import type { RoomEngineHandle } from '../apartment/ApartmentView';
 import { useChatBubbles } from '../chat/useChatBubbles';
+import { useHallSeason } from '../hall/useHallSeason';
 import { useRoomHotspots } from '../places/useRoomHotspots';
 import { LINK } from '../social/shared';
 import SocialNotice from '../social/SocialNotice';
@@ -61,6 +69,8 @@ export type RoomStageProps = LibrarySocialDeps & {
   look?: string | null;
   /** La salle est ouverte : nom, sorte, propriétaire (l'écran s'y adapte). */
   onEnter?: (enter: LibraryEnterResponse) => void;
+  /** Développement (lot 16) : l'instant des saisons ; défaut, l'entrée. */
+  seasonAt?: number;
 };
 
 export default function RoomStage(props: RoomStageProps) {
@@ -82,6 +92,7 @@ function RoomStageInner({
   look = null,
   onEnter,
   onRetry,
+  seasonAt,
   ...override
 }: RoomStageProps & { onRetry: () => void }) {
   const t = useT(nsSocial);
@@ -121,8 +132,14 @@ function RoomStageInner({
   }, [enter]);
   // Lot 7 — une salle commune (hall, salle de lecture) prend son décor fixe
   // (`layouts/*`, `enter` n'y rend aucun meuble) ; ses zones vont au moteur.
-  const scene = useMemo(() => (enter ? sceneOf(enter) : null), [enter]);
-  const spots = useRoomHotspots(enter?.room.kind ?? null);
+  // Lot 16 — la saison lue à l'entrée : citrouilles, leur zone et le fantôme.
+  const kind = enter?.room.kind ?? null;
+  const { season, npc } = useHallSeason(kind, enter, seasonAt);
+  const scene = useMemo(
+    () => (enter ? sceneOf(enter, season?.items) : null),
+    [enter, season]
+  );
+  const spots = useRoomHotspots(kind, undefined, season);
 
   const notice = socialNoticeOf(room);
   if (notice) {
@@ -179,6 +196,7 @@ function RoomStageInner({
           fixed={scene?.fixed}
           hotspots={spots.hotspots}
           onHotspotTap={spots.onHotspotTap}
+          npc={npc}
           specs={specs}
           avatarId={enter.me.avatarId}
           look={look}
@@ -192,11 +210,9 @@ function RoomStageInner({
           playerMarker={social.marker}
           bubbleMs={LIBRARY_BUBBLE_MS}
           onAvatarTap={social.onAvatarTap}
-          onPlayerWalk={(goal) => room.sendMove(goal.i, goal.j)}
-          onPlayerArrive={(tile, dir) => {
-            posRef.current = { gx: tile.i, gy: tile.j, dir };
-            room.updatePosition(posRef.current);
-          }}
+          // Lot 15 : la vue envoie la case visée et ma présence (posture
+          // comprise), et montre « Se lever » sous la scène.
+          furniture={{ room, posRef }}
           engineRef={engineRef}
         />
         <RoomOverlays social={social} room={enter.room} />

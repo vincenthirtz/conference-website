@@ -33,13 +33,18 @@ export const HALL_DOORS = {
 export const DOOR_SPAN = 2;
 export const DOOR_HEIGHT_M = 2.2;
 
-/** Les zones du hall : leur `id` est ce que reçoit l'écran du hall. */
+/**
+ * Les zones du hall : leur `id` est ce que reçoit l'écran du hall.
+ * `halloween` (lot 16) : la citrouille, posée par un calque de saison
+ * (`halloween/hallDecor.ts`) et absente de `HALL_HOTSPOTS` hors événement.
+ */
 export const HALL_SPOT_IDS = [
   'board',
   'tournament_board',
   'reading_room',
   'apartments',
   'team_hq',
+  'halloween',
 ] as const;
 export type HallSpotId = (typeof HALL_SPOT_IDS)[number];
 

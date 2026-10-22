@@ -189,8 +189,10 @@ import enPlayerErrors from './playerErrors';
 import enSafetyPage from './safetyPage';
 import enPlayerLibrary from './playerLibrary';
 import enPlayerLibrarySocial from './playerLibrarySocial';
+import enPlayerLibraryFurniture from './playerLibraryFurniture';
 import enPlayerLibraryChat from './playerLibraryChat';
 import enPlayerLibraryHall from './playerLibraryHall';
+import enPlayerLibraryHalloween from './playerLibraryHalloween';
 import enPlayerLibraryReadingRoom from './playerLibraryReadingRoom';
 import enPlayerLibraryTeamHq from './playerLibraryTeamHq';
 
@@ -371,8 +373,10 @@ const enDict = {
   safetyPage: enSafetyPage,
   playerLibrary: enPlayerLibrary,
   playerLibrarySocial: enPlayerLibrarySocial,
+  playerLibraryFurniture: enPlayerLibraryFurniture,
   playerLibraryChat: enPlayerLibraryChat,
   playerLibraryHall: enPlayerLibraryHall,
+  playerLibraryHalloween: enPlayerLibraryHalloween,
   playerLibraryReadingRoom: enPlayerLibraryReadingRoom,
   playerLibraryTeamHq: enPlayerLibraryTeamHq,
 };

@@ -1,8 +1,12 @@
 // features/player/library/realtime/payloads.ts — ce qui circule ENTRE
 // NAVIGATEURS sur `library:room:<id>` (lot 5 de docs/PLAN-womens-library.md) :
-//   - la présence : `{ userId, gx, gy, dir, ticket }` ;
-//   - les broadcasts : `move { userId, gx, gy, at }`, `emote { userId, emote }`,
-//     `phrase { userId, phraseId }`.
+//   - la présence : `{ userId, gx, gy, dir, ticket, seat?, use? }` ;
+//   - les broadcasts : `move { userId, gx, gy, at, seat?, use? }`,
+//     `emote { userId, emote }`, `phrase { userId, phraseId }`.
+// Lot 15 : `seat { item, spot }` (assise ou allongée sur la place `spot` du
+// meuble `item`) et `use { item }` (en train de s'en servir), facultatifs,
+// jamais les deux. Une cliente qui ne les connaît pas les retire (zod) et
+// voit l'avatar debout sur `gx, gy` — sa case d'accès, à côté du meuble.
 //
 // TOUT PAYLOAD REÇU EST SUSPECT. Il vient d'un autre navigateur, que la policy
 // a seulement admis dans la salle : elle ne lit pas le contenu des messages.
@@ -36,28 +40,58 @@ const userId = z.string().regex(UUID_RE);
 /** Une case : entier positif, borné bien au-delà de la plus grande salle. */
 const tile = z.number().int().min(0).max(400);
 
-/**
- * La présence : OÙ est l'avatar (case, direction) et le jeton qui dit QUI il
- * est. Le pseudo, l'avatar et le look ne se lisent que dans le jeton vérifié.
- */
-export const LibraryPresencePayload = z.object({
-  userId,
-  gx: tile,
-  gy: tile,
-  /** Direction 0..7 (0 = haut de l'écran, sens horaire). */
-  dir: z.number().int().min(0).max(7),
-  /** Jeton de présence (lot 14a, features/player/library/presenceTicket.ts). */
-  ticket: z.string().min(1).max(LIBRARY_PRESENCE_TICKET_MAX_CHARS),
+/** L'identifiant d'un meuble posé (`RoomItem.id`) : court, sans caractère libre. */
+export const LIBRARY_ITEM_REF_RE = /^[A-Za-z0-9_-]{1,64}$/;
+/** Au plus ce nombre de places sur un meuble. */
+export const LIBRARY_SPOT_MAX = 15;
+
+const itemRef = z.string().regex(LIBRARY_ITEM_REF_RE);
+/** Lot 15 : assise ou allongée sur la place `spot` du meuble `item`. */
+export const LibrarySeatRef = z.object({
+  item: itemRef,
+  spot: z.number().int().min(0).max(LIBRARY_SPOT_MAX),
 });
+export type LibrarySeatRef = z.infer<typeof LibrarySeatRef>;
+/** Lot 15 : en train de se servir du meuble `item` (lire, jouer…). */
+export const LibraryUseRef = z.object({ item: itemRef });
+export type LibraryUseRef = z.infer<typeof LibraryUseRef>;
+
+const rest = {
+  seat: LibrarySeatRef.optional(),
+  use: LibraryUseRef.optional(),
+};
+const notBoth = (p: { seat?: unknown; use?: unknown }) => !(p.seat && p.use);
+
+/**
+ * La présence : OÙ est l'avatar (case, direction ; assise : sa case d'accès)
+ * et le jeton qui dit QUI il est. Le pseudo, l'avatar et le look ne se
+ * lisent que dans le jeton vérifié.
+ */
+export const LibraryPresencePayload = z
+  .object({
+    userId,
+    gx: tile,
+    gy: tile,
+    /** Direction 0..7 (0 = haut de l'écran, sens horaire). */
+    dir: z.number().int().min(0).max(7),
+    /** Jeton de présence (lot 14a, features/player/library/presenceTicket.ts). */
+    ticket: z.string().min(1).max(LIBRARY_PRESENCE_TICKET_MAX_CHARS),
+    ...rest,
+  })
+  .refine(notBoth);
 export type LibraryPresencePayload = z.infer<typeof LibraryPresencePayload>;
 
-export const LibraryMovePayload = z.object({
-  userId,
-  gx: tile,
-  gy: tile,
-  /** Horloge de l'émettrice (ms) : sert à ordonner, jamais à décider. */
-  at: z.number().int().min(0),
-});
+export const LibraryMovePayload = z
+  .object({
+    userId,
+    gx: tile,
+    gy: tile,
+    /** Horloge de l'émettrice (ms) : sert à ordonner, jamais à décider. */
+    at: z.number().int().min(0),
+    /** Ce qu'elle fera en arrivant (lot 15). */
+    ...rest,
+  })
+  .refine(notBoth);
 export type LibraryMovePayload = z.infer<typeof LibraryMovePayload>;
 
 export const LibraryEmotePayload = z.object({

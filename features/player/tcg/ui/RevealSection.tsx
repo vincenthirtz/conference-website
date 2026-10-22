@@ -27,6 +27,7 @@ export default function RevealSection({
     subject: cardSubject(c),
     rarity: c.rarity,
     isFoil: c.isFoil,
+    stats: c.stats ?? null,
     isNew: typeof c.isNew === 'boolean' ? c.isNew : null,
   }));
   const knownNew = cards.filter((c) => c.isNew !== null);

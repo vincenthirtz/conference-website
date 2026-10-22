@@ -37,6 +37,7 @@ export default function CollectionCardDetail({
         subject={cardSubject(card)}
         rarity={card.rarity}
         isFoil={card.isFoil}
+        stats={card.stats ?? null}
         count={card.count}
         labels={labels}
         // Vue agrandie : la description d'une carte de l'association se lit
@@ -78,6 +79,7 @@ export function CollectionCardTile({
       subject={cardSubject(card)}
       rarity={card.rarity}
       isFoil={card.isFoil}
+      stats={card.stats ?? null}
       count={card.count}
       labels={labels}
       noLink

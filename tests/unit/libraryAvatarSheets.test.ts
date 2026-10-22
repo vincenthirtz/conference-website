@@ -10,9 +10,13 @@ import {
   animationFor,
   avatarFrame,
   frameDestination,
+  isRestPose,
   MAX_SHEET_PX,
   parseAvatarSheet,
+  poseChain,
+  REST_SURFACE_M,
   resolveDirection,
+  restLift,
   sheetMatchesImage,
   sheetsOf,
 } from '../../features/player/library/engine/avatarSprites';
@@ -329,5 +333,59 @@ describe('feuilles rendues (public/library/spike)', () => {
         expect(fs.existsSync(path.join(root, s.src))).toBe(true);
         expect(Math.max(s.width, s.height)).toBeLessThanOrEqual(4096);
       }
+  });
+});
+
+describe('lot 15 — les poses de repos et leurs replis', () => {
+  it('poseChain : `lie` et `sit_low` retombent sur `sit`, puis sur `idle`', () => {
+    expect(poseChain('lie')).toEqual(['lie', 'sit', 'idle']);
+    expect(poseChain('sit_low')).toEqual(['sit_low', 'sit', 'idle']);
+    expect(poseChain('sit')).toEqual(['sit', 'idle']);
+    expect(poseChain('walk')).toEqual(['walk', 'idle']);
+    expect(poseChain('idle')).toEqual(['idle']);
+  });
+
+  it('animationFor : la pose rendue, sinon `sit`, sinon `idle`', () => {
+    const withSit = parseAvatarSheet(entry()) as AvatarSheet;
+    expect(animationFor(withSit, 'lie').name).toBe('sit');
+    expect(animationFor(withSit, 'sit_low').name).toBe('sit');
+    const withLie = parseAvatarSheet(
+      entry({
+        animations: {
+          ...entry().animations,
+          lie: {
+            fps: 1,
+            sheet: '/library/spike/avatars/a01-lie.webp',
+            sheetWidth: 900,
+            sheetHeight: 300,
+            directions: dirs(1),
+          },
+        },
+      })
+    ) as AvatarSheet;
+    expect(animationFor(withLie, 'lie').name).toBe('lie');
+    expect(at(avatarFrame(withLie, 5, 'lie', clock)).src).toBe(
+      '/library/spike/avatars/a01-lie.webp'
+    );
+    const idleOnly = parseAvatarSheet(
+      entry({ animations: { idle: { fps: 1, directions: dirs(1) } } })
+    ) as AvatarSheet;
+    expect(animationFor(idleOnly, 'lie').name).toBe('idle');
+  });
+
+  it('restLift : la différence avec la surface du rendu, bornée', () => {
+    expect(REST_SURFACE_M).toEqual({ sit: 0.45, sit_low: 0.2, lie: 0.55 });
+    expect(restLift(0.45, 'sit')).toBeCloseTo(0, 9);
+    expect(restLift(0.75, 'sit')).toBeCloseTo(0.3, 9);
+    // Jamais les pieds sous le sol.
+    expect(restLift(0.25, 'sit')).toBe(0);
+    expect(restLift(0.25, 'sit_low')).toBeCloseTo(0.05, 9);
+    // Allongée : un peu plus bas que le rendu au plus.
+    expect(restLift(0.5, 'lie')).toBeCloseTo(-0.05, 9);
+    expect(restLift(0, 'lie')).toBeCloseTo(-0.3, 9);
+    expect(restLift(3, 'sit')).toBe(0.4);
+    expect(restLift(0.9, 'idle')).toBe(0);
+    expect(isRestPose('lie')).toBe(true);
+    expect(isRestPose('walk')).toBe(false);
   });
 });

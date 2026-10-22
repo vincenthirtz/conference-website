@@ -16,6 +16,13 @@
 // renderer ne demande une feuille au cache qu'au moment de dessiner une image
 // qui s'y trouve, donc elle n'est chargée que si un avatar s'assoit.
 //
+// LES POSES DE REPOS (lot 15) : `sit` (assise, l'assise à 0,45 m dans le
+// rendu), `sit_low` (assise basse, 0,20 m) et `lie` (allongée sur le dos, le
+// dos à 0,55 m, les pieds vers la direction). L'ancre reste le sol sous le
+// bassin. Chacune a sa propre feuille ; tant qu'une pose manque, on retombe
+// sur `sit`, puis sur `idle` (`poseChain`). Un meuble plus haut ou plus bas
+// que la surface du rendu décale l'image (`restLift`).
+//
 // Le pipeline rend les 8 directions. Par robustesse, une direction absente
 // prend la direction miroir (8 − d) mod 8, retournée horizontalement
 // (ax → w − ax) ; si le miroir manque aussi, pas d'image : l'avatar retombe sur
@@ -62,11 +69,52 @@ export type AvatarAnimation = {
 
 export type AvatarSheet = {
   sheet: SheetRef;
-  /** `idle` obligatoire ; `walk` et `sit` retombent sur `idle`. */
+  /** `idle` obligatoire ; les autres poses retombent (`poseChain`). */
   animations: Record<string, AvatarAnimation>;
 };
 
-export type AvatarPose = 'idle' | 'walk' | 'sit';
+/** Les poses de repos : sur un meuble, à l'arrêt. */
+export type RestPose = 'sit' | 'sit_low' | 'lie';
+
+export type AvatarPose = 'idle' | 'walk' | RestPose;
+
+export const REST_POSES: readonly RestPose[] = ['sit', 'sit_low', 'lie'];
+
+export function isRestPose(p: unknown): p is RestPose {
+  return p === 'sit' || p === 'sit_low' || p === 'lie';
+}
+
+/**
+ * Hauteur de la surface d'appui DANS LE RENDU de chaque pose de repos (m) :
+ * l'assise de `sit`, celle de `sit_low`, le dos de `lie`.
+ */
+export const REST_SURFACE_M: Readonly<Record<RestPose, number>> = {
+  sit: 0.45,
+  sit_low: 0.2,
+  lie: 0.55,
+};
+
+/** Décalage vertical maximal d'une image de repos (m) : un tabouret de bar. */
+export const MAX_REST_LIFT_M = 0.4;
+
+/** Les poses essayées, dans l'ordre, pour une pose demandée. */
+export function poseChain(pose: AvatarPose): readonly AvatarPose[] {
+  if (pose === 'sit_low' || pose === 'lie') return [pose, 'sit', 'idle'];
+  return pose === 'idle' ? ['idle'] : [pose, 'idle'];
+}
+
+/**
+ * De combien (m) monter l'image de la pose `used` pour qu'elle repose sur
+ * une surface à `surfaceM`. Assise : jamais sous le sol (les pieds y
+ * passeraient) ; allongée : un peu plus bas que le rendu au plus. Une pose
+ * debout (repli `idle`) n'est pas décalée.
+ */
+export function restLift(surfaceM: number, used: AvatarPose): number {
+  if (!isRestPose(used)) return 0;
+  const lift = surfaceM - REST_SURFACE_M[used];
+  const min = used === 'lie' ? -0.3 : 0;
+  return Math.min(MAX_REST_LIFT_M, Math.max(min, lift));
+}
 
 /** Image à découper, et ancre effective (après miroir). */
 export type AvatarFrame = {
@@ -161,15 +209,18 @@ export function sheetMatchesImage(
   return img.naturalWidth === sheet.width && img.naturalHeight === sheet.height;
 }
 
-/** Animation jouée pour une pose (repli sur `idle`). */
+/** Animation jouée pour une pose (replis de `poseChain`, `idle` au bout). */
 export function animationFor(
   sheet: AvatarSheet,
   pose: AvatarPose
-): { name: string; anim: AvatarAnimation } {
-  const a = pose === 'idle' ? undefined : sheet.animations[pose];
-  return a
-    ? { name: pose, anim: a }
-    : { name: 'idle', anim: sheet.animations.idle };
+): { name: AvatarPose; anim: AvatarAnimation } {
+  for (const name of poseChain(pose)) {
+    const a = Object.hasOwn(sheet.animations, name)
+      ? sheet.animations[name]
+      : undefined;
+    if (a) return { name, anim: a };
+  }
+  return { name: 'idle', anim: sheet.animations.idle };
 }
 
 /** Images de la direction d (miroir éventuel), ou null si ni d ni son miroir. */

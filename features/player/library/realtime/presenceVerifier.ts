@@ -29,6 +29,8 @@ import type { LibraryPresenceGrant } from '../socialResponses';
 import {
   LIBRARY_PRESENCE_MAX_CHARS,
   LibraryPresencePayload,
+  type LibrarySeatRef,
+  type LibraryUseRef,
   parsePeerPayload,
 } from './payloads';
 
@@ -133,6 +135,9 @@ export type VerifiedPresenceEntry = {
   gx: number;
   gy: number;
   dir: number;
+  /** Lot 15 : assise / allongée, ou en train de se servir d'un meuble (cosmétique). */
+  seat?: LibrarySeatRef;
+  use?: LibraryUseRef;
   /** Le jeton vérifié : c'est lui que portent signaler, bloquer, expulser. */
   ticket: string;
   /** Son échéance, en ms de MON horloge. */
@@ -181,6 +186,8 @@ export function readVerifiedPresence(
         gx: parsed.gx,
         gy: parsed.gy,
         dir: parsed.dir,
+        ...(parsed.seat ? { seat: parsed.seat } : {}),
+        ...(parsed.use ? { use: parsed.use } : {}),
         ticket: parsed.ticket,
         expiresAt: claims.exp * 1000 - clock.skewMs,
       });

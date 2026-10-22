@@ -31,7 +31,7 @@ import LogoCredit from '@/components/Team/LogoCredit';
 import TcgCardFallback, {
   revealCardFallback,
 } from '@/components/tcg/TcgCardFallback';
-import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
+import { shouldOptimizeCardImage } from './cardImageOptimize';
 import {
   figureRoleFromHeroRole,
   figureUrl,
@@ -43,6 +43,10 @@ import { gameMascotUrl, type GameMascotSlug } from '@/utils/tcg/gameMascots';
 import type { FanartTargetView } from '@/utils/tcg/fanart';
 import type { OverwatchRole } from '@/utils/heroes/overwatch';
 import { RARITY_ORDER, type TcgRarity } from '@/utils/tcg/rarity';
+import type { CardStats } from '@/utils/tcg/cardStats';
+import TcgCardStatsLine, { type TcgCardStatsLabels } from './TcgCardStatsLine';
+
+export { shouldOptimizeCardImage };
 
 /**
  * Habillage par rareté, aligné sur `BADGE_TIER_STYLES` de la fiche joueuse :
@@ -221,6 +225,11 @@ export type TcgCardProps = {
   subject: TcgCardSubject;
   rarity: TcgRarity;
   isFoil?: boolean;
+  /**
+   * Niveau, ATK, DEF : ceux de l'API pour un exemplaire (rôle figé au tirage,
+   * jamais recalculés ici), `cardStats` pour une fiche ou le catalogue.
+   */
+  stats?: CardStats | null;
   /** Nombre d'exemplaires possédés ; masqué si absent ou égal à 1. */
   count?: number;
   /**
@@ -276,43 +285,16 @@ export type TcgCardProps = {
     association?: string;
     /** Badge d'une illustration alternative ; absent ⇒ pas de badge. */
     alternateArt?: string;
+    /** La ligne « Niv. · ATK · DEF » ; absente ⇒ pas de chiffres. */
+    stats?: TcgCardStatsLabels;
   };
 };
-
-/**
- * L'image de la carte peut-elle passer par l'optimiseur de Next ?
- *
- * POURQUOI CE N'EST PAS « TOUJOURS ». `/player/tcg` affiche 40 cartes d'un
- * coup, et une photo consentie peut peser 2 Mio : servie brute dans une
- * vignette de 180 px, c'est toute la collection qui descend en pleine
- * résolution sur un téléphone en 4G. Mais l'ancien `unoptimized`
- * inconditionnel avait une raison réelle : une carte d'ÉQUIPE sans
- * illustration affiche le LOGO, dont l'URL est fournie par l'équipe et peut
- * viser n'importe quel hôte — et `next/image` ÉCHOUE AU RENDU hors
- * `remotePatterns`. D'où l'arbitrage partagé `isOptimizableImageUrl` (même
- * choix que `Team/TeamAvatar.tsx`).
- *
- * LE SVG RESTE SERVI TEL QUEL. Les maquettes de maps sont des SVG locaux
- * (`readMapFaces`) : l'optimiseur n'a rien à réduire dans un vectoriel et le
- * renverrait inchangé — mais depuis une fonction serveur plutôt que le fichier
- * statique en cache, et sous une URL distincte par largeur du `srcset`. Pure
- * perte, et 40 cartes de maps d'un coup dans une collection.
- *
- * Exportée pour être testée sans DOM.
- */
-export function shouldOptimizeCardImage(
-  url: string | null | undefined
-): boolean {
-  if (!isOptimizableImageUrl(url)) return false;
-  // Le chemin seul : un `?v=` de cache ne doit pas masquer l'extension.
-  const path = (url ?? '').trim().split(/[?#]/)[0].toLowerCase();
-  return !path.endsWith('.svg');
-}
 
 export default function TcgCard({
   subject,
   rarity,
   isFoil = false,
+  stats = null,
   count,
   noLink = false,
   insideInteractive = false,
@@ -522,6 +504,14 @@ export default function TcgCard({
             {isFoil ? ` · ${labels.foil}` : ''}
           </span>
         </p>
+        {stats && labels.stats && (
+          // Sous la rareté, qui les fixe ; la vue agrandie dit le profil.
+          <TcgCardStatsLine
+            stats={stats}
+            labels={labels.stats}
+            showProfile={fullDescription}
+          />
+        )}
         {usesTeamLogo &&
           subject.kind === 'team' &&
           // Sans logo, la carte montre une initiale : rien à créditer.

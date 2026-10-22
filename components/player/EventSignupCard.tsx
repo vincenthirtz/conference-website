@@ -25,13 +25,10 @@ import {
   isHomeEventVisible,
 } from '@/config/homeEventSpotlight';
 import { Button, ButtonLink, Card } from '@/features/ruban';
-import { usePlayerSession } from '@/hooks/usePlayerSession';
-import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import { useLocale } from '@/lib/i18n/useLocale';
 import { useT, format } from '@/lib/i18n/useT';
 import nsSoloSignup from '@/lib/i18n/locales/fr/soloSignup';
-import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
-import { useEventPoolSignup } from '@/features/player/dashboard/hooks/useEventPoolSignup';
+import { useEventOneClickSignup } from '@/features/player/dashboard/hooks/useEventOneClickSignup';
 
 export default function EventSignupCard() {
   const event = homeEventSpotlight;
@@ -41,14 +38,11 @@ export default function EventSignupCard() {
 
   const t = useT(nsSoloSignup);
   const locale = useLocale();
-  const { user, token } = usePlayerSession({ redirect: false });
-  const { activeTeamId } = useActiveTeam();
 
-  // Lecture et inscription : features/player/dashboard (client + hook).
-  const { view, register, busy, errorKind } = useEventPoolSignup(
-    event?.tournamentId ?? '',
-    visible && !!token
-  );
+  // Lecture, ce que le clic enverrait et inscription : features/player/
+  // dashboard (partagé avec le hall de la Library, lot 16).
+  const { user, view, draft, registerOneClick, busy, errorKind } =
+    useEventOneClickSignup(event?.tournamentId ?? '', visible);
   const error =
     errorKind === 'closed'
       ? t.closedBody
@@ -58,7 +52,7 @@ export default function EventSignupCard() {
 
   // Rien tant que l'état n'est pas lu : un bouton « en un clic » affiché puis
   // remplacé par « tu es inscrite » ferait cliquer pour rien.
-  if (!visible || !event || !user || !view) return null;
+  if (!visible || !event || !user || !view || !draft) return null;
 
   const signupHref = `/tournament/${event.tournamentSlug}/inscription-solo`;
   const eventHref = `/tournament/${event.tournamentSlug}`;
@@ -68,28 +62,10 @@ export default function EventSignupCard() {
     month: 'long',
   }).format(new Date(event.date));
 
-  // Ce qu'on enverrait : mêmes sources que le formulaire de la page.
-  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
-  const pseudo =
-    typeof meta.display_name === 'string' ? meta.display_name.trim() : '';
-  const rawTag =
-    typeof meta.battle_tag === 'string' ? meta.battle_tag.trim() : '';
-  const tag = BATTLE_TAG_REGEX.test(rawTag) ? rawTag : '';
-  const team =
-    view.teams.find((x) => x.id === activeTeamId) ??
-    (view.teams.length === 1 ? view.teams[0] : null);
-  // Plusieurs équipes et aucune active : à elle de choisir, sur la page.
-  const teamAmbiguous = !team && view.teams.length > 1;
-  const oneClick = pseudo.length >= 2 && !!tag && !teamAmbiguous;
-
-  function registerOneClick() {
-    if (!oneClick) return;
-    register({
-      displayName: pseudo,
-      battleTag: tag,
-      originTeamId: team?.id ?? null,
-    });
-  }
+  // Ce qu'on enverrait : mêmes sources que le formulaire de la page
+  // (`eventSignupDraft`). Plusieurs équipes et aucune active : à elle de
+  // choisir, sur la page.
+  const { pseudo, tag, team, oneClick } = draft;
 
   const registered = !!view.entry;
   const progress = view.teamProgress;

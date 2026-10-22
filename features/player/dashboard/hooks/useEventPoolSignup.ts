@@ -43,6 +43,10 @@ export function useEventPoolSignup(tournamentId: string, enabled: boolean) {
   });
   return {
     view: status.data ?? null,
+    /** Lecture en cours (le hall de la Library l'affiche ; l'encart se tait). */
+    reading: enabled && status.isPending,
+    /** Lecture ratée (le hall renvoie vers la page ; l'encart se tait). */
+    readFailed: status.isError,
     register: register.mutate,
     busy: register.isPending,
     errorKind: register.error ? eventPoolErrorKind(register.error) : null,

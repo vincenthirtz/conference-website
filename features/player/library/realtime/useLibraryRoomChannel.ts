@@ -45,6 +45,7 @@ import {
   type LibraryEviction,
   type LibraryPosition,
   type LibraryRealtimeClient,
+  type LibraryRest,
   type LibraryRoomConnection,
   type SendMoveResult,
 } from './connection';
@@ -120,8 +121,10 @@ export type LibraryRoomChannel = {
   avatars: RemoteAvatar[];
   visible: boolean;
   setVisible: (visible: boolean) => void;
+  /** Ma case, ma direction et ma posture (lot 15 : `seat` / `use`). */
   updatePosition: (position: LibraryPosition) => void;
-  sendMove: (gx: number, gy: number) => SendMoveResult;
+  /** La case visée ; `rest` : ce que j'y ferai (lot 15). */
+  sendMove: (gx: number, gy: number, rest?: LibraryRest) => SendMoveResult;
   sendEmote: (emote: LibraryEmoteId) => boolean;
   sendPhrase: (phrase: LibraryPhraseId) => boolean;
   /** Après un blocage confirmé par l'API (`librarySocialClient.block`). */
@@ -305,8 +308,8 @@ export function useLibraryRoomChannel(
     renewRef.current?.();
   }, [look]);
   const sendMove = useCallback(
-    (gx: number, gy: number): SendMoveResult =>
-      connectionRef.current?.sendMove(gx, gy) ?? 'refused',
+    (gx: number, gy: number, rest?: LibraryRest): SendMoveResult =>
+      connectionRef.current?.sendMove(gx, gy, rest) ?? 'refused',
     []
   );
   const sendEmote = useCallback(

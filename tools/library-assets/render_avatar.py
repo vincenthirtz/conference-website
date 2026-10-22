@@ -9,14 +9,19 @@ Tout est fait ici, sans outil extérieur : seul le corps nu vient du bundle CC0
 « Human Base Meshes » de la Blender Studio (GEO-body_female_realistic). Le
 script lui ajoute un squelette, des poids automatiques, des vêtements taillés
 dans le corps lui-même (ils le couvrent toujours du cou aux chevilles), des
-cheveux en volumes, puis rend trois poses dans les 8 directions du moteur.
+cheveux en volumes, puis rend ses poses dans les 8 directions du moteur.
 
 Feuilles empaquetées (iso_pack.py) : idle (1 image) et walk (8 images) dans
-<id>.webp, sit (1 image) dans <id>-sit.webp, chaque image recadrée sur ses
-pixels, avec son ancre au sol. Directions (contrat du moteur) : 0 = haut de
-l'écran, puis sens horaire ; 4 = vers la caméra. L'ancre est le point au sol
-entre les pieds (origine). Les ombres au sol ne sont pas cuites : le moteur
-dessine une ellipse.
+<id>.webp ; sit, lie et sit_low (1 image chacune) dans leur propre feuille
+<id>-<pose>.webp, chaque image recadrée sur ses pixels, avec son ancre au
+sol. Directions (contrat du moteur) : 0 = haut de l'écran, puis sens
+horaire ; 4 = vers la caméra. L'ancre est l'origine du monde : le point au
+sol entre les pieds debout, sous le bassin assise ou allongée. Les ombres au
+sol ne sont pas cuites : le moteur dessine une ellipse.
+
+`--poses lie,sit_low` ne rend que ces poses (par groupes entiers de
+POSE_GROUPS) : la meta n'a alors que leurs animations, que build.mjs fusionne
+dans l'entrée existante sans toucher aux autres.
 """
 
 import sys
@@ -68,11 +73,28 @@ J = {
 # Directions du moteur en (dx, dy) de grille ; gy suit -y dans Blender.
 DIRECTIONS = [(-1, -1), (0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0)]
 WALK_FRAMES = 8
-ANIMATIONS = [('idle', 1), ('walk', WALK_FRAMES), ('sit', 1)]
+ANIMATIONS = [('idle', 1), ('walk', WALK_FRAMES), ('sit', 1), ('lie', 1), ('sit_low', 1)]
+# Poses cadrées (même caméra, donc même ancre en px) et rendues ensemble.
+# idle, walk et sit gardent le cadre de leur premier rendu ; chaque pose
+# ajoutée a le sien : chaque rect porte son ancre, l'échelle (PPM) ne change
+# pas. Un groupe se rend toujours en entier (idle et walk partagent une
+# feuille).
+POSE_GROUPS = (('idle', 'walk', 'sit'), ('lie',), ('sit_low',))
 SEAT_HEIGHT = 0.45
+# Allongée (lit) : le dos posé sur une surface à 0,55 m du sol.
+LIE_SURFACE_M = 0.55
+# Assise basse (pouf, coussin de sol) : l'assise à 0,20 m du sol.
+SIT_LOW_HEIGHT_M = 0.20
 # Distance couverte par un cycle de marche complet (deux pas) : avec une
 # jambe de 0,82 m et une amplitude de ±24°, un pas fait 2 × 0,82 × sin 24°.
 STRIDE_METERS = round(2 * 2 * 0.82 * math.sin(math.radians(24)), 2)
+TIMING = {
+    'idle': {'fps': 1},
+    'walk': {'fps': 10, 'strideMeters': STRIDE_METERS},
+    'sit': {'fps': 1},
+    'lie': {'fps': 1},
+    'sit_low': {'fps': 1},
+}
 
 
 def parse_args():
@@ -89,7 +111,24 @@ def parse_args():
     p.add_argument('--sun-energy', type=float, default=3.0)
     # Aperçu rapide : seulement deux directions et deux images de marche.
     p.add_argument('--preview', action='store_true')
+    # Poses à rendre (groupes entiers de POSE_GROUPS) ; toutes par défaut.
+    p.add_argument('--poses', default='')
     return p.parse_args(argv)
+
+
+def parse_poses(text):
+    """`--poses a,b` → les groupes de POSE_GROUPS demandés (tous si vide)."""
+    if not text:
+        return list(POSE_GROUPS)
+    wanted = {p for p in text.split(',') if p}
+    unknown = wanted - {name for name, _count in ANIMATIONS}
+    if unknown:
+        raise SystemExit(f'poses inconnues : {", ".join(sorted(unknown))}')
+    groups = [g for g in POSE_GROUPS if wanted & set(g)]
+    for g in groups:
+        if not set(g) <= wanted:
+            raise SystemExit(f'{", ".join(g)} se rendent ensemble')
+    return groups
 
 
 def side(name, s):
@@ -715,6 +754,73 @@ def pose_sit():
     return r, Vector((0, 0, drop))
 
 
+# Allongée, racine non décalée : hauteur du point le plus bas du tronc (les
+# fesses), mesurée sur le corps posé ; talons, mollets et bras sont de 0 à
+# 2 cm plus haut. À refaire si pose_lie change. Et l'épaisseur de la tenue
+# au dos : c'est le tissu qui touche la surface.
+LIE_TRUNK_LOW_M = 0.760
+LIE_CLOTH_M = 0.01
+
+
+def pose_lie():
+    """Allongée sur le dos, les pieds vers la direction du corps debout.
+
+    Tout le corps pend de `hips` : −90° autour de x le couche sur le dos, la
+    tête vers +y du repos, les pieds vers −y (la direction d une fois tourné
+    par `facing`). Les autres rotations se lisent comme debout. Le bassin
+    reste au-dessus de l'origine : l'ancre est le point au sol sous lui.
+    """
+    r = {
+        # 2° de plus : les omoplates se rapprochent du lit (au repos, elles
+        # sont 4 cm en retrait des fesses).
+        'hips': rot(x=-92),
+        # Comme sur un oreiller : le haut du dos et la tête montent (tête
+        # 11 cm au-dessus du lit). La nuque se plie peu : les cheveux longs,
+        # rigides avec la tête, plongeraient sous le dos.
+        'chest': rot(x=8),
+        'neck': rot(x=4),
+        'head': rot(x=2),
+        # Jambes droites, un peu écartées ; les pieds tombent en dehors.
+        'thigh.L': rot(x=1.5) @ rot(y=-2.5) @ rot(z=6),
+        'thigh.R': rot(x=1.5) @ rot(y=2.5) @ rot(z=-6),
+        'shin.L': rot(x=2),
+        'shin.R': rot(x=2),
+        'foot.L': rot(x=22),
+        'foot.R': rot(x=22),
+        # Bras le long du corps, un peu écartés, posés sur le lit.
+        'upperarm.L': rot(x=3) @ rot(y=17),
+        'upperarm.R': rot(x=3) @ rot(y=-17),
+        'forearm.L': rot(x=-8) @ rot(y=4),
+        'forearm.R': rot(x=-8) @ rot(y=-4),
+    }
+    drop = LIE_SURFACE_M + LIE_CLOTH_M - LIE_TRUNK_LOW_M
+    return r, Vector((0, -J['pelvis'][1], drop))
+
+
+def pose_sit_low():
+    """Assise basse (pouf, coussin de sol) : genoux relevés, pieds à plat
+    devant elle, mains sur les genoux ; le bassin au-dessus de l'origine."""
+    r = {
+        # La cuisse monte vers l'avant ; le tibia retombe presque d'aplomb.
+        'thigh.L': rot(x=-117) @ rot(y=-7),
+        'thigh.R': rot(x=-117) @ rot(y=7),
+        'shin.L': rot(x=122),
+        'shin.R': rot(x=122),
+        'foot.L': rot(x=-5),
+        'foot.R': rot(x=-5),
+        # Un peu renversée en arrière, comme dans un pouf.
+        'spine': rot(x=-5),
+    }
+    # Mains posées sur les genoux, le poignet plié : les doigts retombent sur
+    # la rotule au lieu de pointer dans le vide.
+    r.update(relaxed_arms(swing_l=-50, swing_r=-50, flex_l=10, flex_r=10, turn_in=15))
+    r['hand.L'] = rot(x=50)
+    r['hand.R'] = rot(x=50)
+    # Comme `sit` : l'articulation de la hanche à 9 cm au-dessus de l'assise.
+    drop = SIT_LOW_HEIGHT_M + 0.09 - J['hip'][2]
+    return r, Vector((0, -J['pelvis'][1], drop))
+
+
 def apply_pose(arm, rotations, root_offset):
     """Pose en coordonnées de l'armature, os par os, de la racine aux feuilles.
 
@@ -747,8 +853,11 @@ def apply_pose(arm, rotations, root_offset):
     bpy.context.view_layer.update()
 
 
-def frames(preview):
+def frames(preview, poses):
+    """(animation, image) à rendre pour les poses `poses`, dans l'ordre."""
     for anim, count in ANIMATIONS:
+        if anim not in poses:
+            continue
         picks = range(count) if not preview else ([0, 2] if count > 1 else [0])
         for f in picks:
             yield anim, f
@@ -759,6 +868,10 @@ def pose_for(anim, f):
         return pose_walk(f)
     if anim == 'sit':
         return pose_sit()
+    if anim == 'lie':
+        return pose_lie()
+    if anim == 'sit_low':
+        return pose_sit_low()
     return pose_idle()
 
 
@@ -809,43 +922,39 @@ def main():
     style_hair(body, arm, spec)
 
     directions = [4, 3] if args.preview else list(range(8))
-    plan = list(frames(args.preview))
-
-    # Premier passage : un seul cadre pour toutes les images, pour que l'ancre
-    # soit la même partout.
-    points = []
-    for anim, f in plan:
-        rotations, offset = pose_for(anim, f)
-        apply_pose(arm, rotations, offset)
-        for d in directions:
-            arm.rotation_euler = (0.0, 0.0, facing(d))
-            bpy.context.view_layer.update()
-            points += world_points()
-    anchor, res = iso.frame_camera(scene, cam, points)
-    fw, fh = res
+    groups = parse_poses(args.poses)
 
     # Images rangées par animation et direction, puis empaquetées (iso_pack) :
-    # recadrées sur leurs pixels, feuille ≤ 4096 px, `sit` à part.
-    timing = {
-        'idle': {'fps': 1},
-        'walk': {'fps': 10, 'strideMeters': STRIDE_METERS},
-        'sit': {'fps': 1},
-    }
-    animations = {
-        name: {**timing[name], 'frames': {d: [] for d in directions}}
-        for name, _count in ANIMATIONS
-    }
+    # recadrées sur leurs pixels, feuille ≤ 4096 px, sit, lie et sit_low à part.
+    animations = {}
+    framed = []
     colorspace = 'sRGB'
     png = os.path.join(args.out, f'.{avatar_id}.png')
-    for anim, f in plan:
-        rotations, offset = pose_for(anim, f)
-        apply_pose(arm, rotations, offset)
-        for d in directions:
-            arm.rotation_euler = (0.0, 0.0, facing(d))
-            bpy.context.view_layer.update()
-            px, colorspace = iso.render_pixels(scene, png)
-            # Une image par (animation, direction), dans l'ordre de `plan`.
-            animations[anim]['frames'][d].append((np.flipud(px), anchor))
+    for group in groups:
+        plan = list(frames(args.preview, group))
+        # Premier passage : un seul cadre pour toutes les images du groupe,
+        # pour que l'ancre y soit la même partout.
+        points = []
+        for anim, f in plan:
+            rotations, offset = pose_for(anim, f)
+            apply_pose(arm, rotations, offset)
+            for d in directions:
+                arm.rotation_euler = (0.0, 0.0, facing(d))
+                bpy.context.view_layer.update()
+                points += world_points()
+        anchor, res = iso.frame_camera(scene, cam, points)
+        framed.append(f"{'+'.join(group)} {res[0]}x{res[1]}")
+        for name in group:
+            animations[name] = {**TIMING[name], 'frames': {d: [] for d in directions}}
+        for anim, f in plan:
+            rotations, offset = pose_for(anim, f)
+            apply_pose(arm, rotations, offset)
+            for d in directions:
+                arm.rotation_euler = (0.0, 0.0, facing(d))
+                bpy.context.view_layer.update()
+                px, colorspace = iso.render_pixels(scene, png)
+                # Une image par (animation, direction), dans l'ordre de `plan`.
+                animations[anim]['frames'][d].append((np.flipud(px), anchor))
     os.remove(png)
 
     def save(sheet, file):
@@ -855,8 +964,11 @@ def main():
     meta['id'] = avatar_id
     with open(os.path.join(args.out, f'{avatar_id}.json'), 'w', encoding='utf-8') as fp:
         json.dump(meta, fp, indent=2)
-    print(f'LIBRARY_AVATAR_OK {avatar_id} {fw}x{fh} -> '
-          f"{meta['sheetWidth']}x{meta['sheetHeight']}")
+    sheets = {a.get('file', meta.get('file')): (a.get('sheetWidth', meta.get('sheetWidth')),
+                                               a.get('sheetHeight', meta.get('sheetHeight')))
+              for a in meta['animations'].values()}
+    print(f"LIBRARY_AVATAR_OK {avatar_id} {', '.join(framed)} -> "
+          + ', '.join(f'{f} {w}x{h}' for f, (w, h) in sheets.items()))
 
 
 # render_avatar_layers.py importe ce module pour ses briques (corps,
