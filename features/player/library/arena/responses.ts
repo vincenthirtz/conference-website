@@ -66,7 +66,12 @@ export type ArenaFace =
       target: FanartTargetView | null;
     }
   | { kind: 'mascot'; slug: string; name: string | null }
-  | { kind: 'hero'; slug: string; name: string | null; role: OverwatchRole | null };
+  | {
+      kind: 'hero';
+      slug: string;
+      name: string | null;
+      role: OverwatchRole | null;
+    };
 
 /** Faces par clé de sujet. */
 export type ArenaFaces = Record<string, ArenaFace>;
