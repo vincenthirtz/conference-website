@@ -23,6 +23,7 @@ import {
   addToDeck,
   errorCodeOf,
   availableCopies,
+  capitalizeLead,
   type DeckFilters,
   faceName,
   filterCollection,
@@ -282,7 +283,7 @@ export default function ArenaDeckBuilder({ onBack }: { onBack: () => void }) {
                 >
                   <span className="min-w-0">
                     <span className="block truncate font-semibold text-[var(--t1,#f4edf7)]">
-                      {label}
+                      {capitalizeLead(label, t.anonymous)}
                     </span>
                     <span className="block text-xs text-[var(--t2,#c7bfca)]">
                       {card

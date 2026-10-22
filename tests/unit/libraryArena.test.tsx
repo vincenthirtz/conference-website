@@ -62,6 +62,7 @@ import type {
 import {
   addToDeck,
   availableCopies,
+  capitalizeLead,
   type EventWords,
   faceName,
   faceSubject,
@@ -87,6 +88,7 @@ import PlaceScreen from '../../features/player/library/ui/places/PlaceScreen';
 import nsArena from '../../lib/i18n/locales/fr/playerLibraryArena';
 import { format } from '../../lib/i18n/useT';
 import { PlayerHttpError } from '../../utils/player/playerHttp';
+import { formatSiteDate } from '../../utils/timezone';
 import { renderPlayer } from './__helpers__/playerHarness';
 
 const t = nsArena.fr;
@@ -576,6 +578,52 @@ describe('gestes proposés (moteur synchronisé) et récit', () => {
     );
     expect(say({ type: 'turn_end', side: 'player', turn: 3 })).toBeNull();
   });
+
+  it('« une joueuse » garde sa minuscule en milieu de phrase, la majuscule en tête', () => {
+    const anon = `player:${WITHDRAWN}`;
+    const after = board({
+      player: {
+        lp: 4000,
+        deckCount: 10,
+        hand: [card('p3', { key: anon })],
+        field: [null, null, null],
+        graveyard: [],
+      },
+      npc: {
+        lp: 3000,
+        deckCount: 10,
+        handCount: 4,
+        field: [null, null, null],
+        graveyard: [card('n1', { key: 'map:ilios' })],
+      },
+    });
+    const faces = deckResponse([]).faces;
+    const say = (e: ArenaEvent) => narrate(e, after, faces, WORDS);
+    expect(say({ type: 'draw', side: 'player', card: 'p3' })).toBe(
+      'Tu pioches une joueuse.'
+    );
+    expect(
+      say({
+        type: 'attack',
+        side: 'player',
+        combat: {
+          attacker: 'p3',
+          target: 'n1',
+          attackerAtk: 1500,
+          targetPosition: 'attack',
+          targetValue: 1200,
+          destroyed: ['n1'],
+          damage: { side: 'npc', amount: 300 },
+        },
+        lp: { player: 4000, npc: 3000 },
+      })
+    ).toMatch(/^Une joueuse \(1500\) détruit/);
+    // Seul le nom anonyme est touché : un pseudo en minuscules reste le sien.
+    expect(capitalizeLead('lili (1500) détruit Ana.', 'une joueuse')).toBe(
+      'lili (1500) détruit Ana.'
+    );
+    expect(capitalizeLead('une joueuse', 'une joueuse')).toBe('Une joueuse');
+  });
 });
 
 /* ------------------------------------------------- lieu, porte et nav -- */
@@ -637,6 +685,40 @@ describe('l’écran de l’arène', () => {
         .getByRole('link', { name: 'L’arène' })
         .getAttribute('aria-current')
     ).toBe('page');
+  });
+
+  it('un duel en cours dit son échéance : 48 h sans coup = abandon', async () => {
+    renderArena(
+      arenaStub({
+        lobby: async () =>
+          lobby({
+            active: {
+              id: '00000000-0000-4000-9000-000000000009',
+              opponent: 'assaut',
+              startedAt: '2026-10-22T09:00:00.000Z',
+              // 48 h après un dernier coup à 09:00 UTC le 22 — 11:00 à Paris.
+              expiresAt: '2026-10-24T09:00:00.000Z',
+            },
+          }),
+      })
+    );
+    await screen.findByText(t.lobby.activeTitle);
+    expect(
+      screen.getByText(
+        format(t.lobby.activeExpires, {
+          date: formatSiteDate('2026-10-24T09:00:00.000Z', 'fr', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        })
+      )
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/samedi 24 octobre à 11:00|samedi 24 octobre 11:00/)
+    ).toBeTruthy();
   });
 
   it('paquet déjà gagné cette semaine ; sans deck complet, pas de défi', async () => {

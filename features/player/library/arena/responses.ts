@@ -144,8 +144,16 @@ export type ArenaHistoryEntry = {
 export type ArenaLobbyResponse = {
   opponents: ArenaOpponentView[];
   weekly: ArenaWeekly;
-  /** Le duel en cours, s'il y en a un (un seul à la fois). */
-  active: { id: string; opponent: string; startedAt: string } | null;
+  /**
+   * Le duel en cours, s'il y en a un (un seul à la fois). `expiresAt` : sans
+   * coup d'ici là, il sera clos comme un abandon (`ARENA_IDLE_EXPIRY_MS`).
+   */
+  active: {
+    id: string;
+    opponent: string;
+    startedAt: string;
+    expiresAt: string;
+  } | null;
   /** Le deck enregistré compte-t-il 20 cartes ? */
   deckReady: boolean;
   deckCount: number;

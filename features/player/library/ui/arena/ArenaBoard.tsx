@@ -21,7 +21,11 @@ import type {
   ArenaField,
   ArenaMonster,
 } from '../../arena/rules';
-import { faceName, type Selection } from '../../arena/viewModel';
+import {
+  capitalizeLead,
+  faceName,
+  type Selection,
+} from '../../arena/viewModel';
 import { FOCUS_RING, TEXT_MUTED } from './styles';
 import ArenaCardFace, { type ArenaCardLabels } from './ArenaCardFace';
 
@@ -83,20 +87,26 @@ export default function ArenaBoard({
   const t = useT(nsArena);
   const name = (c: ArenaCard) => faceName(faces[c.key], c.key, t.anonymous);
   const cardAria = (c: ArenaCard) =>
-    format(t.duel.cardAria, {
-      name: name(c),
-      level: c.level,
-      attack: c.attack,
-      defense: c.defense,
-    });
+    capitalizeLead(
+      format(t.duel.cardAria, {
+        name: name(c),
+        level: c.level,
+        attack: c.attack,
+        defense: c.defense,
+      }),
+      t.anonymous
+    );
   const monsterAria = (m: ArenaMonster) =>
-    format(t.duel.monsterAria, {
-      name: name(m.card),
-      position: t.duel.positions[m.position],
-      level: m.card.level,
-      attack: m.card.attack,
-      defense: m.card.defense,
-    });
+    capitalizeLead(
+      format(t.duel.monsterAria, {
+        name: name(m.card),
+        position: t.duel.positions[m.position],
+        level: m.card.level,
+        attack: m.card.attack,
+        defense: m.card.defense,
+      }),
+      t.anonymous
+    );
 
   const zones = (field: ArenaField, mine: boolean) => (
     <ol className="flex flex-wrap justify-center gap-2 sm:gap-4">
