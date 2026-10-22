@@ -156,9 +156,7 @@ async function writeIndex(spec) {
       missing.push(id);
       continue;
     }
-    const entry = indexAnimations(
-      JSON.parse(await readFile(metaPath, 'utf8'))
-    );
+    const entry = indexAnimations(JSON.parse(await readFile(metaPath, 'utf8')));
     if (!entry) {
       missing.push(id);
       continue;
