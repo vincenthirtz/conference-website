@@ -44,6 +44,9 @@ export default {
   spotFinalsTitle: 'The finals',
   spotFinalsWatch: 'Watch on Twitch',
   heroFinalsTonight: 'Finals tonight · first match at {time}',
+  heroChampionEyebrow: '{year} champions',
+  heroChampionFinal:
+    'Won the grand final {score} against {opponent}. Congratulations!',
   matchdayTitle_one: '{count} match on the schedule',
   matchdayTitle_other: '{count} matches on the schedule',
   matchdayTbd: 'TBD',

@@ -59,6 +59,11 @@ export default ns('homeV2', {
   spotFinalsTitle: 'Les finales',
   spotFinalsWatch: 'Suivre sur Twitch',
   heroFinalsTonight: 'Finales ce soir · coup d’envoi à {time}',
+  // La grande finale jouée : le hero annonce la championne (config/homeChampion)
+  // à la place de « saison en cours » ou « finales ce soir ».
+  heroChampionEyebrow: 'Championnes {year}',
+  heroChampionFinal:
+    'Victoire {score} face à {opponent} en grande finale. Bravo !',
   // Imminence : ce qui prime quand un début est en vue. `_zero` et `_one` ont
   // leur propre formulation — « dans 0 jour » et « dans 1 jours » ne se disent
   // pas.

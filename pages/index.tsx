@@ -57,6 +57,7 @@ import {
   homeEventSpotlight,
   isHomeEventVisible,
 } from '@/config/homeEventSpotlight';
+import { homeChampion, isHomeChampionVisible } from '@/config/homeChampion';
 import type { SocialFeedItem } from '@/utils/social/socialFeed';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
@@ -163,6 +164,11 @@ function Home({
         // jalon réglé (ouverture de la saison) est passé depuis longtemps.
         countdownTarget={(today && nextKickoff(today, now)) ?? countdownTarget}
         finalsKickoff={finalsTonight ? today.matches[0].scheduledAt : null}
+        // La finale jouée, la championne remplace la ligne d'état ; elle se
+        // retire seule passé `visibleUntil`.
+        champion={
+          isHomeChampionVisible(homeChampion, nowIso) ? homeChampion : null
+        }
         isLive={live.live}
         // « Complet » se DÉDUIT des données déjà chargées (places vs inscrites)
         // plutôt que d'un drapeau à penser à lever : le jour où une place se

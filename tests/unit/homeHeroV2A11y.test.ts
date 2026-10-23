@@ -10,6 +10,10 @@ import { renderToString } from 'react-dom/server';
 
 import HomeHeroV2 from '@/components/Home/HomeHeroV2';
 import RegisterTeamCta from '@/components/RegisterTeamCta';
+import {
+  isHomeChampionVisible,
+  type HomeChampion,
+} from '@/config/homeChampion';
 
 const FUTURE = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -87,6 +91,48 @@ describe('HomeHeroV2 — soir de finales', () => {
     });
     expect(html).toContain('Saison régulière en cours');
     expect(html).not.toContain('Finales ce soir');
+  });
+});
+
+describe('HomeHeroV2 — championnes', () => {
+  const champion: HomeChampion = {
+    year: 2026,
+    teamName: 'Chocomates',
+    teamSlug: 'chocomates',
+    logoUrl: null,
+    runnerUp: 'Hinode Sparkles',
+    finalScore: '3–1',
+    visibleUntil: '2026-12-01T00:00:00+01:00',
+  };
+
+  it('annonce la championne, le score et lie sa fiche', () => {
+    const html = renderHero({ champion });
+    expect(html).toContain('Championnes 2026');
+    expect(html).toContain('href="/team/chocomates"');
+    expect(html).toContain('Victoire 3–1 face à Hinode Sparkles');
+  });
+
+  it('remplace « finales ce soir » et la ligne de saison', () => {
+    const html = renderHero({
+      champion,
+      tournamentRunning: true,
+      tournamentTeamCount: 8,
+      tournamentPath: '/tournament/ow-womens-cup-2026',
+      finalsKickoff: '2026-10-23T17:00:00.000Z',
+    });
+    expect(html).toContain('Championnes 2026');
+    expect(html).not.toContain('Finales ce soir');
+    expect(html).not.toContain('Saison régulière en cours');
+    // Les portes de suivi restent : classement final, résultats.
+    expect(html).toContain('href="/tournament/ow-womens-cup-2026/standings"');
+  });
+
+  it('se retire seule passé sa date', () => {
+    expect(isHomeChampionVisible(champion, '2026-10-23T20:30:00Z')).toBe(true);
+    expect(isHomeChampionVisible(champion, '2026-12-01T00:00:00+01:00')).toBe(
+      false
+    );
+    expect(isHomeChampionVisible(null, '2026-10-23T20:30:00Z')).toBe(false);
   });
 });
 
