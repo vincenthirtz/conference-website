@@ -52,6 +52,12 @@ const SIZES = {
     text: 'text-lg',
     sizes: '(min-width: 640px) 80px, 64px',
   },
+  // Le blason de la championne, en tête d'accueil (HomeHeroV2).
+  xl: {
+    box: 'h-24 w-24 sm:h-32 sm:w-32',
+    text: 'text-3xl',
+    sizes: '(min-width: 640px) 128px, 96px',
+  },
 } as const;
 
 export default function TeamAvatar({

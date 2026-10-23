@@ -176,16 +176,16 @@ export default function HomeHeroV2({
 
         {champion ? (
           <>
-            <div className="mt-7 flex w-full max-w-xl flex-col items-center gap-3 rounded-2xl border border-[var(--color-yellow)]/45 bg-[var(--color-yellow)]/10 px-5 py-4 shadow-[0_0_28px_-10px_var(--color-yellow)] backdrop-blur sm:flex-row sm:gap-5 sm:px-6 sm:text-left">
+            <div className="mt-8 flex w-full max-w-3xl flex-col items-center gap-5 rounded-3xl border-2 border-[var(--color-yellow)]/50 bg-[var(--color-yellow)]/10 px-6 py-7 shadow-[0_0_48px_-12px_var(--color-yellow)] backdrop-blur sm:flex-row sm:gap-8 sm:px-10 sm:py-9 sm:text-left">
               <TeamAvatar
                 name={champion.teamName}
                 logoUrl={champion.logoUrl}
-                size="lg"
+                size="xl"
               />
               <div className="min-w-0">
-                <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--color-yellow)]">
+                <p className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-[var(--color-yellow)] sm:text-base">
                   <svg
-                    className="h-4 w-4 shrink-0"
+                    className="h-5 w-5 shrink-0 sm:h-6 sm:w-6"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -199,7 +199,7 @@ export default function HomeHeroV2({
                   </svg>
                   {format(t.heroChampionEyebrow, { year: champion.year })}
                 </p>
-                <p className="mt-1 text-2xl font-extrabold uppercase tracking-tight text-white sm:text-3xl">
+                <p className="mt-2 break-words text-4xl font-extrabold uppercase leading-none tracking-tight text-white sm:text-5xl md:text-6xl">
                   <Link
                     href={`/team/${champion.teamSlug}`}
                     className="underline-offset-4 transition-colors hover:text-[var(--color-yellow)] hover:underline"
@@ -207,7 +207,7 @@ export default function HomeHeroV2({
                     {champion.teamName}
                   </Link>
                 </p>
-                <p className="mt-1 text-sm text-gray-300">
+                <p className="mt-3 text-base text-gray-200 sm:text-lg">
                   {format(t.heroChampionFinal, {
                     score: champion.finalScore,
                     opponent: champion.runnerUp,
