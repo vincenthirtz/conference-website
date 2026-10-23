@@ -141,41 +141,6 @@ export function selectNextMatchdays(
 }
 
 /**
- * La journée annoncée, si elle se joue AUJOURD'HUI (heure de Paris) ; `null`
- * sinon. Un jour de match, l'accueil le dit avant tout le reste : les affiches
- * passent devant l'encart d'événement, le hero vise le prochain coup d'envoi.
- * Dès que la journée est jouée, `selectNextMatchdays` ne l'annonce plus et
- * l'accueil reprend son ordre habituel, sans qu'il faille y penser. PURE.
- */
-export function matchdayToday(
-  matchdays: HomeMatchday[],
-  now: Date
-): HomeMatchday | null {
-  const day = matchdays[0];
-  if (!day) return null;
-  return day.date === getWallClockParts(now, SITE_TIMEZONE).date ? day : null;
-}
-
-/** Journée de finales : toutes ses affiches sont hors phase. PURE. */
-export function isFinalsDay(day: HomeMatchday): boolean {
-  return day.matches.length > 0 && day.matches.every((m) => m.outOfStage);
-}
-
-/**
- * Le prochain coup d'envoi encore à venir de la journée (ISO), ou `null` quand
- * tout a commencé. Un match en retard sur son horaire ne compte plus : le
- * décompte viserait une heure passée. PURE.
- */
-export function nextKickoff(day: HomeMatchday, now: Date): string | null {
-  const at = now.getTime();
-  return (
-    day.matches.find(
-      (m) => m.status === 'pending' && new Date(m.scheduledAt).getTime() > at
-    )?.scheduledAt ?? null
-  );
-}
-
-/**
  * Complète une équipe de match avec ce que la home connaît déjà d'elle.
  *
  * `readPublicTournamentMatches` ne rend que l'id, le nom et le logo ; les

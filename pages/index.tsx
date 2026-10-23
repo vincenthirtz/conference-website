@@ -28,12 +28,12 @@ import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { type HomeTeam } from '@/utils/home/loadHomeData';
+import { type HomeMatchday } from '@/utils/home/loadNextMatchday';
 import {
   isFinalsDay,
   matchdayToday,
   nextKickoff,
-  type HomeMatchday,
-} from '@/utils/home/loadNextMatchday';
+} from '@/utils/home/matchdayToday';
 import { type HomeStandingRow } from '@/utils/home/loadHomeData';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { loadHomeData } from '@/utils/home/loadHomeData';
