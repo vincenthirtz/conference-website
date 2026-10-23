@@ -256,6 +256,7 @@
   "/timeline-2026": 248,
   "/tournament/[id]": 260,
   "/tournament/[id]/bracket": 247,
+  "/tournament/[id]/clips": 242,
   "/tournament/[id]/ffa": 233,
   "/tournament/[id]/inscription-solo": 230,
   "/tournament/[id]/maps": 231,
