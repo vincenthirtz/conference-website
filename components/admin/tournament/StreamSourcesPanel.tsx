@@ -87,9 +87,9 @@ const SOURCES = [
   // Pas une source « par match » : elle montre toute la journée, d'où son URL
   // à part (cf. sourceUrl).
   { key: 'day', size: '1920×1080' },
-  // Les finales de la journée, une carte chacune : mêmes données que « Matchs
-  // du jour », habillées pour la soirée des finales.
-  { key: 'finals', size: '1920×1080' },
+  // Les finales de la journée, une bande chacune : mêmes données que « Matchs
+  // du jour », dans l'emplacement 1450×340 de l'habillage de la régie.
+  { key: 'finals', size: '1450×340' },
   // Le classement EN COURS du tournoi (celui de la page « Classement ») : pas
   // par match non plus, une URL pour toute la saison.
   { key: 'standings', size: '1920×1080' },

@@ -15,8 +15,6 @@ export default ns('overlayFinals', {
   finalsDocTitle: 'Source de stream — finales',
   finalsMissingTournament:
     'Ajoutez ?tournament=<identifiant ou slug> à l’URL pour afficher les finales.',
-  finalsTitle: 'Les finales',
-  finalsTitleOne: 'La finale',
   finalsGrand: 'Grande finale',
   finalsSmall: 'Petite finale',
   finalsKickoff: 'Coup d’envoi',

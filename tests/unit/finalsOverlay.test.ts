@@ -1,10 +1,12 @@
 // La source OBS « finales » (`/overlay/finales`) : la petite et la grande
-// finale de la soirée, une carte chacune.
+// finale de la soirée, une bande chacune.
 //
 // CE QUE CES CAS PROTÈGENT :
 //   - ne sont des finales que la petite et la grande (une demi-finale
 //     contient aussi « finale ») ;
-//   - les trois états d'une carte, sans jamais masquer le score : l'heure à
+//   - la scène fixe de 1450×340, l'emplacement que l'habillage de la régie
+//     lui réserve — sans titre, l'habillage le porte ;
+//   - les trois états d'une bande, sans jamais masquer le score : l'heure à
 //     venir, le score en direct, le score et les places une fois jouée —
 //     forfait compris ;
 //   - pas de « VS » (la scène de la régie porte déjà l'habillage) ;
@@ -88,7 +90,7 @@ function payload(matches: OverlayDayMatchView[]): OverlayDayResponse {
 
 function render(p: OverlayDayResponse | null, extra = {}): string {
   return renderToStaticMarkup(
-    createElement(FinalsSource, { payload: p, scale: 1, ...extra })
+    createElement(FinalsSource, { payload: p, ...extra })
   );
 }
 
@@ -123,7 +125,16 @@ describe('finalKind — qu’est-ce qu’une finale', () => {
   });
 });
 
-describe('FinalsSource — les cartes', () => {
+describe('FinalsSource — les bandes', () => {
+  it('se dessine sur la scène fixe de 1450×340, sans titre', () => {
+    const html = render(payload([SMALL, match()]));
+    expect(html).toMatch(
+      /data-finals-stage=""[^>]*style="width:1450px;height:340px/
+    );
+    expect(html).not.toContain('<h1');
+    expect(html).not.toContain('OW WOMEN&#x27;s CUP 2026');
+  });
+
   it('à venir : l’heure de Paris, le format, ni score ni « VS »', () => {
     const html = render(payload([SMALL, match()]));
     expect(html).toContain('Petite finale');
@@ -133,7 +144,6 @@ describe('FinalsSource — les cartes', () => {
     expect(html).toContain('BO5');
     expect(html).toContain('Coup d’envoi');
     expect(html).not.toContain('>VS<');
-    expect(html).toContain('Les finales');
     // Ordre du programme : la petite finale d'abord.
     expect(html.indexOf('data-final="small"')).toBeLessThan(
       html.indexOf('data-final="grand"')
@@ -153,7 +163,6 @@ describe('FinalsSource — les cartes', () => {
     expect(html).toContain('En direct');
     expect(html).toMatch(/>2<span[^>]*>:<\/span>1</);
     expect(html).not.toContain('Championnes');
-    expect(html).toContain('La finale');
   });
 
   it('terminé : championnes et finalistes, 3e et 4e place', () => {
@@ -196,13 +205,6 @@ describe('FinalsSource — les cartes', () => {
   it('côté inconnu : « À déterminer », sans planter', () => {
     const html = render(payload([match({ team2: null })]));
     expect(html).toContain('À déterminer');
-  });
-
-  it('&header=0 retire le titre', () => {
-    const html = render(payload([match()]), { header: false });
-    expect(html).not.toContain('Les finales');
-    expect(html).not.toContain('La finale');
-    expect(html).toContain('Grande finale');
   });
 
   it('journée sans finale : cadre vide dans OBS, explication en aperçu', () => {

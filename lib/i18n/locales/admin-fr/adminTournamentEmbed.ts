@@ -98,7 +98,7 @@ export default adminNs('adminTournamentEmbed', {
     'Le programme de la journée (heure de Paris) : horaires, affiches, scores en direct, match du moment mis en avant. Ajoutez &date=AAAA-MM-JJ pour un autre jour, &limit=N pour le nombre de lignes.',
   source_finals_name: 'Finales',
   source_finals_desc:
-    'La petite et la grande finale du jour, une carte chacune : heure, puis score en direct, puis championnes et places. Mêmes données que « Matchs du jour » (elle suit aussi le jour envoyé à OBS) ; seuls les matchs nommés « Petite finale » / « Grande finale » y figurent. Ajoutez &header=0 pour retirer le titre, &date=AAAA-MM-JJ pour un autre jour.',
+    'La petite et la grande finale du jour, une bande chacune : heure, puis score en direct, puis championnes et places. Scène fixe de 1450×340 (l’emplacement de l’habillage), mise à l’échelle de la source sans déformation : réglez la source navigateur en 1450×340. Mêmes données que « Matchs du jour » (elle suit aussi le jour envoyé à OBS) ; seuls les matchs nommés « Petite finale » / « Grande finale » y figurent. Ajoutez &date=AAAA-MM-JJ pour un autre jour.',
   source_standings_name: 'Classement',
   source_standings_desc:
     'Le classement en cours, identique à la page Classement (forfaits et disqualifiées compris), avec la zone des finales en couleur. Ajoutez &limit=N pour le nombre de lignes, &qualify=N pour la zone qualificative (0 la masque), &stage=<clé> pour une autre phase.',

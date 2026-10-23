@@ -1,7 +1,9 @@
 // pages/overlay/finales.tsx
 //
 // LA SOURCE NAVIGATEUR « FINALES » — la petite et la grande finale de la
-// soirée, une carte chacune, à coller une fois dans OBS.
+// soirée, une bande chacune, à coller une fois dans OBS. Scène fixe de
+// 1450×340 (l'emplacement de l'habillage de la régie), mise à l'échelle de la
+// source sans changer de proportions.
 //
 // URL :
 //   /overlay/finales?tournament=<slug>
@@ -10,8 +12,6 @@
 //   tournament  identifiant ou slug du tournoi (requis)
 //   date        AAAA-MM-JJ ; absent = aujourd'hui, heure de Paris (ou le jour
 //               forcé depuis Diffusion › Overlays, comme « Matchs du jour »)
-//   header      0 = sans le bandeau « tournoi · Les finales »
-//   scale       0.5 → 2
 //   tenant      slug d'espace, pour les sources d'un autre organisateur
 //   preview     1 = fond sombre, pour tester la source dans un onglet
 //
@@ -32,12 +32,6 @@ function firstParam(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
-function parseScale(raw: string | undefined): number {
-  const n = Number.parseFloat(raw ?? '');
-  if (!Number.isFinite(n)) return 1;
-  return Math.min(2, Math.max(0.5, n));
-}
-
 export default function FinalsOverlayPage() {
   const router = useRouter();
   // Signal de présence (Diffusion › Overlays : « affichée »).
@@ -49,7 +43,6 @@ export default function FinalsOverlayPage() {
   const tenant = firstParam(router.query.tenant) ?? null;
   // Aperçu dans un navigateur : un fond transparent y devient blanc.
   const preview = firstParam(router.query.preview) === '1';
-  const header = firstParam(router.query.header) !== '0';
 
   // Une URL incomplète doit se voir dès qu'on la colle dans OBS.
   const configError =
@@ -85,12 +78,7 @@ export default function FinalsOverlayPage() {
             </p>
           </div>
         ) : (
-          <FinalsSource
-            payload={data}
-            scale={parseScale(firstParam(router.query.scale))}
-            header={header}
-            preview={preview}
-          />
+          <FinalsSource payload={data} preview={preview} />
         )}
       </div>
     </>

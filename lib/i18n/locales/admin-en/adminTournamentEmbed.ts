@@ -94,7 +94,7 @@ export default {
     'The day’s schedule (Paris time): kick-off times, match-ups, live scores, current match highlighted. Add &date=YYYY-MM-DD for another day, &limit=N for the number of rows.',
   source_finals_name: 'Finals',
   source_finals_desc:
-    'The day’s third-place match and grand final, one card each: kick-off time, then live score, then champions and placings. Same data as “Today’s matches” (it also follows the day sent to OBS); only matches named “Petite finale” / “Grande finale” are shown. Add &header=0 to remove the title, &date=YYYY-MM-DD for another day.',
+    'The day’s third-place match and grand final, one band each: kick-off time, then live score, then champions and placings. Fixed 1450×340 stage (the slot in the stream layout), scaled to the source without distortion: set the browser source to 1450×340. Same data as “Today’s matches” (it also follows the day sent to OBS); only matches named “Petite finale” / “Grande finale” are shown. Add &date=YYYY-MM-DD for another day.',
   source_standings_name: 'Standings',
   source_standings_desc:
     'The current standings, same as the Standings page (forfeits and disqualified teams included), with the finals zone highlighted. Add &limit=N for the number of rows, &qualify=N for the qualifying zone (0 hides it), &stage=<key> for another phase.',

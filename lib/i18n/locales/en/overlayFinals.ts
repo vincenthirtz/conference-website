@@ -8,8 +8,6 @@ export default {
   finalsDocTitle: 'Stream source — finals',
   finalsMissingTournament:
     'Add ?tournament=<id or slug> to the URL to show the finals.',
-  finalsTitle: 'The finals',
-  finalsTitleOne: 'The final',
   finalsGrand: 'Grand final',
   finalsSmall: 'Third-place match',
   finalsKickoff: 'Kick-off',

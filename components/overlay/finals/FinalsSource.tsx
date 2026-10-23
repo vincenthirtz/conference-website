@@ -1,24 +1,30 @@
 // components/overlay/finals/FinalsSource.tsx
 //
-// La source « finales » : la petite et la grande finale de la soirée, en
-// plein cadre 1920×1080. Le cousin habillé de « Matchs du jour » — même
-// journée, mêmes données, mais une carte par finale au lieu d'une ligne.
+// La source « finales » : la petite et la grande finale de la soirée, une
+// bande chacune. Le cousin habillé de « Matchs du jour » — même journée,
+// mêmes données.
 //
-// HIÉRARCHIE. La grande finale est la plus grande carte, filet or ; la petite
-// finale, filet bronze. Ordre du programme (la petite se joue d'abord), pour
-// que l'écran se lise comme la soirée.
+// UNE SCÈNE FIXE DE 1450×340. La source se pose dans l'emplacement que
+// l'habillage de la régie lui réserve (2026-10-23) : elle se dessine toujours
+// à cette taille, puis se met à l'échelle de la source navigateur sans jamais
+// changer de proportions. Collée en 1450×340 dans OBS, elle est au pixel près.
+// Ni titre (l'habillage le porte), ni halo autour des bandes : il serait coupé
+// au bord de la source et déborderait sur l'habillage.
 //
-// TROIS ÉTATS par carte, sans jamais masquer le score :
+// HIÉRARCHIE. Ordre du programme (la petite finale se joue d'abord) ; la
+// grande finale a la bande la plus haute, filet or ; la petite, filet bronze.
+//
+// TROIS ÉTATS par bande, sans jamais masquer le score :
 //   - à venir : l'heure du coup d'envoi au centre ;
-//   - en direct : le score, et une pastille « En direct » ;
+//   - en direct : le score, une pastille et un filet rouges ;
 //   - terminé : le score, le perdant en retrait, et la place de chacune
-//     (championnes / finalistes, 3e / 4e place). Un forfait passe par là aussi.
-// Pas de « VS » : la scène de la régie porte déjà l'habillage.
+//     (championnes / finalistes, 3ᵉ / 4ᵉ place). Un forfait passe par là aussi.
+// Pas de « VS » : l'habillage de la régie s'en charge.
 //
-// Les cartes ont leur propre fond (noir translucide) : posée sur n'importe
-// quel décor, la source reste lisible. Fond de page transparent.
+// Les bandes ont leur propre fond (noir translucide) : la source reste lisible
+// sur n'importe quel décor. Fond de page transparent.
 
-import type { CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 import nsOverlayFinals from '@/lib/i18n/locales/fr/overlayFinals';
@@ -34,30 +40,46 @@ import {
 /** Phases et repli (`overlay`) + textes des finales (`overlayFinals`). */
 type Dict = typeof nsOverlay.fr & typeof nsOverlayFinals.fr;
 
+/** L'emplacement réservé par l'habillage de la régie. */
+export const FINALS_STAGE = { width: 1450, height: 340 } as const;
+
 /** Or pour le titre, bronze pour la 3e place. */
 export const FINAL_TONES: Record<FinalKind, string> = {
   grand: '#f2c94c',
   small: '#d4935b',
 };
 
-/** Tailles par carte : la grande finale domine. */
+const LIVE_RED = '#ef4444';
+
+/** Tailles par bande : la grande finale domine. `grow` = part de hauteur. */
 const SIZES: Record<
   FinalKind,
-  { logo: number; name: string; score: string; place: string }
+  { grow: number; logo: number; name: string; score: string }
 > = {
-  grand: {
-    logo: 136,
-    name: 'text-5xl',
-    score: 'text-8xl',
-    place: 'text-xl',
-  },
-  small: {
-    logo: 104,
-    name: 'text-4xl',
-    score: 'text-6xl',
-    place: 'text-lg',
-  },
+  grand: { grow: 172, logo: 92, name: 'text-[34px]', score: 'text-6xl' },
+  small: { grow: 156, logo: 80, name: 'text-3xl', score: 'text-5xl' },
 };
+
+/**
+ * Échelle qui fait tenir la scène dans la fenêtre, sans la déformer. 1 au
+ * rendu serveur (et dans une source OBS réglée en 1450×340).
+ */
+function useFitScale(): number {
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const fit = () =>
+      setScale(
+        Math.min(
+          window.innerWidth / FINALS_STAGE.width,
+          window.innerHeight / FINALS_STAGE.height
+        )
+      );
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, []);
+  return scale;
+}
 
 function Logo({
   team,
@@ -78,14 +100,14 @@ function Logo({
         src={team.logoUrl}
         alt=""
         style={box}
-        className="shrink-0 object-contain drop-shadow-[0_6px_18px_rgba(0,0,0,0.6)]"
+        className="shrink-0 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.6)]"
       />
     );
   }
   return (
     <div
       style={box}
-      className="flex shrink-0 items-center justify-center rounded-2xl bg-white/10 text-3xl font-black text-white/80"
+      className="flex shrink-0 items-center justify-center rounded-xl bg-white/10 text-2xl font-black text-white/80"
       aria-hidden="true"
     >
       {fallback.slice(0, 2).toUpperCase()}
@@ -123,7 +145,7 @@ function TeamBlock({
   const dim = settled && !winner;
   return (
     <div
-      className={`flex min-w-0 items-center gap-6 ${
+      className={`flex min-w-0 items-center gap-5 ${
         align === 'right' ? 'flex-row-reverse text-right' : 'text-left'
       }`}
     >
@@ -131,7 +153,7 @@ function TeamBlock({
       <div className="min-w-0">
         {/* Jamais tronqué : un nom coupé ne se devine pas à l'antenne. */}
         <div
-          className={`break-words font-black leading-tight ${size.name} ${
+          className={`break-words font-black leading-[1.05] ${size.name} ${
             team
               ? dim
                 ? 'text-white/45'
@@ -143,7 +165,7 @@ function TeamBlock({
         </div>
         {settled && team && (
           <div
-            className={`mt-2 font-bold uppercase tracking-[0.2em] ${size.place}`}
+            className="mt-1 text-base font-bold uppercase tracking-[0.2em]"
             style={{
               color: winner ? FINAL_TONES[kind] : 'rgba(255,255,255,0.5)',
             }}
@@ -156,7 +178,7 @@ function TeamBlock({
   );
 }
 
-function FinalCard({ final, t }: { final: FinalMatch; t: Dict }) {
+function FinalBand({ final, t }: { final: FinalMatch; t: Dict }) {
   const { match, kind } = final;
   const tone = FINAL_TONES[kind];
   const size = SIZES[kind];
@@ -166,135 +188,120 @@ function FinalCard({ final, t }: { final: FinalMatch; t: Dict }) {
     done && Boolean(match.team1?.isWinner || match.team2?.isWinner);
   const time = hourLabel(match.scheduledAt ?? match.startedAt);
   const format = (match.format ?? '').trim().toUpperCase();
+  const edge = live ? LIVE_RED : tone;
 
   return (
     <section
       data-final={kind}
-      className="w-full overflow-hidden rounded-[28px] border-2 bg-black/80"
+      className="grid min-h-0 grid-cols-[200px_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-6 overflow-hidden rounded-2xl border-2 px-6"
       style={{
-        borderColor: live ? '#ef4444' : tone,
-        boxShadow: `0 0 64px ${live ? 'rgba(239,68,68,0.35)' : `${tone}55`}, 0 24px 80px rgba(0,0,0,0.6)`,
+        flex: `${size.grow} 1 0%`,
+        borderColor: edge,
+        // L'accent reste DANS la bande : un halo serait coupé au bord de la
+        // source et déborderait sur l'habillage.
+        background: `linear-gradient(90deg, ${edge}33 0%, rgba(0,0,0,0.82) 26%, rgba(0,0,0,0.82) 100%)`,
       }}
     >
-      <div className="flex items-center justify-between gap-6 px-12 pt-7">
+      <div className="flex min-w-0 flex-col items-start gap-2">
         <span
-          className={`font-black uppercase tracking-[0.3em] ${
-            kind === 'grand' ? 'text-3xl' : 'text-2xl'
-          }`}
+          className="text-lg font-black uppercase leading-tight tracking-[0.16em]"
           style={{ color: tone }}
         >
           {kind === 'grand' ? t.finalsGrand : t.finalsSmall}
         </span>
-        <span className="flex shrink-0 items-center gap-3">
+        <span className="flex flex-wrap items-center gap-2">
           {format && (
-            <span className="rounded-full border border-white/20 px-4 py-1 text-lg font-bold tracking-wider text-white/80">
+            <span className="rounded-full border border-white/20 px-2.5 py-0.5 text-sm font-bold tracking-wider text-white/80">
               {format}
             </span>
           )}
           {live ? (
-            <span className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-1 text-lg font-bold uppercase tracking-wider text-white">
-              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-white" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-2.5 py-0.5 text-sm font-bold uppercase tracking-wider text-white">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
               {t.matchPhaseLive}
             </span>
           ) : done ? (
-            <span className="rounded-full bg-white/10 px-4 py-1 text-lg font-bold uppercase tracking-wider text-white/70">
+            <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-sm font-bold uppercase tracking-wider text-white/70">
               {t.matchPhaseFinal}
             </span>
           ) : null}
         </span>
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-10 px-12 pb-10 pt-6">
-        <TeamBlock
-          team={match.team1}
-          align="right"
-          kind={kind}
-          settled={settled}
-          t={t}
-        />
-        <div className="flex min-w-[12rem] flex-col items-center">
-          {live || done ? (
-            <span
-              className={`font-black leading-none tabular-nums text-white ${size.score}`}
-            >
-              {match.team1?.score ?? 0}
-              <span className="mx-4 text-white/30">:</span>
-              {match.team2?.score ?? 0}
+      <TeamBlock
+        team={match.team1}
+        align="right"
+        kind={kind}
+        settled={settled}
+        t={t}
+      />
+      <div className="flex min-w-[10rem] flex-col items-center">
+        {live || done ? (
+          <span
+            className={`font-black leading-none tabular-nums text-white ${size.score}`}
+          >
+            {match.team1?.score ?? 0}
+            <span className="mx-3 text-white/30">:</span>
+            {match.team2?.score ?? 0}
+          </span>
+        ) : (
+          <>
+            <span className="text-xs font-bold uppercase tracking-[0.25em] text-white/60">
+              {t.finalsKickoff}
             </span>
-          ) : (
-            <>
-              <span className="text-lg font-bold uppercase tracking-[0.25em] text-white/60">
-                {t.finalsKickoff}
-              </span>
-              <span
-                className={`mt-1 font-black leading-none tabular-nums text-white ${size.score}`}
-              >
-                {time ?? '—'}
-              </span>
-            </>
-          )}
-        </div>
-        <TeamBlock
-          team={match.team2}
-          align="left"
-          kind={kind}
-          settled={settled}
-          t={t}
-        />
+            <span
+              className={`mt-1 font-black leading-none tabular-nums text-white ${size.score}`}
+            >
+              {time ?? '—'}
+            </span>
+          </>
+        )}
       </div>
+      <TeamBlock
+        team={match.team2}
+        align="left"
+        kind={kind}
+        settled={settled}
+        t={t}
+      />
     </section>
   );
 }
 
 export function FinalsSource({
   payload,
-  scale,
-  header = true,
   preview = false,
 }: {
   payload: OverlayDayResponse | null;
-  scale: number;
-  /** Bandeau « tournoi · Les finales » au-dessus des cartes. */
-  header?: boolean;
   /** Aperçu dans un onglet : dire pourquoi le cadre est vide. */
   preview?: boolean;
 }) {
   const t: Dict = { ...useT(nsOverlay), ...useT(nsOverlayFinals) };
+  const scale = useFitScale();
   if (!payload) return null;
 
   const finals = selectFinals(payload.matches);
-  if (finals.length === 0) {
-    // Dans OBS, un cadre vide (rien à annoncer) ; en aperçu, la raison.
-    return preview ? (
-      <div className="flex h-full w-full items-center justify-center p-16">
-        <p className="max-w-3xl rounded-2xl border border-white/15 bg-black/85 px-10 py-8 text-center text-2xl font-semibold text-white/80">
-          {t.finalsNone.replace('{date}', payload.date)}
-        </p>
-      </div>
-    ) : null;
-  }
+  if (finals.length === 0 && !preview) return null;
 
   return (
-    <div className="flex h-full w-full items-center justify-center px-16">
+    <div className="flex h-full w-full items-center justify-center overflow-hidden">
       <div
-        className="flex w-full max-w-[1600px] origin-center flex-col gap-8 [text-shadow:0_2px_10px_rgba(0,0,0,0.85)]"
-        style={{ transform: scale !== 1 ? `scale(${scale})` : undefined }}
+        data-finals-stage=""
+        className="flex shrink-0 flex-col gap-3 [text-shadow:0_2px_8px_rgba(0,0,0,0.85)]"
+        style={{
+          width: FINALS_STAGE.width,
+          height: FINALS_STAGE.height,
+          transform: scale !== 1 ? `scale(${scale})` : undefined,
+        }}
       >
-        {header && (
-          <header className="text-center">
-            {payload.tournament.name && (
-              <p className="text-xl font-bold uppercase tracking-[0.4em] text-white/70">
-                {payload.tournament.name}
-              </p>
-            )}
-            <h1 className="mt-2 text-6xl font-black uppercase tracking-tight text-white">
-              {finals.length > 1 ? t.finalsTitle : t.finalsTitleOne}
-            </h1>
-          </header>
+        {finals.length === 0 ? (
+          // Dans OBS, un cadre vide (rien à annoncer) ; en aperçu, la raison.
+          <p className="m-auto max-w-[1100px] rounded-2xl border border-white/15 bg-black/85 px-8 py-6 text-center text-2xl font-semibold text-white/80">
+            {t.finalsNone.replace('{date}', payload.date)}
+          </p>
+        ) : (
+          finals.map((f) => <FinalBand key={f.match.id} final={f} t={t} />)
         )}
-        {finals.map((f) => (
-          <FinalCard key={f.match.id} final={f} t={t} />
-        ))}
       </div>
     </div>
   );
