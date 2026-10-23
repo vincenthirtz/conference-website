@@ -52,6 +52,8 @@ export default {
     'For a match in progress, finished or upcoming — e.g. at the end of a broadcast, before the score is entered. The bot posts the vote in its Discord channel (supporters), and Twitch chat votes with !mvp <name>. The vote stays open until “Close now”, 4 h at most: after that, it closes and is settled by itself.',
   openNone:
     'No match (in progress, finished or upcoming) without an audience vote.',
+  openNoneToday: 'No match today: here are all the tournament’s matches.',
+  openShowAll: 'All tournament matches ({count})',
   openStateOngoing: 'In progress',
   openStateUpcoming: 'Upcoming',
   openMatchLabel: 'Match',

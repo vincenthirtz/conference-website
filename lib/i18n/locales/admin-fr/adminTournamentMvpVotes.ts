@@ -53,6 +53,8 @@ export default adminNs('adminTournamentMvpVotes', {
   openHelp:
     'Pour un match en cours, terminé ou à venir — par exemple en fin de diffusion, avant la saisie du score. Le bot poste le vote dans son salon Discord (supporters), et le chat Twitch vote par !mvp <pseudo>. Le vote reste ouvert jusqu’à « Clore maintenant », 4 h au plus : passé ce délai, il se clôt et se dépouille tout seul.',
   openNone: 'Aucun match (en cours, terminé ou à venir) sans vote du public.',
+  openNoneToday: 'Aucun match aujourd’hui : voici tous les matchs du tournoi.',
+  openShowAll: 'Tous les matchs du tournoi ({count})',
   openStateOngoing: 'En cours',
   openStateUpcoming: 'À venir',
   openMatchLabel: 'Match',

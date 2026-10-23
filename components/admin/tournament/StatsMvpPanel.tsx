@@ -37,26 +37,17 @@ import nsAdminTournamentMvpVotes from '@/lib/i18n/locales/admin-fr/adminTourname
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip, { type ChipTone } from '@/features/admin/_shared/ui/Chip';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
+import MvpPublicLaunch, {
+  type OpenableMatch,
+} from '@/components/admin/tournament/MvpPublicLaunch';
 import {
   rubanCardPadded,
   rubanErrBox,
   rubanEyebrowSnug,
   rubanFaint,
-  rubanFormInput,
   rubanMuted,
   rubanStrong,
 } from '@/features/admin/_shared/ui/ruban';
-
-/** Match terminé sans vote du public : on peut le lancer à la main. */
-type OpenableMatch = {
-  id: string;
-  /** pending · ongoing · finished (le vote du public s'ouvre sur les trois). */
-  status?: string | null;
-  roundName: string | null;
-  scheduledAt: string | null;
-  team1Name: string | null;
-  team2Name: string | null;
-};
 
 type Response = VoteBoard & {
   tournament: { id: string; name: string };
@@ -150,7 +141,6 @@ export default function StatsMvpPanel({
     (tid) => tournamentUrls.sub(tid, segment)
   );
   const data = votesQuery.data ?? null;
-  const [openMatchId, setOpenMatchId] = useState('');
   const [busy, setBusy] = useState(false);
   const loading = votesQuery.isPending;
   const error = votesQuery.error
@@ -188,9 +178,12 @@ export default function StatsMvpPanel({
     [locale]
   );
 
-  /** Lancer / clore le vote du public d'un match, puis recharger. */
+  /** Lancer / clore le vote du public d'un match, puis recharger. `true` si fait. */
   const runPublic = useCallback(
-    async (matchId: string, body: { action: 'open' } | { action: 'close' }) => {
+    async (
+      matchId: string,
+      body: { action: 'open' } | { action: 'close' }
+    ): Promise<boolean> => {
       setBusy(true);
       try {
         const res = await adminRequest<OpenResponse>(
@@ -199,15 +192,16 @@ export default function StatsMvpPanel({
         );
         addToast(body.action === 'open' ? t.openDone : t.closeDone, 'success');
         if (body.action === 'open') {
-          setOpenMatchId('');
           // Le vote est ouvert, mais le chat Twitch compte-t-il ? Un échec
           // d'abonnement passait inaperçu (0 voix Twitch le 2026-10-09).
           const warning = twitchChatWarning(t, res?.twitchChat);
           if (warning) addToast(warning, 'warning');
         }
         await load(true);
+        return true;
       } catch (err) {
         addToast((err as AdminFetchError).message || t.actionError, 'error');
+        return false;
       } finally {
         setBusy(false);
       }
@@ -329,46 +323,12 @@ export default function StatsMvpPanel({
       )}
 
       {kind === 'public' && data && (
-        <section className={rubanCardPadded}>
-          <h3 className={rubanStrong}>{t.openTitle}</h3>
-          <p className={`mt-1 text-xs ${rubanMuted}`}>{t.openHelp}</p>
-          {(data.openable ?? []).length === 0 ? (
-            <p className={`mt-3 text-sm ${rubanFaint}`}>{t.openNone}</p>
-          ) : (
-            <div className="mt-3 flex flex-wrap items-end gap-3">
-              <label className={`text-xs ${rubanMuted}`}>
-                {t.openMatchLabel}
-                <select
-                  className={`mt-1 block !w-auto ${rubanFormInput}`}
-                  value={openMatchId}
-                  onChange={(e) => setOpenMatchId(e.target.value)}
-                >
-                  <option value="">—</option>
-                  {(data.openable ?? []).map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.status === 'ongoing'
-                        ? `${t.openStateOngoing} · `
-                        : m.status === 'pending'
-                          ? `${t.openStateUpcoming} · `
-                          : ''}
-                      {m.team1Name ?? t.tbd} {t.vs} {m.team2Name ?? t.tbd}
-                      {m.roundName ? ` · ${m.roundName}` : ''}
-                      {m.scheduledAt ? ` · ${fmtDate(m.scheduledAt)}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <AdminButton
-                variant="primary"
-                size="sm"
-                disabled={busy || !openMatchId}
-                onClick={() => void runPublic(openMatchId, { action: 'open' })}
-              >
-                {t.openCta}
-              </AdminButton>
-            </div>
-          )}
-        </section>
+        <MvpPublicLaunch
+          openable={data.openable ?? []}
+          busy={busy}
+          fmtDate={fmtDate}
+          onOpen={(matchId) => runPublic(matchId, { action: 'open' })}
+        />
       )}
 
       {data && data.matches.length === 0 && (
