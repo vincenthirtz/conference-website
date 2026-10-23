@@ -22,5 +22,6 @@ export default {
   mvp: 'MVP',
   podium: 'Podium',
   ffa: 'FFA',
+  clips: 'Clips',
   reviews: 'Reviews',
 };

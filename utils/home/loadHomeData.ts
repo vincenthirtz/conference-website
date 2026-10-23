@@ -60,20 +60,6 @@ export type HomeData = {
   loadError: boolean;
 };
 
-/**
- * Un clip Twitch, réduit à ce que `HomeClips` affiche. L'accueil ne les charge
- * plus (2026-10-23) : le bloc repoussait les affiches sous la ligne de
- * flottaison, un soir de finales.
- */
-export type HomeClip = {
-  id: string;
-  title: string;
-  url: string;
-  thumbnailUrl: string;
-  viewCount: number;
-  duration: number;
-};
-
 /** Une ligne de classement, réduite à ce que l'accueil affiche. */
 export type HomeStandingRow = {
   rank: number;

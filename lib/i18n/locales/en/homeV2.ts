@@ -64,8 +64,6 @@ export default {
   standingsNote: '3 points per win · ties broken by head-to-head.',
   clipsTitle: 'Clips of the moment',
   clipsChannel: 'The channel',
-  clipsViews_one: '{count} view',
-  clipsViews_other: '{count} views',
   matchdayNextDay: 'Then {day}',
   matchdayAll: 'Full schedule',
   teamsStripEyebrow_one: '{count} team competing',

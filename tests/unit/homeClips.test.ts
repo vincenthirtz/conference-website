@@ -16,7 +16,8 @@ import { renderToString } from 'react-dom/server';
 import HomeSpotlight from '@/components/Home/HomeSpotlight';
 import HomeClips from '@/components/Home/HomeClips';
 import type { UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
-import type { HomeClip, HomeTeam } from '@/utils/home/loadHomeData';
+import type { HomeTeam } from '@/utils/home/loadHomeData';
+import type { ClipCard } from '@/components/tournament/clips/ClipGrid';
 import type { HomeMatchday } from '@/utils/home/loadNextMatchday';
 
 const tournament: UpcomingTournament = {
@@ -42,7 +43,7 @@ const teams: HomeTeam[] = [
   },
 ];
 
-function clip(over: Partial<HomeClip> = {}): HomeClip {
+function clip(over: Partial<ClipCard> = {}): ClipCard {
   return {
     id: 'clip-1',
     title: 'Un triple kill de folie',

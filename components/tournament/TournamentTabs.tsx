@@ -1,7 +1,7 @@
 // components/tournament/TournamentTabs.tsx
 // Barre d'onglets partagée par toutes les sous-pages publiques d'un tournoi.
 // Rendue en tête de chaque page pour offrir une navigation cohérente (Hub,
-// Équipes, Matchs, Classement, Maps, Stats, MVP, + Podium/FFA/Reviews conditionnels). Chaque onglet
+// Équipes, Matchs, Classement, Maps, Stats, MVP, Clips, + Podium/FFA/Reviews conditionnels). Chaque onglet
 // est un <Link> Next stylisé (HTML valide + navigation client), avec état actif
 // et focus clavier visible. Aucun fetch : présentation pure.
 
@@ -20,6 +20,7 @@ export type TournamentTabKey =
   | 'mvp'
   | 'podium'
   | 'ffa'
+  | 'clips'
   | 'reviews';
 
 export default function TournamentTabs({
@@ -29,6 +30,7 @@ export default function TournamentTabs({
   bracketLabel = 'bracket',
   showPodium = true,
   showFfa = false,
+  showClips = true,
   showReviews = false,
   className = '',
 }: {
@@ -47,6 +49,12 @@ export default function TournamentTabs({
   showPodium?: boolean;
   /** Afficher l'onglet FFA (uniquement si le tournoi a une phase FFA). */
   showFfa?: boolean;
+  /**
+   * Afficher l'onglet Clips (par défaut oui). Toujours là, comme Bracket :
+   * savoir s'il existe des clips demanderait d'interroger Twitch depuis
+   * chaque page sœur — la page Clips gère l'état vide.
+   */
+  showClips?: boolean;
   /** Afficher l'onglet Reviews (uniquement si une playlist est configurée). */
   showReviews?: boolean;
   className?: string;
@@ -89,6 +97,15 @@ export default function TournamentTabs({
             key: 'ffa' as TournamentTabKey,
             label: t.ffa,
             href: `${tournamentPath}/ffa`,
+          },
+        ]
+      : []),
+    ...(showClips
+      ? [
+          {
+            key: 'clips' as TournamentTabKey,
+            label: t.clips,
+            href: `${tournamentPath}/clips`,
           },
         ]
       : []),

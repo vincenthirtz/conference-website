@@ -89,8 +89,6 @@ export default ns('homeV2', {
     '3 points par victoire · départage à la confrontation directe.',
   clipsTitle: 'Les clips du moment',
   clipsChannel: 'La chaîne',
-  clipsViews_one: '{count} vue',
-  clipsViews_other: '{count} vues',
   matchdayNextDay: 'Puis {day}',
   matchdayAll: 'Tout le calendrier',
   teamsStripEyebrow_one: '{count} équipe engagée',
