@@ -154,6 +154,7 @@ import enFfaStandings from './ffaStandings';
 import enEmbedSchedule from './embedSchedule';
 import enScrimPlanning from './scrimPlanning';
 import enOverlay from './overlay';
+import enOverlayFinals from './overlayFinals';
 import enDeveloperRegisterPage from './developerRegisterPage';
 import enBattlenetVerify from './battlenetVerify';
 import enOverwatchRank from './overwatchRank';
@@ -330,6 +331,7 @@ const enDict = {
   embedSchedule: enEmbedSchedule,
   scrimPlanning: enScrimPlanning,
   overlay: enOverlay,
+  overlayFinals: enOverlayFinals,
   developerRegisterPage: enDeveloperRegisterPage,
   battlenetVerify: enBattlenetVerify,
   overwatchRank: enOverwatchRank,

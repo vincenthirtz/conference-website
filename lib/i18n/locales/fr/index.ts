@@ -153,6 +153,7 @@ import nsFfaStandings from './ffaStandings';
 import nsEmbedSchedule from './embedSchedule';
 import nsScrimPlanning from './scrimPlanning';
 import nsOverlay from './overlay';
+import nsOverlayFinals from './overlayFinals';
 import nsDeveloperRegisterPage from './developerRegisterPage';
 import nsBattlenetVerify from './battlenetVerify';
 import nsOverwatchRank from './overwatchRank';
@@ -329,6 +330,7 @@ export const frDict = {
   embedSchedule: nsEmbedSchedule.fr,
   scrimPlanning: nsScrimPlanning.fr,
   overlay: nsOverlay.fr,
+  overlayFinals: nsOverlayFinals.fr,
   developerRegisterPage: nsDeveloperRegisterPage.fr,
   battlenetVerify: nsBattlenetVerify.fr,
   overwatchRank: nsOverwatchRank.fr,

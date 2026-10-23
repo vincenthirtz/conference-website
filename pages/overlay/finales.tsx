@@ -25,7 +25,7 @@ import { useRouter } from 'next/router';
 import { useT } from '@/lib/i18n/useT';
 import { useDayOverlay } from '@/hooks/useDayOverlay';
 import { FinalsSource } from '@/components/overlay/finals/FinalsSource';
-import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+import nsOverlayFinals from '@/lib/i18n/locales/fr/overlayFinals';
 import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 
 function firstParam(v: string | string[] | undefined): string | undefined {
@@ -42,7 +42,7 @@ export default function FinalsOverlayPage() {
   const router = useRouter();
   // Signal de présence (Diffusion › Overlays : « affichée »).
   useOverlayHeartbeat('finals');
-  const t = useT(nsOverlay);
+  const t = useT(nsOverlayFinals);
 
   const tournament = firstParam(router.query.tournament)?.trim() || null;
   const date = firstParam(router.query.date) ?? null;

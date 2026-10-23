@@ -21,6 +21,7 @@
 import type { CSSProperties } from 'react';
 import { useT } from '@/lib/i18n/useT';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
+import nsOverlayFinals from '@/lib/i18n/locales/fr/overlayFinals';
 import type { OverlayDayResponse } from '@/utils/overlay/dayOverlay';
 import type { OverlayTeamView } from '@/utils/overlay/matchOverlay';
 import { hourLabel } from '@/components/overlay/match/MatchSources';
@@ -30,7 +31,8 @@ import {
   type FinalMatch,
 } from '@/components/overlay/finals/finalsRounds';
 
-type Dict = typeof nsOverlay.fr;
+/** Phases et repli (`overlay`) + textes des finales (`overlayFinals`). */
+type Dict = typeof nsOverlay.fr & typeof nsOverlayFinals.fr;
 
 /** Or pour le titre, bronze pour la 3e place. */
 export const FINAL_TONES: Record<FinalKind, string> = {
@@ -257,7 +259,7 @@ export function FinalsSource({
   /** Aperçu dans un onglet : dire pourquoi le cadre est vide. */
   preview?: boolean;
 }) {
-  const t = useT(nsOverlay);
+  const t: Dict = { ...useT(nsOverlay), ...useT(nsOverlayFinals) };
   if (!payload) return null;
 
   const finals = selectFinals(payload.matches);
