@@ -239,23 +239,36 @@ async function fetchBroadcasterId(login: string): Promise<string | null> {
 }
 
 /**
- * Les clips les plus vus d'une chaîne sur les `days` derniers jours.
+ * Les clips les plus vus d'une chaîne sur une fenêtre de temps.
  *
- * FENÊTRE GLISSANTE, et pas le palmarès de tous les temps : la home montre « la
- * chaîne en ce moment ». Sans `started_at`, Helix renverrait éternellement le
- * même clip de 2025, et le bloc cesserait de vouloir dire quoi que ce soit.
+ * FENÊTRE GLISSANTE par défaut (`days` derniers jours), et pas le palmarès de
+ * tous les temps : « la chaîne en ce moment ». Sans `started_at`, Helix
+ * renverrait éternellement le même clip de 2025.
+ *
+ * FENÊTRE FIXE avec `from` (et `to`, maintenant par défaut, jamais au-delà) :
+ * les clips d'un tournoi, de son coup d'envoi à sa finale — l'onglet Clips du
+ * site. Une fenêtre vide (tournoi pas commencé) ne coûte aucun appel.
  *
  * Ne lève jamais : sans identifiants, sans réseau ou sur une erreur Helix, on
  * renvoie une liste vide et l'appelant n'affiche rien.
  */
 export async function fetchTwitchClips(
   channel: string,
-  opts: { limit?: number; days?: number } = {}
+  opts: { limit?: number; days?: number; from?: Date; to?: Date } = {}
 ): Promise<TwitchClip[]> {
   const login = channel.trim().toLowerCase();
   if (!login) return [];
-  const limit = Math.min(20, Math.max(1, opts.limit ?? 4));
+  // Helix plafonne `first` à 100.
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 4));
   const days = Math.min(365, Math.max(1, opts.days ?? 30));
+
+  const now = Date.now();
+  const endedAt = Math.min(now, opts.to?.getTime() ?? now);
+  const startedAt = opts.from
+    ? opts.from.getTime()
+    : endedAt - days * 86_400_000;
+  if (Number.isNaN(startedAt) || Number.isNaN(endedAt)) return [];
+  if (startedAt >= endedAt) return [];
 
   const creds = clientCreds();
   const token = await getAccessToken();
@@ -268,12 +281,11 @@ export async function fetchTwitchClips(
   // borne la fenêtre à started_at + 7 JOURS. Demander « les 30 derniers
   // jours » renvoyait donc les clips d'il y a 30 à 23 jours — soit, pour cette
   // chaîne, aucun. Vérifié contre l'API le 2026-09-20.
-  const now = Date.now();
   const search = new URLSearchParams({
     broadcaster_id: broadcasterId,
     first: String(limit),
-    started_at: new Date(now - days * 86_400_000).toISOString(),
-    ended_at: new Date(now).toISOString(),
+    started_at: new Date(startedAt).toISOString(),
+    ended_at: new Date(endedAt).toISOString(),
   });
 
   try {
