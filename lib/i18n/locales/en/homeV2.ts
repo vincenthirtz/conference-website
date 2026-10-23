@@ -47,6 +47,12 @@ export default {
   heroChampionEyebrow: '{year} champions',
   heroChampionFinal:
     'Won the grand final {score} against {opponent}. Congratulations!',
+  podiumAria: '{year} podium',
+  podiumRank1: '1st',
+  podiumRank2: '2nd',
+  podiumRank3: '3rd',
+  podiumPlaceSr: '{rank} place:',
+  podiumFull: 'See the final standings',
   matchdayTitle_one: '{count} match on the schedule',
   matchdayTitle_other: '{count} matches on the schedule',
   matchdayTbd: 'TBD',

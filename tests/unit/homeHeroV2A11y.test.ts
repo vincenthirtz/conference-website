@@ -97,6 +97,8 @@ describe('HomeHeroV2 — soir de finales', () => {
 describe('HomeHeroV2 — championnes', () => {
   const champion: HomeChampion = {
     year: 2026,
+    tournamentId: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b',
+    tournamentSlug: 'ow-womens-cup-2026',
     teamName: 'Chocomates',
     teamSlug: 'chocomates',
     logoUrl: null,

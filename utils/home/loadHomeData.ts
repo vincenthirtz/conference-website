@@ -165,6 +165,9 @@ function tournamentDay(value: string | null | undefined): string | null {
   return getWallClockParts(parsed, SITE_TIMEZONE).date;
 }
 
+/** Combien de jours un tournoi clos reste à l'affiche après sa date de fin. */
+export const COMPLETED_FEATURED_DAYS = 42;
+
 type FeaturableTournament = {
   status?: string | null;
   start_date?: string | null;
@@ -185,6 +188,13 @@ type FeaturableTournament = {
  * lire. Le statut `running` n'est posé qu'à la main par le staff ; la home ne
  * peut pas dépendre de ce geste pour annoncer un tournoi qui se joue.
  *
+ * UNE FOIS FINI, IL RESTE QUELQUES SEMAINES. Clos (`completed`), le tournoi
+ * cédait aussitôt la place au prochain publié — le 23/10/2026, l'Event
+ * Halloween d'une soirée aurait pris le classement et le hero de la Cup le soir
+ * même du sacre. Il reste donc à l'affiche `COMPLETED_FEATURED_DAYS` après sa
+ * date de fin, devant ce qui est à venir (un événement a son propre encart).
+ * Sans `end_date`, pas de sursis : on ne sait pas depuis quand il est fini.
+ *
  * PURE, `now` INJECTÉ : la home est rendue en ISR, et cette décision doit être
  * testable sans attendre la bonne date.
  */
@@ -196,6 +206,22 @@ export function pickFeaturedTournament<T extends FeaturableTournament>(
   if (running) return running;
 
   const today = getWallClockParts(now, SITE_TIMEZONE).date;
+  const graceStart = getWallClockParts(
+    new Date(now.getTime() - COMPLETED_FEATURED_DAYS * 24 * 60 * 60 * 1000),
+    SITE_TIMEZONE
+  ).date;
+  // Le plus récemment fini, si plusieurs le sont.
+  let justCompleted: T | null = null;
+  let justCompletedEnd = '';
+  for (const t of rows) {
+    if (t.status !== 'completed') continue;
+    const end = tournamentDay(t.end_date);
+    if (!end || end < graceStart || end <= justCompletedEnd) continue;
+    justCompleted = t;
+    justCompletedEnd = end;
+  }
+  if (justCompleted) return justCompleted;
+
   const upcoming = rows.find((t) => {
     if (t.status !== 'published') return false;
     const start = tournamentDay(t.start_date);
@@ -220,7 +246,7 @@ export async function loadUpcomingTournament(
       'id, name, slug, short_name, status, format, start_date, end_date, max_teams'
     )
     .eq('tenant_id', tenantId)
-    .in('status', ['running', 'published'])
+    .in('status', ['running', 'published', 'completed'])
     .order('start_date', { ascending: true, nullsFirst: false });
   if (error || !data?.length) return null;
 

@@ -64,6 +64,14 @@ export default ns('homeV2', {
   heroChampionEyebrow: 'Championnes {year}',
   heroChampionFinal:
     'Victoire {score} face à {opponent} en grande finale. Bravo !',
+  // Le podium figé (final_rankings), sous la championne. Le rang est lu avant
+  // chaque nom ; le chiffre des marches est décoratif.
+  podiumAria: 'Podium {year}',
+  podiumRank1: '1re',
+  podiumRank2: '2e',
+  podiumRank3: '3e',
+  podiumPlaceSr: '{rank} place :',
+  podiumFull: 'Voir le classement final',
   // Imminence : ce qui prime quand un début est en vue. `_zero` et `_one` ont
   // leur propre formulation — « dans 0 jour » et « dans 1 jours » ne se disent
   // pas.

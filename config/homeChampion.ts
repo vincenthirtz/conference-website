@@ -10,10 +10,18 @@
 //
 // Le résultat recopié ici est celui de la grande finale en base (match
 // `finished`, `winner_team_id`) : le vérifier avant de le publier.
+//
+// LE PODIUM, lui, n'est pas recopié : il est lu dans `final_rankings` du
+// tournoi `tournamentId`, que la finalisation admin fige. Tant qu'elle n'a pas
+// eu lieu, l'accueil n'affiche que la championne.
 
 export type HomeChampion = {
   /** Année de l'édition remportée. */
   year: number;
+  /** UUID du tournoi remporté : source du podium (final_rankings). */
+  tournamentId: string;
+  /** Slug du tournoi : sert au lien vers son podium complet. */
+  tournamentSlug: string;
   teamName: string;
   /** Slug de l'équipe : sert au lien vers sa fiche (`/team/<slug>`). */
   teamSlug: string;
@@ -29,6 +37,8 @@ export type HomeChampion = {
 
 export const homeChampion: HomeChampion | null = {
   year: 2026,
+  tournamentId: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b',
+  tournamentSlug: 'ow-womens-cup-2026',
   teamName: 'Chocomates',
   teamSlug: 'chocomates',
   logoUrl:

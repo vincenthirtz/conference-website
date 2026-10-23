@@ -55,12 +55,59 @@ describe('pickFeaturedTournament', () => {
     );
   });
 
-  it('ignore les brouillons et les éditions terminées', () => {
+  it('ignore les brouillons, et les éditions closes sans date de fin', () => {
     const rows = [
       { id: 'draft', status: 'draft', start_date: '2026-09-18' },
       { id: 'done', status: 'completed', start_date: '2026-09-18' },
     ];
     expect(pickFeaturedTournament(rows, at('2026-09-18'))).toBeNull();
+  });
+
+  describe('une fois clos', () => {
+    // Le soir du sacre : la Cup est close, l'Event Halloween (une soirée,
+    // sans date de fin) est publié pour le 30.
+    const cupClose = { ...owwc26, status: 'completed' };
+    const halloween = {
+      id: 'halloween',
+      status: 'published',
+      start_date: '2026-10-30',
+    };
+
+    it('reste à l’affiche devant l’événement à venir', () => {
+      expect(
+        pickFeaturedTournament([cupClose, halloween], at('2026-10-23'))
+      ).toBe(cupClose);
+    });
+
+    it('le temps du sursis, puis cède la place', () => {
+      // 42 jours après le 23/10 : le 4 décembre.
+      expect(pickFeaturedTournament([cupClose], at('2026-12-04'))).toBe(
+        cupClose
+      );
+      expect(pickFeaturedTournament([cupClose], at('2026-12-05'))).toBeNull();
+    });
+
+    it('ce qui se joue passe quand même devant', () => {
+      const halloweenLive = { ...halloween, status: 'running' };
+      expect(
+        pickFeaturedTournament([cupClose, halloweenLive], at('2026-10-30'))
+      ).toBe(halloweenLive);
+    });
+
+    it('le plus récemment fini, s’il y en a plusieurs', () => {
+      const avant = {
+        id: 'avant',
+        status: 'completed',
+        start_date: '2026-09-01',
+        end_date: '2026-10-10',
+      };
+      expect(pickFeaturedTournament([avant, cupClose], at('2026-10-24'))).toBe(
+        cupClose
+      );
+      expect(pickFeaturedTournament([cupClose, avant], at('2026-10-24'))).toBe(
+        cupClose
+      );
+    });
   });
 
   it('sans date de début, rien à annoncer', () => {

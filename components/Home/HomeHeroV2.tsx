@@ -21,8 +21,10 @@ import { useT, format } from '@/lib/i18n/useT';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 import RegisterTeamCta from '@/components/RegisterTeamCta';
 import TeamAvatar from '@/components/Team/TeamAvatar';
+import HomePodium from '@/components/Home/HomePodium';
 import { socialUrl } from '@/config/socials';
 import type { HomeChampion } from '@/config/homeChampion';
+import type { HomePodiumEntry } from '@/utils/home/loadHomePodium';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import { formatSiteDate } from '@/utils/timezone';
 
@@ -60,6 +62,13 @@ type HomeHeroV2Props = {
    * (saison en cours, finales ce soir) : la finale jouée, elle seule compte.
    */
   champion?: HomeChampion | null;
+  /** Le podium figé de son tournoi, rendu sous la championne. */
+  podium?: HomePodiumEntry[];
+  /**
+   * Le tournoi mis en avant est clos : on reste sur « suivre » (classement,
+   * résultats), sans ligne de saison en cours ni « complet ».
+   */
+  tournamentCompleted?: boolean;
 };
 
 type Parts = { days: number; hours: number; minutes: number; seconds: number };
@@ -92,10 +101,14 @@ export default function HomeHeroV2({
   tournamentPath = null,
   finalsKickoff = null,
   champion = null,
+  podium = [],
+  tournamentCompleted = false,
 }: HomeHeroV2Props): JSX.Element {
   const t = useT(nsHomeV2);
   const { lang } = useLang();
   const currentYear = new Date().getFullYear();
+  // En cours ou clos : on vient suivre (ou revoir), plus s'inscrire.
+  const followMode = tournamentRunning || tournamentCompleted;
 
   // « finale le 23 octobre » : jour + mois suffisent, l'année est dans le titre.
   const finalDate = tournamentEndDate
@@ -162,45 +175,52 @@ export default function HomeHeroV2({
         </p>
 
         {champion ? (
-          <div className="mt-7 flex w-full max-w-xl flex-col items-center gap-3 rounded-2xl border border-[var(--color-yellow)]/45 bg-[var(--color-yellow)]/10 px-5 py-4 shadow-[0_0_28px_-10px_var(--color-yellow)] backdrop-blur sm:flex-row sm:gap-5 sm:px-6 sm:text-left">
-            <TeamAvatar
-              name={champion.teamName}
-              logoUrl={champion.logoUrl}
-              size="lg"
-            />
-            <div className="min-w-0">
-              <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--color-yellow)]">
-                <svg
-                  className="h-4 w-4 shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-                  <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-                </svg>
-                {format(t.heroChampionEyebrow, { year: champion.year })}
-              </p>
-              <p className="mt-1 text-2xl font-extrabold uppercase tracking-tight text-white sm:text-3xl">
-                <Link
-                  href={`/team/${champion.teamSlug}`}
-                  className="underline-offset-4 transition-colors hover:text-[var(--color-yellow)] hover:underline"
-                >
-                  {champion.teamName}
-                </Link>
-              </p>
-              <p className="mt-1 text-sm text-gray-300">
-                {format(t.heroChampionFinal, {
-                  score: champion.finalScore,
-                  opponent: champion.runnerUp,
-                })}
-              </p>
+          <>
+            <div className="mt-7 flex w-full max-w-xl flex-col items-center gap-3 rounded-2xl border border-[var(--color-yellow)]/45 bg-[var(--color-yellow)]/10 px-5 py-4 shadow-[0_0_28px_-10px_var(--color-yellow)] backdrop-blur sm:flex-row sm:gap-5 sm:px-6 sm:text-left">
+              <TeamAvatar
+                name={champion.teamName}
+                logoUrl={champion.logoUrl}
+                size="lg"
+              />
+              <div className="min-w-0">
+                <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--color-yellow)]">
+                  <svg
+                    className="h-4 w-4 shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                  </svg>
+                  {format(t.heroChampionEyebrow, { year: champion.year })}
+                </p>
+                <p className="mt-1 text-2xl font-extrabold uppercase tracking-tight text-white sm:text-3xl">
+                  <Link
+                    href={`/team/${champion.teamSlug}`}
+                    className="underline-offset-4 transition-colors hover:text-[var(--color-yellow)] hover:underline"
+                  >
+                    {champion.teamName}
+                  </Link>
+                </p>
+                <p className="mt-1 text-sm text-gray-300">
+                  {format(t.heroChampionFinal, {
+                    score: champion.finalScore,
+                    opponent: champion.runnerUp,
+                  })}
+                </p>
+              </div>
             </div>
-          </div>
+            <HomePodium
+              entries={podium}
+              year={champion.year}
+              fullHref={`/tournament/${champion.tournamentSlug}/podium`}
+            />
+          </>
         ) : finalsTime ? (
           <p className="mt-4 max-w-[52ch] text-base font-semibold text-[var(--color-yellow)] sm:text-lg">
             {format(t.heroFinalsTonight, { time: finalsTime })}
@@ -217,7 +237,8 @@ export default function HomeHeroV2({
                 })}
           </p>
         ) : (
-          tournamentFull && (
+          tournamentFull &&
+          !tournamentCompleted && (
             <p className="mt-4 max-w-[52ch] text-sm text-[var(--color-yellow)]/90">
               {format(t.heroTournamentFullHint, {
                 count: String(tournamentMaxTeams ?? ''),
@@ -228,9 +249,10 @@ export default function HomeHeroV2({
         )}
 
         <div className="mt-8 flex w-full max-w-md flex-col items-center justify-center gap-3 sm:max-w-none sm:flex-row sm:gap-4">
-          {tournamentRunning && standingsHref && matchesHref ? (
-            // Compétition lancée : la porte d'entrée n'est plus l'inscription,
-            // c'est le suivi. En direct, la diffusion passe devant tout.
+          {followMode && standingsHref && matchesHref ? (
+            // Compétition lancée (ou close) : la porte d'entrée n'est plus
+            // l'inscription, c'est le suivi. En direct, la diffusion passe
+            // devant tout.
             <>
               <Link
                 href={isLive ? TWITCH_URL : standingsHref}
@@ -316,7 +338,7 @@ export default function HomeHeroV2({
               c'est le plus gros gisement, il n'avait aucun CTA. Retirée
               pendant la compétition : quatre boutons ne se hiérarchisent plus,
               et la carte du prochain rendez-vous porte le même lien. */}
-          {!tournamentRunning && (
+          {!followMode && (
             <Link
               href="/rejoindre"
               className="hero-secondary-btn hero-secondary-btn--violet group flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-medium text-white backdrop-blur transition-all duration-300 sm:w-auto sm:px-6 sm:text-base"

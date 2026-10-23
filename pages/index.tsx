@@ -58,6 +58,10 @@ import {
   isHomeEventVisible,
 } from '@/config/homeEventSpotlight';
 import { homeChampion, isHomeChampionVisible } from '@/config/homeChampion';
+import {
+  loadHomePodium,
+  type HomePodiumEntry,
+} from '@/utils/home/loadHomePodium';
 import type { SocialFeedItem } from '@/utils/social/socialFeed';
 import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 
@@ -72,6 +76,8 @@ type HomeProps = {
   countdownTarget: string | null;
   /** Le bloc TCG : trois cartes, le total à collectionner, le barème. */
   tcg: HomeTcgShowcaseData;
+  /** Le podium figé du tournoi de la championne ; vide avant finalisation. */
+  podium: HomePodiumEntry[];
   // L'horloge du rendu (ISR 15 min à 1 h). Fabriquée ici plutôt que dans la carte :
   // un `new Date()` côté composant donne le build au serveur et la visite au
   // client — deux valeurs qui divergent dès qu'un minuit passe entre les deux.
@@ -85,10 +91,14 @@ type HomeProps = {
 // par tenant en multi-tenant.
 export const getStaticProps: GetStaticProps<HomeProps> = async () => {
   const now = new Date();
-  // En parallèle : le bloc TCG ne lève jamais et n'attend rien du reste.
-  const [data, tcg] = await Promise.all([
+  // En parallèle : le bloc TCG et le podium ne lèvent jamais et n'attendent
+  // rien du reste. Le podium n'est lu que pendant l'annonce de la championne.
+  const [data, tcg, podium] = await Promise.all([
     loadHomeData(DEFAULT_TENANT_ID),
     readHomeTcgShowcase(DEFAULT_TENANT_ID, now),
+    isHomeChampionVisible(homeChampion, now.toISOString())
+      ? loadHomePodium(DEFAULT_TENANT_ID, homeChampion.tournamentId)
+      : Promise.resolve([]),
   ]);
   return {
     props: {
@@ -101,6 +111,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       standings: data.standings,
       countdownTarget: data.countdownTarget,
       tcg,
+      podium,
       nowIso: now.toISOString(),
       loadError: data.loadError,
     },
@@ -143,6 +154,7 @@ function Home({
   standings,
   countdownTarget,
   tcg,
+  podium,
   nowIso,
   loadError,
 }: HomeProps) {
@@ -169,6 +181,10 @@ function Home({
         champion={
           isHomeChampionVisible(homeChampion, nowIso) ? homeChampion : null
         }
+        podium={podium}
+        // Clos, le tournoi reste quelques semaines à l'affiche
+        // (pickFeaturedTournament) : le hero reste sur « suivre ».
+        tournamentCompleted={upcomingTournament?.status === 'completed'}
         isLive={live.live}
         // « Complet » se DÉDUIT des données déjà chargées (places vs inscrites)
         // plutôt que d'un drapeau à penser à lever : le jour où une place se
