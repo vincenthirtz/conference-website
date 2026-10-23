@@ -135,6 +135,13 @@ describe('FinalsSource — les bandes', () => {
     expect(html).not.toContain('OW WOMEN&#x27;s CUP 2026');
   });
 
+  it('encadre chaque bande aux couleurs du fond de l’habillage', () => {
+    const html = render(payload([SMALL, match()]));
+    expect(html.match(/data-finals-frame=""/g) ?? []).toHaveLength(2);
+    // Vert puis violet, les faisceaux du fond « STARTING WOMEN'S CUP ».
+    expect(html).toContain('linear-gradient(90deg, #5c8c68, #823aa8)');
+  });
+
   it('à venir : l’heure de Paris, le format, ni score ni « VS »', () => {
     const html = render(payload([SMALL, match()]));
     expect(html).toContain('Petite finale');

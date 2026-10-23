@@ -12,11 +12,15 @@
 // au bord de la source et déborderait sur l'habillage.
 //
 // HIÉRARCHIE. Ordre du programme (la petite finale se joue d'abord) ; la
-// grande finale a la bande la plus haute, filet or ; la petite, filet bronze.
+// grande finale a la bande la plus haute, libellé or ; la petite, bronze.
+//
+// LE CADRE REPREND L'HABILLAGE : un filet du vert au violet, les couleurs des
+// faisceaux du fond de la régie (« STARTING WOMEN'S CUP FOND 2 », mesurées sur
+// l'image le 2026-10-23), dans tous les états — la pastille dit le direct.
 //
 // TROIS ÉTATS par bande, sans jamais masquer le score :
 //   - à venir : l'heure du coup d'envoi au centre ;
-//   - en direct : le score, une pastille et un filet rouges ;
+//   - en direct : le score et une pastille rouge ;
 //   - terminé : le score, le perdant en retrait, et la place de chacune
 //     (championnes / finalistes, 3ᵉ / 4ᵉ place). Un forfait passe par là aussi.
 // Pas de « VS » : l'habillage de la régie s'en charge.
@@ -49,7 +53,25 @@ export const FINAL_TONES: Record<FinalKind, string> = {
   small: '#d4935b',
 };
 
-const LIVE_RED = '#ef4444';
+/**
+ * Les faisceaux du fond de l'habillage : vert à gauche, violet à droite
+ * (moyenne des 60 pixels les plus marqués de chacun, sur l'image).
+ */
+export const FRAME_COLORS = { green: '#5c8c68', purple: '#823aa8' } as const;
+
+/**
+ * Filet en dégradé SUR une bande translucide : un `border-image` ignore les
+ * coins arrondis, et un dégradé sous le fond transparaîtrait dedans. Un calque
+ * dont le masque ne garde que le contour.
+ */
+const FRAME_STYLE: CSSProperties = {
+  padding: 2,
+  background: `linear-gradient(90deg, ${FRAME_COLORS.green}, ${FRAME_COLORS.purple})`,
+  WebkitMask:
+    'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+  WebkitMaskComposite: 'xor',
+  mask: 'linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0)',
+};
 
 /** Tailles par bande : la grande finale domine. `grow` = part de hauteur. */
 const SIZES: Record<
@@ -188,20 +210,26 @@ function FinalBand({ final, t }: { final: FinalMatch; t: Dict }) {
     done && Boolean(match.team1?.isWinner || match.team2?.isWinner);
   const time = hourLabel(match.scheduledAt ?? match.startedAt);
   const format = (match.format ?? '').trim().toUpperCase();
-  const edge = live ? LIVE_RED : tone;
 
   return (
     <section
       data-final={kind}
-      className="grid min-h-0 grid-cols-[200px_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-6 overflow-hidden rounded-2xl border-2 px-6"
+      className="relative grid min-h-0 grid-cols-[200px_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-6 overflow-hidden rounded-2xl px-6"
       style={{
         flex: `${size.grow} 1 0%`,
-        borderColor: edge,
         // L'accent reste DANS la bande : un halo serait coupé au bord de la
-        // source et déborderait sur l'habillage.
-        background: `linear-gradient(90deg, ${edge}33 0%, rgba(0,0,0,0.82) 26%, rgba(0,0,0,0.82) 100%)`,
+        // source et déborderait sur l'habillage. Les lueurs se POSENT sur un
+        // fond noir uniforme : en dégradé vers le noir, les côtés restaient
+        // transparents à 80 % et le décor passait sous le nom de la manche.
+        background: `linear-gradient(90deg, ${FRAME_COLORS.green}33 0%, transparent 26%, transparent 74%, ${FRAME_COLORS.purple}33 100%), rgba(0,0,0,0.82)`,
       }}
     >
+      <span
+        aria-hidden="true"
+        data-finals-frame=""
+        className="pointer-events-none absolute inset-0 rounded-2xl"
+        style={FRAME_STYLE}
+      />
       <div className="flex min-w-0 flex-col items-start gap-2">
         <span
           className="text-lg font-black uppercase leading-tight tracking-[0.16em]"
