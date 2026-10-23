@@ -31,6 +31,8 @@ export default {
   dayLiveStatus: 'The OBS source shows today.',
   dayTestHint:
     '“Test” opens a preview; “Send to OBS” makes the already-pasted source show this day, for 12 h at most. Its URL does not change.',
+  finalsTestHint:
+    '“Test” opens a preview of that day. To make the source already in OBS show it, send it from “Today’s matches”: both sources follow the same day.',
   copiedBtn: 'Copied',
   copiedToast: 'Snippet copied',
   openWidget: 'Open widget',
@@ -90,6 +92,9 @@ export default {
   source_day_name: 'Today’s matches',
   source_day_desc:
     'The day’s schedule (Paris time): kick-off times, match-ups, live scores, current match highlighted. Add &date=YYYY-MM-DD for another day, &limit=N for the number of rows.',
+  source_finals_name: 'Finals',
+  source_finals_desc:
+    'The day’s third-place match and grand final, one card each: kick-off time, then live score, then champions and placings. Same data as “Today’s matches” (it also follows the day sent to OBS); only matches named “Petite finale” / “Grande finale” are shown. Add &header=0 to remove the title, &date=YYYY-MM-DD for another day.',
   source_standings_name: 'Standings',
   source_standings_desc:
     'The current standings, same as the Standings page (forfeits and disqualified teams included), with the finals zone highlighted. Add &limit=N for the number of rows, &qualify=N for the qualifying zone (0 hides it), &stage=<key> for another phase.',

@@ -83,6 +83,22 @@ export default ns('overlay', {
     'Ajoutez ?tournament=<identifiant ou slug> à l’URL pour afficher les matchs du jour.',
   dayTeamTbd: 'À déterminer',
 
+  // Source « finales » (`/overlay/finales`).
+  finalsDocTitle: 'Source de stream — finales',
+  finalsMissingTournament:
+    'Ajoutez ?tournament=<identifiant ou slug> à l’URL pour afficher les finales.',
+  finalsTitle: 'Les finales',
+  finalsTitleOne: 'La finale',
+  finalsGrand: 'Grande finale',
+  finalsSmall: 'Petite finale',
+  finalsKickoff: 'Coup d’envoi',
+  finalsChampions: 'Championnes',
+  finalsRunnersUp: 'Finalistes',
+  finalsThird: '3ᵉ place',
+  finalsFourth: '4ᵉ place',
+  finalsNone:
+    'Aucune finale le {date} : la source n’affiche que les matchs nommés « Petite finale » ou « Grande finale ».',
+
   // Source « classement » (`/overlay/standings`).
   standingsDocTitle: 'Source de stream — classement',
   standingsMissingTournament:

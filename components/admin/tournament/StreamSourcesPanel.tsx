@@ -87,6 +87,9 @@ const SOURCES = [
   // Pas une source « par match » : elle montre toute la journée, d'où son URL
   // à part (cf. sourceUrl).
   { key: 'day', size: '1920×1080' },
+  // Les finales de la journée, une carte chacune : mêmes données que « Matchs
+  // du jour », habillées pour la soirée des finales.
+  { key: 'finals', size: '1920×1080' },
   // Le classement EN COURS du tournoi (celui de la page « Classement ») : pas
   // par match non plus, une URL pour toute la saison.
   { key: 'standings', size: '1920×1080' },
@@ -149,6 +152,8 @@ function parisToday(): string {
 function sourceUrl(baseUrl: string, tournamentRef: string, key: string) {
   const tournament = encodeURIComponent(tournamentRef);
   if (key === 'day') return `${baseUrl}/overlay/day?tournament=${tournament}`;
+  if (key === 'finals')
+    return `${baseUrl}/overlay/finales?tournament=${tournament}`;
   if (key === 'standings')
     return `${baseUrl}/overlay/standings?tournament=${tournament}`;
   if (key === 'scrims') return `${baseUrl}/overlay/scrims`;
@@ -334,19 +339,21 @@ export default function StreamSourcesPanel({
                   {t.copyFailed}
                 </p>
               )}
-              {s.key === 'day' && (
+              {(s.key === 'day' || s.key === 'finals') && (
                 // TEST SUR UN AUTRE JOUR. L'URL à coller reste celle du jour
                 // (ci-dessus) ; ce bouton n'ouvre qu'un aperçu daté, sur fond
-                // sombre (`preview=1`).
+                // sombre (`preview=1`). « Finales » lit la même journée : même
+                // test, mais l'envoi à OBS reste sur « Matchs du jour », qui
+                // pilote les deux.
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <label
-                    htmlFor="day-overlay-test-date"
+                    htmlFor={`${s.key}-overlay-test-date`}
                     className={`text-xs ${rubanMuted}`}
                   >
                     {t.dayTestLabel}
                   </label>
                   <input
-                    id="day-overlay-test-date"
+                    id={`${s.key}-overlay-test-date`}
                     type="date"
                     value={testDay}
                     onChange={(e) => setTestDay(e.target.value)}
@@ -363,7 +370,7 @@ export default function StreamSourcesPanel({
                   >
                     {t.dayTestBtn}
                   </AdminButtonLink>
-                  {overlayDayUrl && (
+                  {overlayDayUrl && s.key === 'day' && (
                     <AdminButton
                       variant="primary"
                       size="xs"
@@ -374,9 +381,9 @@ export default function StreamSourcesPanel({
                     </AdminButton>
                   )}
                   <span className={`text-[11px] ${rubanFaint}`}>
-                    {t.dayTestHint}
+                    {s.key === 'day' ? t.dayTestHint : t.finalsTestHint}
                   </span>
-                  {overlayDayUrl && (
+                  {overlayDayUrl && s.key === 'day' && (
                     <div className="flex w-full flex-wrap items-center gap-2 text-[11px]">
                       {forced?.active && forced.date ? (
                         <>

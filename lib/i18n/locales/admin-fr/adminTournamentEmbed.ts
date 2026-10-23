@@ -30,6 +30,8 @@ export default adminNs('adminTournamentEmbed', {
   dayLiveStatus: 'La source OBS affiche le jour même.',
   dayTestHint:
     '« Tester » ouvre un aperçu ; « Envoyer dans OBS » fait afficher ce jour à la source déjà collée, pendant 12 h au plus. Son URL ne change pas.',
+  finalsTestHint:
+    '« Tester » ouvre un aperçu de ce jour. Pour le faire afficher par la source déjà collée, envoyez-le depuis « Matchs du jour » : les deux sources suivent le même jour.',
   copiedBtn: 'Copié',
   copiedToast: 'Snippet copié',
   openWidget: 'Ouvrir le widget',
@@ -94,6 +96,9 @@ export default adminNs('adminTournamentEmbed', {
   source_day_name: 'Matchs du jour',
   source_day_desc:
     'Le programme de la journée (heure de Paris) : horaires, affiches, scores en direct, match du moment mis en avant. Ajoutez &date=AAAA-MM-JJ pour un autre jour, &limit=N pour le nombre de lignes.',
+  source_finals_name: 'Finales',
+  source_finals_desc:
+    'La petite et la grande finale du jour, une carte chacune : heure, puis score en direct, puis championnes et places. Mêmes données que « Matchs du jour » (elle suit aussi le jour envoyé à OBS) ; seuls les matchs nommés « Petite finale » / « Grande finale » y figurent. Ajoutez &header=0 pour retirer le titre, &date=AAAA-MM-JJ pour un autre jour.',
   source_standings_name: 'Classement',
   source_standings_desc:
     'Le classement en cours, identique à la page Classement (forfaits et disqualifiées compris), avec la zone des finales en couleur. Ajoutez &limit=N pour le nombre de lignes, &qualify=N pour la zone qualificative (0 la masque), &stage=<clé> pour une autre phase.',
