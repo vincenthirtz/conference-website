@@ -12,6 +12,12 @@
 //     celui du hero — et affichait « Complet » une seconde fois, le tournoi
 //     étant plein.
 //
+// UN JOUR DE MATCH, L'ORDRE CHANGE. Les affiches du jour remontent juste sous
+// le hero, devant l'encart d'événement (Halloween…), qui passe sous le
+// classement ; le hero vise le prochain coup d'envoi. Rien à défaire : la
+// journée jouée, `loadNextMatchdays` ne l'annonce plus et l'ordre habituel
+// revient de lui-même.
+//
 // Le chargement des données passe par le loader partagé `loadHomeData`
 // Les présentateurs V2 vivent
 // sous `components/Home/*`.
@@ -22,8 +28,13 @@ import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import { type HomePartner } from '@/components/Home/HomeSponsors';
 import { type HomeTeam } from '@/utils/home/loadHomeData';
-import { type HomeMatchday } from '@/utils/home/loadNextMatchday';
-import { type HomeClip, type HomeStandingRow } from '@/utils/home/loadHomeData';
+import {
+  isFinalsDay,
+  matchdayToday,
+  nextKickoff,
+  type HomeMatchday,
+} from '@/utils/home/loadNextMatchday';
+import { type HomeStandingRow } from '@/utils/home/loadHomeData';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { loadHomeData } from '@/utils/home/loadHomeData';
 import { homeRevalidateSeconds } from '@/utils/isr/stateRevalidate';
@@ -57,7 +68,6 @@ type HomeProps = {
   teams: HomeTeam[];
   matchdays: HomeMatchday[];
   standings: HomeStandingRow[];
-  clips: HomeClip[];
   countdownTarget: string | null;
   /** Le bloc TCG : trois cartes, le total à collectionner, le barème. */
   tcg: HomeTcgShowcaseData;
@@ -88,7 +98,6 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       teams: data.teams,
       matchdays: data.matchdays,
       standings: data.standings,
-      clips: data.clips,
       countdownTarget: data.countdownTarget,
       tcg,
       nowIso: now.toISOString(),
@@ -96,7 +105,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
     },
     // 15 min un jour de matchs (dès 2 h avant le premier coup d'envoi), 1 h
     // sinon. Scores et actualités régénèrent l'accueil à la demande ; le reste
-    // (mur des réseaux, clips, vitrine TCG, compteur d'inscrites) supporte
+    // (mur des réseaux, vitrine TCG, compteur d'inscrites) supporte
     // l'heure. Cf. utils/isr/stateRevalidate.
     revalidate: homeRevalidateSeconds(
       data.matchdays[0]?.matches[0]?.scheduledAt ?? null,
@@ -131,7 +140,6 @@ function Home({
   teams,
   matchdays,
   standings,
-  clips,
   countdownTarget,
   tcg,
   nowIso,
@@ -140,10 +148,21 @@ function Home({
   const t = useT(nsHomeV2);
   const live = useTwitchLive();
 
+  // Avec l'horloge du rendu, comme le reste : SSR et client disent la même.
+  const now = new Date(nowIso);
+  const today = matchdayToday(matchdays, now);
+  const finalsTonight = today !== null && isFinalsDay(today);
+  const eventSpotlight = isHomeEventVisible(homeEventSpotlight, nowIso) ? (
+    <HomeEventSpotlight event={homeEventSpotlight} />
+  ) : null;
+
   return (
     <div>
       <HomeHeroV2
-        countdownTarget={countdownTarget}
+        // Un jour de match, le décompte vise le prochain coup d'envoi : le
+        // jalon réglé (ouverture de la saison) est passé depuis longtemps.
+        countdownTarget={(today && nextKickoff(today, now)) ?? countdownTarget}
+        finalsKickoff={finalsTonight ? today.matches[0].scheduledAt : null}
         isLive={live.live}
         // « Complet » se DÉDUIT des données déjà chargées (places vs inscrites)
         // plutôt que d'un drapeau à penser à lever : le jour où une place se
@@ -178,21 +197,24 @@ function Home({
       )}
 
       {/* Événement ponctuel daté (Halloween…) : sous le hero pour être vu
-          avant la clôture des inscriptions ; se retire seul passé sa date. */}
-      {isHomeEventVisible(homeEventSpotlight, nowIso) && (
-        <HomeEventSpotlight event={homeEventSpotlight} />
-      )}
+          avant la clôture des inscriptions ; se retire seul passé sa date.
+          Un jour de match, il cède la place aux affiches (plus bas). */}
+      {!today && eventSpotlight}
 
       <HomeSpotlight
         tournament={upcomingTournament}
         teams={teams}
         matchdays={matchdays}
-        clips={clips}
+        finalsTonight={finalsTonight}
       />
 
       {/* OÙ EN EST LA SAISON. Après « ce qui se joue », avant les actus :
           entre deux journées, c'est la question qu'on vient poser. */}
       {upcomingTournament && <HomeStandings rows={standings} />}
+
+      {/* Un jour de match, l'événement passe au second plan : après les
+          affiches et le classement, avant le TCG. */}
+      {today && eventSpotlight}
 
       {/* Le TCG : prolongement des matchs (chaque match rapporte des pièces),
           et seule porte vers le jeu de cartes pour qui ne s'est pas encore

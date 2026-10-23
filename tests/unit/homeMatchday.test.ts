@@ -19,6 +19,9 @@ import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 
 import {
+  isFinalsDay,
+  matchdayToday,
+  nextKickoff,
   selectNextMatchday,
   selectNextMatchdays,
   shapeMatchdayMatch,
@@ -523,5 +526,139 @@ describe('HomeMatchdayStrip — soir de finales', () => {
     // Grand format : rembourrage et blasons agrandis.
     expect(html).toContain('py-5');
     expect(html).toContain('h-12 w-12');
+  });
+});
+
+/* ── Un jour de match ──────────────────────────────────────────────────────
+ *
+ * Le 23/10/2026, soir des deux finales, l'accueil les montrait SOUS l'encart
+ * Halloween et sous les clips du moment, et le hero ne disait rien de la
+ * soirée. Ces règles décident de l'ordre de la page (pages/index) et du
+ * décompte du hero.
+ */
+
+describe('matchdayToday — la journée annoncée se joue-t-elle aujourd’hui ?', () => {
+  // 10 h à Paris le vendredi 18 septembre (CEST = UTC+2).
+  const FRIDAY_MORNING = new Date('2026-09-18T08:00:00.000Z');
+
+  it('rend la journée quand elle tombe aujourd’hui, à Paris', () => {
+    const day = matchday();
+    expect(matchdayToday([day], FRIDAY_MORNING)).toBe(day);
+  });
+
+  it('rend null la veille, et sans journée', () => {
+    expect(matchdayToday([matchday()], NOW_THURSDAY)).toBeNull();
+    expect(matchdayToday([], FRIDAY_MORNING)).toBeNull();
+  });
+
+  it('suit le jour de Paris, pas celui d’UTC', () => {
+    // 23 h 30 UTC le jeudi = 1 h 30 le vendredi à Paris.
+    const parisFriday = new Date('2026-09-17T23:30:00.000Z');
+    expect(matchdayToday([matchday()], parisFriday)).not.toBeNull();
+  });
+});
+
+describe('isFinalsDay', () => {
+  it('vrai quand toutes les affiches sont hors phase', () => {
+    expect(isFinalsDay(matchday())).toBe(true);
+  });
+
+  it('faux dès qu’une affiche appartient à une phase', () => {
+    const inStage = shapeMatchdayMatch(
+      match({ id: 'm-2', stage_id: 'stage-1' }),
+      new Map()
+    );
+    if (!inStage) throw new Error('fixture invalide');
+    const day = matchday();
+    expect(
+      isFinalsDay({ ...day, matches: [...day.matches, inStage], totalCount: 2 })
+    ).toBe(false);
+  });
+
+  it('faux pour une journée vide', () => {
+    expect(isFinalsDay(matchday({ matches: [], totalCount: 0 }))).toBe(false);
+  });
+});
+
+describe('nextKickoff — ce que vise le décompte du hero', () => {
+  function finalsDay(): HomeMatchday {
+    const small = shapeMatchdayMatch(
+      match({ id: 'small', scheduled_at: '2026-10-23T17:00:00.000Z' }),
+      new Map()
+    );
+    const grand = shapeMatchdayMatch(
+      match({ id: 'grand', scheduled_at: '2026-10-23T18:30:00.000Z' }),
+      new Map()
+    );
+    if (!small || !grand) throw new Error('fixture invalide');
+    return { date: '2026-10-23', matches: [small, grand], totalCount: 2 };
+  }
+
+  it('vise le premier coup d’envoi à venir', () => {
+    expect(nextKickoff(finalsDay(), new Date('2026-10-23T09:00:00.000Z'))).toBe(
+      '2026-10-23T17:00:00.000Z'
+    );
+  });
+
+  it('passe au match suivant une fois le premier lancé', () => {
+    const day = finalsDay();
+    day.matches[0] = { ...day.matches[0], status: 'ongoing' };
+    expect(nextKickoff(day, new Date('2026-10-23T17:20:00.000Z'))).toBe(
+      '2026-10-23T18:30:00.000Z'
+    );
+  });
+
+  it('ignore un match en retard sur son horaire', () => {
+    // Encore « pending » à 19 h 10 : viser 19 h, c'est viser le passé.
+    expect(nextKickoff(finalsDay(), new Date('2026-10-23T17:10:00.000Z'))).toBe(
+      '2026-10-23T18:30:00.000Z'
+    );
+  });
+
+  it('rend null quand tout a commencé', () => {
+    expect(
+      nextKickoff(finalsDay(), new Date('2026-10-23T19:00:00.000Z'))
+    ).toBeNull();
+  });
+});
+
+describe('HomeSpotlight — soir de finales', () => {
+  const tournament: UpcomingTournament = {
+    id: 'tour-1',
+    name: "OW WOMEN's CUP 2026",
+    slug: 'ow-womens-cup-2026',
+    shortName: null,
+    status: 'running',
+    startDate: '2026-09-18',
+    endDate: '2026-10-23',
+    format: 'BO3',
+    maxTeams: 8,
+    teamCount: 8,
+  };
+
+  function render(finalsTonight: boolean): string {
+    return renderToString(
+      createElement(HomeSpotlight, {
+        tournament,
+        teams: [],
+        matchdays: [matchday()],
+        finalsTonight,
+      })
+    );
+  }
+
+  it('nomme les finales et renvoie au direct', () => {
+    const html = render(true);
+    expect(html).toContain('Ce soir');
+    expect(html).toContain('Les finales');
+    expect(html).toContain('href="https://www.twitch.tv/');
+    expect(html).toContain('Suivre sur Twitch');
+  });
+
+  it('garde « À suivre » les autres jours, sans lien Twitch', () => {
+    const html = render(false);
+    expect(html).toContain('À suivre');
+    expect(html).not.toContain('Les finales');
+    expect(html).not.toContain('twitch.tv');
   });
 });

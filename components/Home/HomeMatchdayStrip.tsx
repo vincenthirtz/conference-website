@@ -52,12 +52,18 @@ function MatchSide({
   const nameClass = large
     ? 'text-base sm:text-lg font-bold'
     : 'text-[13px] sm:text-sm font-semibold';
+  // Grand format, sur mobile : le blason AU-DESSUS du nom, qui peut passer à
+  // la ligne. Côte à côte, à 390 px, « LVN EMBERS » devenait « LV… » — un
+  // soir de finales, sur l'affiche qu'on vient voir.
+  const layout = large
+    ? `flex-col gap-2 text-center sm:gap-3 ${
+        align === 'end'
+          ? 'sm:flex-row-reverse sm:text-right'
+          : 'sm:flex-row sm:text-left'
+      }`
+    : `gap-2 ${align === 'end' ? 'flex-row-reverse text-right' : 'text-left'}`;
   return (
-    <span
-      className={`flex min-w-0 items-center ${large ? 'gap-3' : 'gap-2'} ${
-        align === 'end' ? 'flex-row-reverse text-right' : 'text-left'
-      }`}
-    >
+    <span className={`flex min-w-0 items-center ${layout}`}>
       {team ? (
         <TeamAvatar
           name={team.name}
@@ -76,7 +82,9 @@ function MatchSide({
         </span>
       )}
       <span
-        className={`min-w-0 truncate leading-tight transition-colors ${nameClass} ${
+        className={`min-w-0 leading-tight transition-colors ${
+          large ? 'max-w-full text-balance break-words sm:truncate' : 'truncate'
+        } ${nameClass} ${
           !team
             ? 'italic text-gray-400'
             : dimmed

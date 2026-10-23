@@ -21,6 +21,7 @@ import nsHomeV2 from '@/lib/i18n/locales/fr/homeV2';
 import RegisterTeamCta from '@/components/RegisterTeamCta';
 import { socialUrl } from '@/config/socials';
 import { useLang } from '@/lib/i18n/LanguageProvider';
+import { formatSiteDate } from '@/utils/timezone';
 
 type HomeHeroV2Props = {
   /** ISO du prochain jalon (coup d'envoi / ouverture des matchs). */
@@ -46,6 +47,11 @@ type HomeHeroV2Props = {
   tournamentEndDate?: string | null;
   /** Base des liens du tournoi, ex. `/tournament/ow-womens-cup-2026`. */
   tournamentPath?: string | null;
+  /**
+   * Premier coup d'envoi (ISO) quand les finales se jouent aujourd'hui : la
+   * ligne d'état les annonce à la place de « saison régulière en cours ».
+   */
+  finalsKickoff?: string | null;
 };
 
 type Parts = { days: number; hours: number; minutes: number; seconds: number };
@@ -76,6 +82,7 @@ export default function HomeHeroV2({
   tournamentTeamCount = null,
   tournamentEndDate = null,
   tournamentPath = null,
+  finalsKickoff = null,
 }: HomeHeroV2Props): JSX.Element {
   const t = useT(nsHomeV2);
   const { lang } = useLang();
@@ -88,6 +95,13 @@ export default function HomeHeroV2({
         { day: 'numeric', month: 'long', timeZone: 'Europe/Paris' }
       )
     : null;
+  // Heure de Paris, comme sur les affiches : SSR et client disent la même.
+  const finalsTime = finalsKickoff
+    ? formatSiteDate(finalsKickoff, lang, {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '';
   const standingsHref = tournamentPath ? `${tournamentPath}/standings` : null;
   const matchesHref = tournamentPath ? `${tournamentPath}/matches` : null;
 
@@ -138,7 +152,11 @@ export default function HomeHeroV2({
           <span className="font-medium text-white">{t.heroTaglineStrong}</span>
         </p>
 
-        {tournamentRunning ? (
+        {finalsTime ? (
+          <p className="mt-4 max-w-[52ch] text-base font-semibold text-[var(--color-yellow)] sm:text-lg">
+            {format(t.heroFinalsTonight, { time: finalsTime })}
+          </p>
+        ) : tournamentRunning ? (
           <p className="mt-4 max-w-[52ch] text-sm text-[var(--color-yellow)]/90">
             {finalDate
               ? format(t.heroRunningHintUntil, {

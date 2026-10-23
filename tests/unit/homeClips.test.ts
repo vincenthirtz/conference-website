@@ -1,4 +1,5 @@
-// Le bloc « clips du moment » de l'accueil.
+// Le bloc « clips du moment » — composant conservé, mais l'accueil ne le monte
+// plus depuis le 2026-10-23 (il repoussait les affiches des finales).
 //
 // CE QU'IL REMPLACE : un panneau Twitch qui, hors direct, n'affichait qu'une
 // promesse (« le lecteur s'ouvre ici quand la chaîne est en direct »). Un bloc
@@ -6,8 +7,7 @@
 //
 // CE QUE CES CAS PROTÈGENT :
 //   1. RIEN NE S'AFFICHE SANS CLIP. Un cadre vide serait pire que l'absence.
-//   2. Les clips passent AVANT les prochaines rencontres (l'ordre demandé).
-//   3. Une vignette ouvre le clip sur Twitch, dans un nouvel onglet.
+//   2. Une vignette ouvre le clip sur Twitch, dans un nouvel onglet.
 
 import { describe, it, expect } from 'vitest';
 import { createElement } from 'react';
@@ -105,23 +105,7 @@ describe('HomeClips', () => {
   });
 });
 
-describe('HomeSpotlight — l’ordre du bloc', () => {
-  it('place les clips AVANT les prochaines rencontres', () => {
-    const html = renderToString(
-      createElement(HomeSpotlight, {
-        tournament,
-        teams,
-        matchdays: [matchday],
-        clips: [clip()],
-      })
-    );
-    const clipIdx = html.indexOf('clip/AbcDef');
-    const matchIdx = html.indexOf('href="/match/m-1"');
-    expect(clipIdx).toBeGreaterThan(-1);
-    expect(matchIdx).toBeGreaterThan(-1);
-    expect(clipIdx).toBeLessThan(matchIdx);
-  });
-
+describe('HomeSpotlight — le bloc', () => {
   it('n’affiche plus la fiche du tournoi (dates, format, places)', () => {
     // Cinq semaines d'informations immobiles en haut de page : le hero les
     // porte déjà, et la section montre ce qui bouge.
@@ -130,7 +114,6 @@ describe('HomeSpotlight — l’ordre du bloc', () => {
         tournament,
         teams,
         matchdays: [matchday],
-        clips: [clip()],
       })
     );
     expect(html).not.toContain('8 / 8');
@@ -138,7 +121,7 @@ describe('HomeSpotlight — l’ordre du bloc', () => {
     expect(html).not.toContain('player.twitch.tv');
   });
 
-  it('garde la bande des équipes même sans clip ni affiche', () => {
+  it('garde la bande des équipes même sans affiche', () => {
     const html = renderToString(
       createElement(HomeSpotlight, { tournament, teams })
     );

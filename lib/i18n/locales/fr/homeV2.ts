@@ -54,6 +54,11 @@ export default ns('homeV2', {
   // montre la chaîne et les prochaines rencontres. Son titre suit.
   spotEyebrow: 'En ce moment',
   spotTitle: 'À suivre',
+  // Le jour des finales, la carte les nomme et renvoie au direct.
+  spotFinalsEyebrow: 'Ce soir',
+  spotFinalsTitle: 'Les finales',
+  spotFinalsWatch: 'Suivre sur Twitch',
+  heroFinalsTonight: 'Finales ce soir · coup d’envoi à {time}',
   // Imminence : ce qui prime quand un début est en vue. `_zero` et `_one` ont
   // leur propre formulation — « dans 0 jour » et « dans 1 jours » ne se disent
   // pas.

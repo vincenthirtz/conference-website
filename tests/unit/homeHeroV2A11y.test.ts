@@ -65,6 +65,31 @@ describe('HomeHeroV2 — pastille du compte à rebours', () => {
   });
 });
 
+describe('HomeHeroV2 — soir de finales', () => {
+  it('annonce les finales et l’heure du coup d’envoi, à Paris', () => {
+    const html = renderHero({
+      tournamentRunning: true,
+      tournamentTeamCount: 8,
+      tournamentEndDate: '2026-10-23',
+      tournamentPath: '/tournament/ow-womens-cup-2026',
+      // 19 h à Paris (CEST = UTC+2).
+      finalsKickoff: '2026-10-23T17:00:00.000Z',
+    });
+    expect(html).toContain('Finales ce soir');
+    expect(html).toContain('19:00');
+    expect(html).not.toContain('Saison régulière en cours');
+  });
+
+  it('garde la ligne de saison les autres jours', () => {
+    const html = renderHero({
+      tournamentRunning: true,
+      tournamentTeamCount: 8,
+    });
+    expect(html).toContain('Saison régulière en cours');
+    expect(html).not.toContain('Finales ce soir');
+  });
+});
+
 describe('RegisterTeamCta — isFull fourni par la page', () => {
   it('affiche « Complet » immédiatement quand la page le sait', () => {
     const html = renderToString(
