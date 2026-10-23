@@ -318,10 +318,18 @@ export default function LiveHub({
   hub,
   standings,
   tournamentPath,
+  finished = false,
 }: {
   hub: LiveHubData;
   standings: PublicStandingsTable[];
   tournamentPath: string;
+  /**
+   * Tournoi clos : le suivi devient un BILAN. Plus de « prochains matchs »
+   * (vide pour toujours) ni de barre d'avancement (pleine pour toujours), et
+   * le tableau dit de quelle phase il est le classement : le classement
+   * final, lui, est au-dessus (FinalRanking) et peut ne pas le suivre.
+   */
+  finished?: boolean;
 }) {
   const t = useT(nsTournamentLanding);
   const locale = useLocale();
@@ -333,6 +341,11 @@ export default function LiveHub({
   const hasPlayed = standings.some((tb) => tb.rows.some((r) => r.played > 0));
   const showStageNames = standings.length > 1;
   const upcoming = [...hub.live, ...hub.upcoming];
+  const filledTables = standings.filter((tb) => tb.rows.length > 0);
+  const standingsTitle =
+    finished && filledTables.length === 1 && filledTables[0].stageName
+      ? filledTables[0].stageName
+      : t.hubStandings;
 
   return (
     <Section id="suivi">
@@ -341,73 +354,84 @@ export default function LiveHub({
         className="right-[-10%] top-0 h-[360px] w-[520px] opacity-50"
       />
       <SectionHeader
-        eyebrow={t.hubEyebrow}
-        title={t.hubTitle}
+        eyebrow={finished ? t.hubEyebrowFinished : t.hubEyebrow}
+        title={finished ? t.hubTitleFinished : t.hubTitle}
         align="left"
-        subtitle={[
-          format(t.hubProgress, { played: hub.played, total: hub.total }),
-          hub.nextRound
-            ? format(t.hubNextRound, { round: hub.nextRound })
-            : null,
-        ]
-          .filter(Boolean)
-          .join(' · ')}
+        subtitle={
+          finished
+            ? format(t.hubPlayed, { played: hub.played })
+            : [
+                format(t.hubProgress, {
+                  played: hub.played,
+                  total: hub.total,
+                }),
+                hub.nextRound
+                  ? format(t.hubNextRound, { round: hub.nextRound })
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')
+        }
       />
 
-      <div
-        className="-mt-6 mb-8 h-1.5 w-full overflow-hidden rounded-full bg-white/10 md:-mt-10"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={hub.total}
-        aria-valuenow={hub.played}
-        aria-label={format(t.hubProgress, {
-          played: hub.played,
-          total: hub.total,
-        })}
-      >
+      {!finished && (
         <div
-          className="h-full rounded-full bg-gradient-to-r from-[var(--color-violet)] to-[var(--color-green)]"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+          className="-mt-6 mb-8 h-1.5 w-full overflow-hidden rounded-full bg-white/10 md:-mt-10"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={hub.total}
+          aria-valuenow={hub.played}
+          aria-label={format(t.hubProgress, {
+            played: hub.played,
+            total: hub.total,
+          })}
+        >
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-[var(--color-violet)] to-[var(--color-green)]"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div className="space-y-4">
-          <Panel
-            title={hub.live.length > 0 ? t.hubLive : t.hubUpcoming}
-            action={
-              hub.live.length > 0 ? (
-                <a
-                  href={hub.live[0].stream_url || COMMUNITY_LINKS.twitch}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-violet-cta)] px-3 py-1 text-xs font-bold text-white hover:brightness-110"
-                >
-                  {t.hubWatch}
-                </a>
+          {!finished && (
+            <Panel
+              title={hub.live.length > 0 ? t.hubLive : t.hubUpcoming}
+              action={
+                hub.live.length > 0 ? (
+                  <a
+                    href={hub.live[0].stream_url || COMMUNITY_LINKS.twitch}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-violet-cta)] px-3 py-1 text-xs font-bold text-white hover:brightness-110"
+                  >
+                    {t.hubWatch}
+                  </a>
+                ) : (
+                  <PanelLink href={`${tournamentPath}/matches`}>
+                    {t.hubSeeAllMatches}
+                  </PanelLink>
+                )
+              }
+            >
+              {upcoming.length === 0 ? (
+                <p className="text-sm text-gray-400">{t.hubUpcomingEmpty}</p>
               ) : (
-                <PanelLink href={`${tournamentPath}/matches`}>
-                  {t.hubSeeAllMatches}
-                </PanelLink>
-              )
-            }
-          >
-            {upcoming.length === 0 ? (
-              <p className="text-sm text-gray-400">{t.hubUpcomingEmpty}</p>
-            ) : (
-              <ul className="space-y-2">
-                {upcoming.map((m) => (
-                  <MatchRow
-                    key={m.id}
-                    match={m}
-                    mode={m.status === 'ongoing' ? 'live' : 'upcoming'}
-                    locale={locale}
-                    t={t}
-                  />
-                ))}
-              </ul>
-            )}
-          </Panel>
+                <ul className="space-y-2">
+                  {upcoming.map((m) => (
+                    <MatchRow
+                      key={m.id}
+                      match={m}
+                      mode={m.status === 'ongoing' ? 'live' : 'upcoming'}
+                      locale={locale}
+                      t={t}
+                    />
+                  ))}
+                </ul>
+              )}
+            </Panel>
+          )}
 
           <Panel
             title={t.hubRecent}
@@ -438,7 +462,7 @@ export default function LiveHub({
         </div>
 
         <Panel
-          title={t.hubStandings}
+          title={standingsTitle}
           action={
             hasStandings ? (
               <PanelLink href={`${tournamentPath}/standings`}>

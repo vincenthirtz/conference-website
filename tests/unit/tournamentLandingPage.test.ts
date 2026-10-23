@@ -223,6 +223,75 @@ describe('landing tournoi — getStaticProps', () => {
     expect(res.revalidate).toBe(60);
   });
 
+  describe('tournoi clos — classement figé', () => {
+    function seedRanking() {
+      store.final_rankings = [
+        {
+          tenant_id: DEFAULT_TENANT_ID,
+          tournament_id: TOUR,
+          team_id: 'tb',
+          rank: 2,
+          prize: null,
+        },
+        {
+          tenant_id: DEFAULT_TENANT_ID,
+          tournament_id: TOUR,
+          team_id: 'ta',
+          rank: 1,
+          prize: '500 €',
+        },
+      ] as any;
+      store.teams = [
+        {
+          id: 'ta',
+          tenant_id: DEFAULT_TENANT_ID,
+          name: 'Alpha',
+          slug: 'alpha',
+          logo_url: null,
+        },
+        {
+          id: 'tb',
+          tenant_id: DEFAULT_TENANT_ID,
+          name: 'Bravo',
+          slug: 'bravo',
+          logo_url: null,
+        },
+      ] as any;
+    }
+
+    it('lu et trié pour un tournoi clos', async () => {
+      seed({ status: 'completed' });
+      seedRanking();
+      const res: any = await getStaticProps({ params: { id: 'cup' } } as any);
+      expect(
+        res.props.finalRanking.map((r: any) => [r.rank, r.teamName, r.prize])
+      ).toEqual([
+        [1, 'Alpha', '500 €'],
+        [2, 'Bravo', null],
+      ]);
+    });
+
+    it('pas lu pendant le tournoi', async () => {
+      seed();
+      seedRanking();
+      const res: any = await getStaticProps({ params: { id: 'cup' } } as any);
+      expect(res.props.finalRanking).toEqual([]);
+      expect(fromCalls).not.toContain('final_rankings');
+    });
+
+    it('lecture en échec → section vide, fenêtre du direct', async () => {
+      seed({
+        status: 'completed',
+        start_date: '2025-03-01',
+        end_date: '2025-03-08',
+      });
+      failTable('final_rankings');
+      const res: any = await getStaticProps({ params: { id: 'cup' } } as any);
+      expect(res.props.finalRanking).toEqual([]);
+      expect(res.revalidate).toBe(60);
+    });
+  });
+
   it('introuvable ou privé → 404', async () => {
     seed({ visibility: 'private' });
     const priv: any = await getStaticProps({ params: { id: 'cup' } } as any);

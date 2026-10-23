@@ -32,6 +32,11 @@ import FinalCta from '@/components/tournament/landing/FinalCta';
 import StickyRegisterBar from '@/components/tournament/landing/StickyRegisterBar';
 import TournamentInfoCards from '@/components/tournament/landing/TournamentInfoCards';
 import LiveHub from '@/components/tournament/landing/LiveHub';
+import FinalRanking from '@/components/tournament/landing/FinalRanking';
+import {
+  readPublicTournamentStandings,
+  type PublicStanding,
+} from '@/utils/public/readStandings';
 import {
   buildLiveHub,
   type LiveHub as LiveHubData,
@@ -84,6 +89,8 @@ type TournamentPageProps = {
   hub: LiveHubData;
   /** Classement OFFICIEL (celui de la page Classement). */
   standings: PublicStandingsTable[];
+  /** Classement FIGÉ (final_rankings) d'un tournoi clos ; vide sinon. */
+  finalRanking: PublicStanding[];
   /** Playlist « Reviews » configurée → onglet affiché. */
   hasReviews: boolean;
   seo: SeoProps;
@@ -153,6 +160,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
     partnersResult,
     matchesResult,
     standings,
+    finalRankingResult,
   ] = await Promise.all([
     supabaseAdmin
       .from('tournament_stages')
@@ -197,6 +205,19 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       .neq('status', 'cancelled'),
 
     readPublicStandings(tenantId, tournamentId),
+
+    // Le classement figé, pour un tournoi clos seulement. Le lecteur LÈVE :
+    // rattrapé ici, une panne ne coûte que la section, et `degraded`
+    // raccourcit la fenêtre de régénération.
+    computePhase(tournament.status) === 'finished'
+      ? readPublicTournamentStandings(tournamentId, tenantId).then(
+          (rows) => ({ rows, error: false }),
+          (err: unknown) => {
+            logger.error('tournament final ranking error:', err);
+            return { rows: [] as PublicStanding[], error: true };
+          }
+        )
+      : Promise.resolve({ rows: [] as PublicStanding[], error: false }),
   ]);
 
   if (stagesResult.error)
@@ -294,7 +315,8 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       teamsResult.error ||
       leaguesResult.error ||
       partnersResult.error ||
-      matchesResult.error
+      matchesResult.error ||
+      finalRankingResult.error
   );
 
   return {
@@ -312,6 +334,7 @@ export const getStaticProps: GetStaticProps<TournamentPageProps> = async (
       leagues,
       hub,
       standings,
+      finalRanking: finalRankingResult.rows,
       hasReviews,
       seo: buildTournamentSeo(tournament),
     },
@@ -336,6 +359,7 @@ export default function TournamentPage({
   leagues,
   hub,
   standings,
+  finalRanking,
   hasReviews,
 }: Omit<TournamentPageProps, 'seo'>) {
   const tournamentPath = `/tournament/${tournament.slug || tournament.id}`;
@@ -366,6 +390,7 @@ export default function TournamentPage({
         registrationOpen={registrationOpen}
         liveMatch={hub.live[0] ?? null}
         nextMatch={hub.upcoming[0] ?? null}
+        champion={finalRanking.find((r) => r.rank === 1) ?? null}
         tabs={
           <TournamentTabs
             tournamentPath={tournamentPath}
@@ -393,10 +418,19 @@ export default function TournamentPage({
           ne lisait plus jusqu'en bas. */}
       {running && (
         <>
+          {/* Clos : le classement FINAL d'abord, le bilan (résultats,
+              classement de phase) ensuite. */}
+          {isCompleted && (
+            <FinalRanking
+              ranking={finalRanking}
+              tournamentPath={tournamentPath}
+            />
+          )}
           <LiveHub
             hub={hub}
             standings={standings}
             tournamentPath={tournamentPath}
+            finished={isCompleted}
           />
           <StreamingSection phase={phase} />
         </>

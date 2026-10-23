@@ -19,6 +19,8 @@ import type {
 } from './types';
 import { COMMUNITY_LINKS } from './types';
 import type { HubMatch } from '@/utils/tournament/liveHub';
+import type { PublicStanding } from '@/utils/public/readStandings';
+import TeamAvatar from '@/components/Team/TeamAvatar';
 import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 import { gameLabel } from '@/config/games';
 import { tournamentRegisterHref } from '@/utils/tournaments/registerHref';
@@ -33,6 +35,7 @@ export default function TournamentHero({
   registrationOpen,
   liveMatch = null,
   nextMatch = null,
+  champion = null,
   tabs,
 }: {
   tournament: LandingTournament;
@@ -46,6 +49,11 @@ export default function TournamentHero({
   liveMatch?: HubMatch | null;
   /** Prochain match programmé : ce que le décompte vise pendant le tournoi. */
   nextMatch?: HubMatch | null;
+  /**
+   * 1re du classement figé (final_rankings) d'un tournoi clos : le hero la
+   * nomme là où le décompte, sans objet, laissait une carte vide.
+   */
+  champion?: PublicStanding | null;
   /**
    * Barre d'onglets du tournoi, posée EN HAUT du hero — même conteneur et
    * même hauteur que sur les autres onglets, où elle ouvre la page. Sous le
@@ -65,6 +73,8 @@ export default function TournamentHero({
   const teamsHref = `${tournamentPath}/teams`;
 
   const isFull = placesRemaining === 0;
+  // Clos ET classé : la championne remplace décompte et bracket.
+  const showChampion = phase === 'finished' && champion !== null;
 
   // Les places ne parlent qu'avant le coup d'envoi : en plein tournoi, une
   // pastille rouge « Complet » se lisait comme une mauvaise nouvelle.
@@ -144,6 +154,11 @@ export default function TournamentHero({
                     {t.tournamentInProgress}
                   </span>
                 ))}
+              {phase === 'finished' && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-yellow)]/40 bg-[var(--color-yellow)]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--color-yellow)]">
+                  {t.tournamentFinished}
+                </span>
+              )}
             </div>
 
             <h1 className="text-4xl font-black leading-[0.98] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
@@ -218,6 +233,14 @@ export default function TournamentHero({
                     <ArrowGlyph />
                   </span>
                 </Link>
+              ) : showChampion ? (
+                // Clos et classé : on vient voir qui a gagné.
+                <Link href={`${tournamentPath}/podium`}>
+                  <span className="tl-cta-glow inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[var(--color-yellow)] to-[var(--color-green)] px-7 py-3 text-sm font-bold text-black transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]">
+                    {t.ctaViewPodium}
+                    <ArrowGlyph />
+                  </span>
+                </Link>
               ) : (
                 // Pendant le tournoi, on vient voir qui joue : les matchs. Le
                 // bracket reste l'entrée une fois le tournoi terminé.
@@ -267,52 +290,68 @@ export default function TournamentHero({
               Pendant le tournoi, il visait encore le coup d'envoi — passé —
               et n'affichait que « Le tournoi est en cours » sur quatre cases
               vides. Il vise désormais le PROCHAIN MATCH, ou annonce celui qui
-              se joue. */}
-          <div className="lg:justify-self-end">
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-md sm:p-8">
-              {phase === 'live' && liveMatch ? (
-                <HeroMatch
-                  match={liveMatch}
-                  live
-                  label={t.heroLiveMatch}
-                  cta={t.heroWatchLive}
-                  href={liveMatch.stream_url || COMMUNITY_LINKS.twitch}
-                  external
-                  tbd={t.hubTbd}
-                />
-              ) : phase === 'live' && nextMatch ? (
-                <>
-                  <TournamentCountdown
-                    targetDate={nextMatch.scheduled_at}
-                    phase="upcoming"
-                    size="giant"
-                    label={t.heroNextMatchIn}
-                    endedLabel={t.heroNextMatchStarting}
+              se joue. Tournoi clos : elle nomme la championne — et s'efface
+              sans classement figé, plutôt que de rester une carte vide. */}
+          {!(phase === 'finished' && !showChampion) && (
+            <div className="lg:justify-self-end">
+              <div
+                className={`rounded-3xl border p-6 backdrop-blur-md sm:p-8 ${
+                  showChampion
+                    ? 'border-[var(--color-yellow)]/40 bg-[var(--color-yellow)]/[0.06]'
+                    : 'border-white/10 bg-white/[0.03]'
+                }`}
+              >
+                {showChampion && champion ? (
+                  <HeroChampion
+                    champion={champion}
+                    label={t.heroChampions}
+                    cta={t.ctaViewPodium}
+                    href={`${tournamentPath}/podium`}
                   />
+                ) : phase === 'live' && liveMatch ? (
                   <HeroMatch
-                    match={nextMatch}
-                    cta={t.heroSeeMatch}
-                    href={`/match/${nextMatch.id}`}
+                    match={liveMatch}
+                    live
+                    label={t.heroLiveMatch}
+                    cta={t.heroWatchLive}
+                    href={liveMatch.stream_url || COMMUNITY_LINKS.twitch}
+                    external
                     tbd={t.hubTbd}
                   />
-                </>
-              ) : (
-                <TournamentCountdown
-                  targetDate={tournament.kickoff_at ?? tournament.start_date}
-                  phase={phase}
-                  size="giant"
-                />
-              )}
-              {phase !== 'live' && phase !== 'finished' && (
-                <p className="mt-6 flex items-center gap-2 text-xs text-gray-400">
-                  <span className="h-1 w-1 rounded-full bg-[var(--color-green)]" />
-                  {totalTeams > 0
-                    ? t.teamsMore.replace('{count}', String(totalTeams))
-                    : t.scrollHint}
-                </p>
-              )}
+                ) : phase === 'live' && nextMatch ? (
+                  <>
+                    <TournamentCountdown
+                      targetDate={nextMatch.scheduled_at}
+                      phase="upcoming"
+                      size="giant"
+                      label={t.heroNextMatchIn}
+                      endedLabel={t.heroNextMatchStarting}
+                    />
+                    <HeroMatch
+                      match={nextMatch}
+                      cta={t.heroSeeMatch}
+                      href={`/match/${nextMatch.id}`}
+                      tbd={t.hubTbd}
+                    />
+                  </>
+                ) : (
+                  <TournamentCountdown
+                    targetDate={tournament.kickoff_at ?? tournament.start_date}
+                    phase={phase}
+                    size="giant"
+                  />
+                )}
+                {phase !== 'live' && phase !== 'finished' && (
+                  <p className="mt-6 flex items-center gap-2 text-xs text-gray-400">
+                    <span className="h-1 w-1 rounded-full bg-[var(--color-green)]" />
+                    {totalTeams > 0
+                      ? t.teamsMore.replace('{count}', String(totalTeams))
+                      : t.scrollHint}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </header>
@@ -376,7 +415,69 @@ function HeroMatch({
   );
 }
 
+/** La championne d'un tournoi clos : blason, nom, lien vers le podium. */
+function HeroChampion({
+  champion,
+  label,
+  cta,
+  href,
+}: {
+  champion: PublicStanding;
+  label: string;
+  cta: string;
+  href: string;
+}) {
+  const name = champion.teamName ?? '—';
+  return (
+    <div className="flex flex-col items-center text-center">
+      <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-[var(--color-yellow)]">
+        <TrophyGlyph />
+        {label}
+      </p>
+      <div className="mt-5">
+        <TeamAvatar name={name} logoUrl={champion.logoUrl} size="xl" />
+      </div>
+      <p className="mt-4 break-words text-3xl font-black uppercase leading-none tracking-tight text-white sm:text-4xl">
+        {champion.teamSlug ? (
+          <Link
+            href={`/team/${champion.teamSlug}`}
+            className="underline-offset-4 transition-colors hover:text-[var(--color-yellow)] hover:underline"
+          >
+            {name}
+          </Link>
+        ) : (
+          name
+        )}
+      </p>
+      <Link
+        href={href}
+        className="mt-6 inline-flex items-center gap-2 rounded-full border border-[var(--color-yellow)]/40 bg-[var(--color-yellow)]/10 px-5 py-2.5 text-sm font-bold text-[var(--color-yellow)] transition-colors hover:border-[var(--color-yellow)]/70 hover:bg-[var(--color-yellow)]/20"
+      >
+        {cta}
+        <ArrowGlyph />
+      </Link>
+    </div>
+  );
+}
+
 /* ── petits glyphes locaux (inline, pas de dépendance) ── */
+function TrophyGlyph() {
+  return (
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+      <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+    </svg>
+  );
+}
 function CalendarGlyph() {
   return (
     <svg
