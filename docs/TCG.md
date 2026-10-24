@@ -997,8 +997,8 @@ et la contrainte `UNIQUE` aurait jeté la série suivante comme un doublon.
 Au check-in, aucune feuille de match n'existe encore (`match_participants` est
 figé à la fin du match) : impossible de savoir qui jouera. Sont donc
 récompensés les `team_members` avec un compte, **hors remplaçantes**
-(`is_substitute`) et **hors encadrement** (coach, manager — le filtre du
-snapshot `match_participants`). Payer toutes les inscrites aurait récompensé
+(`is_substitute`), **plus l'encadrement** (coach, manager — cf. « L'encadrement
+des équipes » ci-dessous). Payer toutes les inscrites aurait récompensé
 une remplaçante jamais présente. Écart assumé avec la victoire, qui paie les
 remplaçantes : celle-là sait qui a joué, celle-ci non.
 
@@ -1019,6 +1019,7 @@ la récompense suit le badge que sa fiche affichera. Écartés : le roster coura
 (il paierait une recrue arrivée après le tournoi et oublierait une joueuse
 partie) et les remplaçantes (plus généreux que le badge lui-même). Une équipe
 sans feuille de match figée ne rapporte **rien** — on ne devine pas un roster.
+L'encadrement d'une équipe classée touche le même palier que ses titulaires.
 
 **Une récompense par personne et par tournoi** (`source_ref` = le tournoi). Une
 joueuse passée par deux équipes classées ne touche que son **meilleur** rang.
@@ -1058,7 +1059,8 @@ palmarès reste devant, en pièces comme en paquets.
 - **Qui** : les joueuses des feuilles de match de l'équipe sur le tournoi
   (`match_participants`, titulaires ET remplaçantes — on paie la participation,
   pas la performance). Sans aucune feuille (abandon avant le premier match) :
-  membres actuels hors coach / manager.
+  membres actuels hors coach / manager. Dans les deux cas, l'encadrement de
+  l'équipe en plus.
 - **Quand** : à la disqualification (`POST /api/admin/stages/[stageId]/disqualify`,
   champ `participationReward` de la réponse), sans attendre la clôture du
   tournoi. Rattrapage d'une équipe déjà en DNF :
@@ -1584,6 +1586,38 @@ Les **remplaçantes sont récompensées** : elles figurent dans
 `match_participants` et le moteur de rating les traite comme les autres.
 Inventer ici une seconde définition de « avoir joué » ferait diverger deux
 systèmes qui décrivent la même rencontre.
+
+### L'encadrement des équipes
+
+**Coach et manager touchent les mêmes récompenses que les joueuses** (décision
+produit du 2026-10-24). Constat du jour : Shaki, coach des Chocomates
+championnes de la Cup 2026, n'avait que son cadeau d'accueil quand chaque
+titulaire tirait de la même Cup sept paquets de victoire et cinq de palmarès ;
+onze comptes d'encadrement étaient dans ce cas.
+
+La feuille de match (`match_participants`) reste celle du rating et
+**continue d'écarter l'encadrement** — l'y faire figurer lui donnerait un
+rating pour des matchs qu'il n'a pas joués. C'est la récompense qui
+s'élargit : [`utils/tcg/teamStaff.ts`](../utils/tcg/teamStaff.ts) lit les
+`team_members` de rôle coach ou manager **au moment de la récompense**, et
+les six écrivains les ajoutent :
+
+| Récompense | L'encadrement de… | Garde |
+| ---------- | ----------------- | ----- |
+| Victoire (tournoi, scrim) | l'équipe gagnante | au moins une gagnante sur la feuille |
+| Défaite | l'équipe perdante | idem ; pas à qui touche la victoire du même match |
+| Palmarès | l'équipe classée, même palier ; meilleur rang s'il encadre deux équipes | l'équipe a des titulaires payées |
+| Participation (DNF, classée hors top 8) | l'équipe | au moins une joueuse payée |
+| Série de check-ins | l'équipe | au moins une titulaire |
+
+Le cadeau d'édition payait déjà tout le roster engagé, encadrement compris.
+Une lecture de l'encadrement en échec paie quand même les joueuses d'une
+victoire ou d'une défaite (rien ne rejoue un match déjà noté) ; elle fait
+s'abstenir palmarès et participation, que la finalisation relancée rattrape.
+
+Le passé a été rattrapé le jour même par la migration de données
+`tcg_team_staff_rewards_backfill.sql` (conference-api) : neuf comptes, 77
+paquets, au montant que les joueuses avaient touché pour chaque clé.
 
 **Un scrim paie une fois, quel que soit son miroir** (correctif de sécurité du
 2026-09-15). Un scrim classé est noté via un match **miroir**
