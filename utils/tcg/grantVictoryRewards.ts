@@ -24,6 +24,12 @@
 // Inventer ici une seconde définition de « avoir joué » ferait diverger deux
 // systèmes qui décrivent la même rencontre.
 //
+// L'ENCADREMENT DU CAMP GAGNANT AUSSI (coach, manager — 2026-10-24, cf.
+// `teamStaff.ts`). Il n'est pas sur la feuille, qui reste celle du rating ; on
+// le lit à part. Une lecture en échec paie quand même les joueuses : bloquer
+// toute la victoire pour un encadrement illisible priverait aussi celles-ci,
+// et rien ne rejoue un match déjà noté.
+//
 // LE SOLDE EST RECALCULÉ, PAS INCRÉMENTÉ. `tcg_wallets.balance` est un cache du
 // registre : on le réécrit depuis la somme des écritures plutôt que de lui
 // ajouter un delta. Un incrément perdu creuse un écart définitif ; un recalcul
@@ -49,6 +55,7 @@ import { logger } from '@/utils/logger';
 import { announcePackGranted } from './announcePackGranted';
 import { coinsForWin } from './economy';
 import { recomputeWalletBalance } from './walletRpc';
+import { readTeamStaff } from './teamStaff';
 
 /** Clé STABLE des gains d'un scrim, indépendante de son match miroir. */
 export function scrimRewardSourceRef(scrimId: string): string {
@@ -89,14 +96,22 @@ export async function grantVictoryRewards(input: {
     // Camp gagnant, dédoublonné : une joueuse inscrite deux fois sur la feuille
     // ne toucherait qu'un paquet de toute façon (contrainte d'unicité), mais
     // autant ne pas lui envoyer deux écritures.
+    const players = participants
+      .filter((p) => p.teamId === winnerTeamId && p.userId)
+      .map((p) => p.userId);
+    // Pas de gagnante sur la feuille, pas de victoire à payer — l'encadrement
+    // seul ne déclenche rien.
+    if (players.length === 0) return;
+    const staff = await readTeamStaff(tenantId, [winnerTeamId]);
+    if (staff === null) {
+      logger.error(
+        '[tcg] encadrement illisible (match %s) : joueuses seules payées',
+        matchId
+      );
+    }
     const winners = [
-      ...new Set(
-        participants
-          .filter((p) => p.teamId === winnerTeamId && p.userId)
-          .map((p) => p.userId)
-      ),
+      ...new Set([...players, ...(staff?.get(winnerTeamId) ?? [])]),
     ];
-    if (winners.length === 0) return;
 
     const nowIso = new Date().toISOString();
     const amount = coinsForWin(isScrim);

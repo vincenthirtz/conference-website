@@ -1,6 +1,6 @@
 {
-  "apiCommit": "fdad7f7f7c28936e0891d9a9240f3c29461fa5e0",
-  "syncedAt": "2026-10-23T11:10:45.719Z",
+  "apiCommit": "eec5796fe9ed2758f196d9bcc8362d89f9db921a",
+  "syncedAt": "2026-10-24T08:53:46.556Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -323,6 +323,7 @@
     "utils/tcg/showcase.ts",
     "utils/tcg/subjectKey.ts",
     "utils/tcg/teamCardImage.ts",
+    "utils/tcg/teamStaff.ts",
     "utils/tcg/tradeLimits.ts",
     "utils/tcg/tradeRules.ts",
     "utils/tcg/trades.ts",

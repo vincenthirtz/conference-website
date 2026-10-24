@@ -15,6 +15,8 @@
 //     match, exactement comme `match_win`. Un rejeu ne crée rien.
 //   - les remplaçantes sont payées : elles figurent dans `match_participants`,
 //     comme pour la victoire ;
+//   - l'encadrement du camp perdant (coach, manager) aussi, lu à part ; une
+//     lecture en échec paie quand même les joueuses (cf. `teamStaff.ts`) ;
 //   - le solde est RECALCULÉ depuis le registre, jamais incrémenté.
 //
 // QUI N'EST PAS PAYÉ, ET POURQUOI (`isDefeatRewardable`).
@@ -42,6 +44,7 @@ import { logger } from '@/utils/logger';
 import { MATCH_LOSS_COINS } from './economy';
 import { getEarnSource } from './earnSources';
 import { recomputeWalletBalance } from './walletRpc';
+import { readTeamStaff } from './teamStaff';
 
 /** Origine écrite dans `tcg_wallet_entries.source_kind`. */
 export const MATCH_LOSS_SOURCE_KIND = 'match_loss';
@@ -91,14 +94,21 @@ export async function grantDefeatRewards(input: {
   if (!getEarnSource(MATCH_LOSS_SOURCE_KIND)?.schemaReady) return;
 
   try {
+    const players = participants
+      .filter((p) => p.teamId === loserTeamId && p.userId)
+      .map((p) => p.userId);
+    // Comme la victoire : l'encadrement seul ne déclenche rien.
+    if (players.length === 0) return;
+    const staff = await readTeamStaff(tenantId, [loserTeamId]);
+    if (staff === null) {
+      logger.error(
+        '[tcg] encadrement illisible (défaite du match %s) : joueuses seules payées',
+        matchId
+      );
+    }
     const losers = [
-      ...new Set(
-        participants
-          .filter((p) => p.teamId === loserTeamId && p.userId)
-          .map((p) => p.userId)
-      ),
+      ...new Set([...players, ...(staff?.get(loserTeamId) ?? [])]),
     ];
-    if (losers.length === 0) return;
 
     // Les joueuses déjà payées en VICTOIRE sur ce match (score corrigé) : elles
     // gardent la victoire, on ne leur verse pas la défaite en plus.

@@ -29,8 +29,9 @@
 //
 // QUI EST RÉCOMPENSÉE — CHOIX CONSERVATEUR, cf. docs/TCG.md §4. Les TITULAIRES
 // du roster au moment du check-in : `team_members` avec un compte, hors
-// remplaçantes (`is_substitute`) et hors encadrement (coach, manager — même
-// filtre que le snapshot `match_participants`). Les feuilles de match
+// remplaçantes (`is_substitute`), PLUS l'encadrement (coach, manager) : mêmes
+// récompenses que les joueuses depuis le 2026-10-24 (cf. `teamStaff.ts`).
+// Pas de roster jouant à payer, pas d'encadrement non plus. Les feuilles de match
 // n'existent pas encore au check-in (elles sont figées à la fin du match) : on
 // ne peut pas savoir qui jouera, et payer toutes les inscrites aurait récompensé
 // une remplaçante jamais présente.
@@ -263,25 +264,24 @@ export async function grantCheckinStreakReward(input: {
       return { status: 'error' };
     }
 
+    const rows = (
+      (members ?? []) as Array<{
+        user_id: string | null;
+        role: string | null;
+        is_substitute: boolean | null;
+      }>
+    ).filter((m) => Boolean(m.user_id));
+    const starters = rows.filter(
+      (m) => m.is_substitute !== true && !isNonPlayingTeamRole(m.role)
+    );
+    if (starters.length === 0) return { status: 'no_recipient', streak };
     const recipients = [
       ...new Set(
-        (
-          (members ?? []) as Array<{
-            user_id: string | null;
-            role: string | null;
-            is_substitute: boolean | null;
-          }>
+        [...starters, ...rows.filter((m) => isNonPlayingTeamRole(m.role))].map(
+          (m) => m.user_id as string
         )
-          .filter(
-            (m) =>
-              Boolean(m.user_id) &&
-              m.is_substitute !== true &&
-              !isNonPlayingTeamRole(m.role)
-          )
-          .map((m) => m.user_id as string)
       ),
     ];
-    if (recipients.length === 0) return { status: 'no_recipient', streak };
 
     const { coins, packs } = earnReward(WALLET_SOURCE_KIND);
     const sourceRef = `${tournamentId}:${matchId}`;

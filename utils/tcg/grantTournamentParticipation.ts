@@ -24,6 +24,9 @@
 // l'équipe n'a aucune feuille de match (abandon avant son premier match), on
 // se rabat sur les membres actuels hors encadrement (coach / manager) : c'est
 // alors le seul roster connu, et l'abandon vient de geler l'équipe.
+// L'ENCADREMENT (coach, manager) est payé en plus, dans les deux cas — mêmes
+// récompenses que les joueuses depuis le 2026-10-24 (cf. `teamStaff.ts`) —
+// pourvu qu'il y ait au moins une joueuse à payer.
 //
 // IDEMPOTENCE.
 //   - Pièces : `source_ref` = le tournoi + UNIQUE du registre. Un rejeu ne
@@ -46,6 +49,7 @@ import { absoluteSiteUrl } from '@/utils/siteUrl';
 import { isNonPlayingTeamRole } from '@/utils/teams/roleKind';
 import { getEarnSource, TOURNAMENT_PARTICIPATION_COINS } from './earnSources';
 import { grantCoinsThenPacks } from './grantCoinsThenPacks';
+import { readTeamStaff } from './teamStaff';
 
 const WALLET_SOURCE_KIND = 'tournament_participation';
 export const PARTICIPATION_MESSAGE_KIND = 'tcg_participation';
@@ -253,7 +257,7 @@ export function buildParticipationMessage(input: {
       : 'the tournament';
     return [
       `🎁 **${input.teamName}**, thank you for taking part in ${tournament}!`,
-      `Each player on the team (${input.players}) receives **${coins} coins** for the card game as a participation reward.`,
+      `Each team member (${input.players}) receives **${coins} coins** for the card game as a participation reward.`,
       `They are already in your wallet: ${input.url}`,
     ].join('\n');
   }
@@ -262,7 +266,7 @@ export function buildParticipationMessage(input: {
     : 'au tournoi';
   return [
     `🎁 **${input.teamName}**, merci d'avoir participé ${tournament} !`,
-    `Chaque joueuse de l'équipe (${input.players}) reçoit **${coins} pièces** pour le jeu de cartes, en récompense de sa participation.`,
+    `Chaque membre de l'équipe (${input.players}) reçoit **${coins} pièces** pour le jeu de cartes, en récompense de sa participation.`,
     `Elles sont déjà dans votre portefeuille : ${input.url}`,
   ].join('\n');
 }
@@ -297,6 +301,10 @@ export async function grantTournamentParticipation(input: {
       if (users === null) return report('error');
     }
     if (users.length === 0) return report('nothing', { rosterSource });
+
+    const staff = await readTeamStaff(tenantId, [teamId]);
+    if (staff === null) return report('error', { rosterSource });
+    users = [...new Set([...users, ...(staff.get(teamId) ?? [])])];
 
     const result = await grantCoinsThenPacks({
       tenantId,
