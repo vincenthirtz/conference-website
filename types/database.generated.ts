@@ -3961,6 +3961,9 @@ export type Database = {
           bracket_side: string | null
           bracket_slot: number | null
           checkin_email_sent_at: string | null
+          coin_toss_at: string | null
+          coin_toss_imposed_map: string | null
+          coin_toss_winner_team_id: string | null
           completed_at: string | null
           created_at: string | null
           deleted_at: string | null
@@ -4031,6 +4034,9 @@ export type Database = {
           bracket_side?: string | null
           bracket_slot?: number | null
           checkin_email_sent_at?: string | null
+          coin_toss_at?: string | null
+          coin_toss_imposed_map?: string | null
+          coin_toss_winner_team_id?: string | null
           completed_at?: string | null
           created_at?: string | null
           deleted_at?: string | null
@@ -4101,6 +4107,9 @@ export type Database = {
           bracket_side?: string | null
           bracket_slot?: number | null
           checkin_email_sent_at?: string | null
+          coin_toss_at?: string | null
+          coin_toss_imposed_map?: string | null
+          coin_toss_winner_team_id?: string | null
           completed_at?: string | null
           created_at?: string | null
           deleted_at?: string | null
@@ -4167,6 +4176,13 @@ export type Database = {
           winner_team_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "matches_coin_toss_winner_team_id_fkey"
+            columns: ["coin_toss_winner_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "matches_forfeit_team_id_fkey"
             columns: ["forfeit_team_id"]
@@ -9243,6 +9259,7 @@ export type Database = {
           default_stream_url: string | null
           description_info: string | null
           end_date: string | null
+          first_map_rule: string
           format: string | null
           format_details: string | null
           format_type: string | null
@@ -9283,6 +9300,7 @@ export type Database = {
           default_stream_url?: string | null
           description_info?: string | null
           end_date?: string | null
+          first_map_rule?: string
           format?: string | null
           format_details?: string | null
           format_type?: string | null
@@ -9323,6 +9341,7 @@ export type Database = {
           default_stream_url?: string | null
           description_info?: string | null
           end_date?: string | null
+          first_map_rule?: string
           format?: string | null
           format_details?: string | null
           format_type?: string | null

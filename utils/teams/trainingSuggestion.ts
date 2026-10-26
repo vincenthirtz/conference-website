@@ -108,17 +108,24 @@ function compareSlotKeys(a: string, b: string): number {
  * les créneaux paraîtraient inexploités.
  *
  * Le décalage est passé en minutes plutôt qu'en fuseau IANA — le module reste
- * pur, et l'appelant sait déjà dans quel fuseau il raisonne.
+ * pur, et l'appelant sait déjà dans quel fuseau il raisonne. De préférence une
+ * FONCTION de l'instant : un match de juillet (UTC+2) relu en hiver (UTC+1)
+ * avec le décalage du jour tombait une heure trop tôt, sur le mauvais créneau.
+ * Un nombre fixe reste accepté là où toutes les dates partagent un décalage.
  */
+export type SlotOffset = number | ((instant: Date) => number);
+
 export function tallyPlayedBySlot(
   playedAtIso: Array<string | null>,
-  offsetMinutes: number
+  offset: SlotOffset
 ): Map<string, number> {
   const out = new Map<string, number>();
   for (const iso of playedAtIso) {
     if (!iso) continue;
     const t = Date.parse(iso);
     if (!Number.isFinite(t)) continue;
+    const offsetMinutes =
+      typeof offset === 'function' ? offset(new Date(t)) : offset;
     const local = new Date(t + offsetMinutes * 60_000);
     const day = local.getUTCDay();
     const weekday = day === 0 ? 7 : day;
@@ -134,7 +141,7 @@ export function tallyPlayedBySlot(
  */
 export function announcedSlotKeys(
   isoSlots: string[],
-  offsetMinutes: number
+  offset: SlotOffset
 ): Set<string> {
-  return new Set(tallyPlayedBySlot(isoSlots, offsetMinutes).keys());
+  return new Set(tallyPlayedBySlot(isoSlots, offset).keys());
 }

@@ -67,6 +67,7 @@ export type StaffLogAction =
   | 'batch_scores'
   | 'report_score'
   | 'map_veto'
+  | 'coin_toss'
   | 'bulk_schedule'
   | 'bulk_update'
   | 'bulk_seed'

@@ -95,6 +95,12 @@ export type Tournament = {
   schedule_rules: string | null;
   format_details: string | null;
   registration_fields: RegistrationField[] | null;
+  /**
+   * Règle de la 1re map après le pile ou face (`imposed` | `team_pick`, cf.
+   * utils/matches/firstMapRule.ts). Absente des réponses antérieures à la
+   * migration match_coin_toss.sql : traiter comme `imposed`.
+   */
+  first_map_rule?: string | null;
   created_at: string;
   updated_at: string | null;
 };
@@ -109,6 +115,8 @@ export type TournamentMini = {
   game?: string | null;
   /** Fuseau IANA du tournoi (ex. `Europe/Paris`), pour afficher les créneaux. */
   timezone?: string | null;
+  /** Règle de la 1re map après le pile ou face (cf. utils/matches/firstMapRule.ts). */
+  first_map_rule?: string | null;
 };
 
 /* -----------------------------------------------------------

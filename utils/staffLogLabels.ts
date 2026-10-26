@@ -77,6 +77,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   batch_scores: 'Scores en masse',
   report_score: 'Report de score',
   map_veto: 'Veto de maps',
+  coin_toss: 'Pile ou face',
   bulk_schedule: 'Planification en masse',
   bulk_update: 'Modification en masse',
   bulk_seed: 'Seeding en masse',
