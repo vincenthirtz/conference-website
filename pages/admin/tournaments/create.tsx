@@ -8,6 +8,9 @@ import {
 } from '@/config/tournament-templates';
 import { applyTemplateDefaults } from '@/utils/admin/tournamentTemplateForm';
 import SoloModeCheckbox from '@/components/admin/tournaments/SoloModeCheckbox';
+import FirstMapRuleSelect from '@/components/admin/tournaments/FirstMapRuleSelect';
+import { toFirstMapRule } from '@/utils/matches/firstMapRule';
+import type { CreateTournamentBody } from '@/features/admin/tournaments/createBody';
 import TemplatePicker from '@/components/admin/tournaments/TemplatePicker';
 import { useAutoSave } from '@/utils/useAutoSave';
 import { withAdminQuery } from '@/features/admin/_shared/query';
@@ -41,24 +44,6 @@ type Props = {
     role: string;
     display_name: string;
   };
-};
-
-type CreateTournamentBody = {
-  name: string;
-  slug?: string | null;
-  game?: string | null;
-  status?: string | null;
-  start_date?: string | null;
-  end_date?: string | null;
-  format_type?: string | null;
-  max_teams?: number | null;
-  min_players?: number | null;
-  max_players?: number | null;
-  solo_mode?: boolean;
-  is_public?: boolean;
-  is_featured?: boolean;
-  logo_url?: string | null;
-  banner_url?: string | null;
 };
 
 export const getServerSideProps = withStaffPage({
@@ -98,6 +83,7 @@ function AdminTournamentCreatePage(_props: Props) {
     is_featured: boolean;
     logo_url: string;
     banner_url: string;
+    first_map_rule: string;
   }>({
     name: '',
     slug: '',
@@ -114,6 +100,7 @@ function AdminTournamentCreatePage(_props: Props) {
     is_featured: false,
     logo_url: '',
     banner_url: '',
+    first_map_rule: 'imposed',
   });
 
   const [selectedTemplate, setSelectedTemplate] =
@@ -195,6 +182,7 @@ function AdminTournamentCreatePage(_props: Props) {
       is_featured: form.is_featured,
       logo_url: form.logo_url.trim() || null,
       banner_url: form.banner_url.trim() || null,
+      first_map_rule: toFirstMapRule(form.first_map_rule),
     };
 
     try {
@@ -413,6 +401,12 @@ function AdminTournamentCreatePage(_props: Props) {
                         <option value="showmatch">{t.formatShowmatch}</option>
                       </select>
                     </div>
+
+                    <FirstMapRuleSelect
+                      value={form.first_map_rule}
+                      onChange={(v) => updateField('first_map_rule', v)}
+                      labels={t}
+                    />
 
                     <div>
                       <label className={CREATE_LABEL}>{t.maxTeamsLabel}</label>

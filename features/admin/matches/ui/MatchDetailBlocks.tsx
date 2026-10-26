@@ -8,6 +8,10 @@ import type { MatchStatus } from '@/types/admin';
 import nsAdminMatchDetail from '@/lib/i18n/locales/admin-fr/adminMatchDetail';
 import type { ChipTone } from '@/features/admin/_shared/ui/Chip';
 import { FicheSection } from '@/features/admin/_shared/ui/Fiche';
+import {
+  DEFAULT_FIRST_MAP_RULE,
+  isFirstMapRule,
+} from '@/utils/matches/firstMapRule';
 
 type Dict = typeof nsAdminMatchDetail.fr;
 
@@ -28,6 +32,8 @@ type TournamentMini = {
   id: string;
   name: string | null;
   slug: string | null;
+  /** Règle de la 1re map après le pile ou face (cf. utils/matches/firstMapRule.ts). */
+  first_map_rule?: string | null;
 };
 
 type GameRow = {
@@ -69,6 +75,10 @@ export type MatchRow = {
   dispute_resolution: string | null;
   dispute_resolved_by: string | null;
   dispute_resolved_at: string | null;
+  /** Pile ou face : équipe A (1er ban). Absent avant la migration match_coin_toss. */
+  coin_toss_winner_team_id?: string | null;
+  coin_toss_at?: string | null;
+  coin_toss_imposed_map?: string | null;
   team1?: TeamMini | null;
   team2?: TeamMini | null;
   stage?: StageMini | null;
@@ -247,6 +257,78 @@ export function MatchInfoCards({ match }: { match: MatchRow }) {
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Pile ou face avant la 1re map : l'équipe A (gagnante) et le déroulé selon la
+ * règle du tournoi. Le tirage se lance sur Discord (/pile-ou-face) ; ici on le
+ * relit. Se tait sur un match sans ses deux équipes.
+ */
+export function MatchCoinTossCard({ match }: { match: MatchRow }) {
+  const t = useAdminT(nsAdminMatchDetail);
+  if (!match.team1_id || !match.team2_id) return null;
+  const ruleRaw = match.tournament?.first_map_rule;
+  const rule = isFirstMapRule(ruleRaw) ? ruleRaw : DEFAULT_FIRST_MAP_RULE;
+  const name1 = match.team1?.name || t.team1Fallback;
+  const name2 = match.team2?.name || t.team2Fallback;
+  const winnerId = match.coin_toss_winner_team_id;
+  const tossed = winnerId === match.team1_id || winnerId === match.team2_id;
+  const pile = winnerId === match.team1_id;
+  const a = pile ? name1 : name2;
+  const b = pile ? name2 : name1;
+  // A 1er ban, (B la map, A le côté,) B 2e ban.
+  const steps: [string, string][] =
+    rule === 'team_pick'
+      ? [
+          [t.coinTossStepBan1, a],
+          [t.coinTossStepMap, b],
+          [t.coinTossStepSide, a],
+          [t.coinTossStepBan2, b],
+        ]
+      : [
+          [t.coinTossStepBan1, a],
+          [t.coinTossStepBan2, b],
+        ];
+
+  return (
+    <div className={CARD}>
+      <p className={EYEBROW}>{t.coinTossHeading}</p>
+      <p className={LINE}>
+        {rule === 'team_pick' ? t.coinTossRuleTeamPick : t.coinTossRuleImposed}
+      </p>
+      {!tossed ? (
+        <p className={`mt-2 ${LINE}`}>{t.coinTossPending}</p>
+      ) : (
+        <>
+          <p className="mt-2 text-sm text-[var(--t1,#f4edf7)]">
+            {format(t.coinTossResult, {
+              coin: pile ? t.coinTossPile : t.coinTossFace,
+              team: a,
+            })}
+          </p>
+          {rule === 'imposed' && match.coin_toss_imposed_map && (
+            <p className={LINE}>
+              {format(t.coinTossImposedMap, {
+                map: match.coin_toss_imposed_map,
+              })}
+            </p>
+          )}
+          <ol className={`mt-2 list-decimal pl-5 ${LINE}`}>
+            {steps.map(([label, team]) => (
+              <li key={label}>{format(label, { team })}</li>
+            ))}
+          </ol>
+          {match.coin_toss_at && (
+            <p className="mt-2 font-mono text-xs text-[var(--t3,#a39ba6)]">
+              {format(t.coinTossAt, {
+                date: formatDateTime(match.coin_toss_at),
+              })}
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }

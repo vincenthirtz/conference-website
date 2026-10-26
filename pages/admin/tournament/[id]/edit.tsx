@@ -27,6 +27,12 @@ import type { StaffProps, Tournament } from '@/types/admin';
 import type { RegistrationField } from '@/utils/registrationFields';
 import { getGame } from '@/config/games';
 import { TOURNAMENT_TIMEZONES } from '@/utils/timezone';
+import {
+  DEFAULT_FIRST_MAP_RULE,
+  toFirstMapRule,
+  type FirstMapRule,
+} from '@/utils/matches/firstMapRule';
+import FirstMapRuleSelect from '@/components/admin/tournaments/FirstMapRuleSelect';
 import nsAdminTournamentEdit from '@/lib/i18n/locales/admin-fr/adminTournamentEdit';
 import nsAdminRegistrationFields from '@/lib/i18n/locales/admin-fr/adminRegistrationFields';
 import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
@@ -119,6 +125,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
     schedule_details: string;
     schedule_rules: string;
     format_details: string;
+    first_map_rule: FirstMapRule;
   }>({
     name: '',
     slug: '',
@@ -146,6 +153,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
     schedule_details: '',
     schedule_rules: '',
     format_details: '',
+    first_map_rule: DEFAULT_FIRST_MAP_RULE,
   });
 
   function updateField<K extends keyof typeof form>(
@@ -210,6 +218,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
         schedule_details: tour.schedule_details || '',
         schedule_rules: tour.schedule_rules || '',
         format_details: tour.format_details || '',
+        first_map_rule: toFirstMapRule(tour.first_map_rule),
       };
       const nextFields = Array.isArray(tour.registration_fields)
         ? tour.registration_fields
@@ -288,6 +297,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
       schedule_details: form.schedule_details.trim() || null,
       schedule_rules: form.schedule_rules.trim() || null,
       format_details: form.format_details.trim() || null,
+      first_map_rule: form.first_map_rule,
       registration_fields: registrationFields,
       expected_updated_at: lock.version,
     };
@@ -504,6 +514,12 @@ function AdminTournamentEditPage(_props: StaffProps) {
                           </select>
                           <p className={HELP}>{t.timezoneHelp}</p>
                         </div>
+                        <FirstMapRuleSelect
+                          value={form.first_map_rule}
+                          onChange={(v) => updateField('first_map_rule', v)}
+                          labels={t}
+                          classes={{ label: LABEL, input: INPUT, help: HELP }}
+                        />
                         <TournamentFormatFields
                           form={form}
                           updateField={updateField}

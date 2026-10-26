@@ -35,6 +35,12 @@ export default adminNs('adminTournamentEdit', {
     'Au-delà de cette date, les équipes inscrites ne peuvent plus modifier leur roster (ajout, suppression, swap). Vide = pas de verrou.',
   timezoneLabel: 'Fuseau horaire',
   timezoneHelp: 'Les horaires seront affichés dans ce fuseau.',
+  firstMapRuleLabel: '1re map après le pile ou face',
+  firstMapRuleImposed: 'Map imposée — A 1er ban, B 2e ban',
+  firstMapRuleTeamPick:
+    'B choisit la map — A 1er ban, B la map, A le côté, B 2e ban',
+  firstMapRuleHelp:
+    'A = l’équipe qui gagne le pile ou face (/pile-ou-face sur Discord). Avec « Map imposée », le staff fixe la map au moment du tirage.',
   formatLabel: 'Format (libellé court)',
   formatHelp:
     'Texte court affiché sur la carte « Format » de la page publique (ex. « BO3 », « Suisse + playoffs »).',

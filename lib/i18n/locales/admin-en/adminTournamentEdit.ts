@@ -36,6 +36,12 @@ export default {
     'After this date, registered teams can no longer change their roster (add, remove, swap). Empty = no lock.',
   timezoneLabel: 'Timezone',
   timezoneHelp: 'Times will be displayed in this timezone.',
+  firstMapRuleLabel: 'Map 1 after the coin toss',
+  firstMapRuleImposed: 'Imposed map — A bans first, B bans second',
+  firstMapRuleTeamPick:
+    'B picks the map — A bans first, B picks the map, A picks the side, B bans second',
+  firstMapRuleHelp:
+    'A = the team that wins the coin toss (/pile-ou-face on Discord). With “Imposed map”, staff set the map when running the toss.',
   formatLabel: 'Format (short label)',
   formatHelp:
     'Short text shown on the "Format" card of the public page (e.g. "BO3", "Swiss + playoffs").',

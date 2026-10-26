@@ -21,6 +21,7 @@ import AdminButton, {
 } from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import {
+  MatchCoinTossCard,
   MatchDisputeCard,
   MatchInfoCards,
   MatchMapsSection,
@@ -297,6 +298,9 @@ function MatchViewPage(_: StaffProps) {
             />
 
             <MatchInfoCards match={match} />
+
+            {/* Pile ou face avant la 1re map (lancé sur Discord). */}
+            <MatchCoinTossCard match={match} />
 
             <MatchScoreLine match={match} />
 

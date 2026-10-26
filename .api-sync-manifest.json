@@ -1,6 +1,6 @@
 {
   "apiCommit": "b9ec35cbbbf5c4a25770c100712be347c5440209",
-  "syncedAt": "2026-10-26T11:19:17.072Z",
+  "syncedAt": "2026-10-26T11:21:50.955Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -185,6 +185,7 @@
     "utils/matches/availabilityRows.ts",
     "utils/matches/botEventEnrich.ts",
     "utils/matches/computeRequiredWins.ts",
+    "utils/matches/firstMapRule.ts",
     "utils/matches/forfeitProposal.ts",
     "utils/matches/heroBans.ts",
     "utils/matches/lineup.ts",

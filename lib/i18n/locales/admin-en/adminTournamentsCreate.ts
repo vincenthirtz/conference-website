@@ -41,6 +41,12 @@ export default {
   formatSwiss: 'Swiss',
   formatRoundRobin: 'Round Robin',
   formatShowmatch: 'Showmatch',
+  firstMapRuleLabel: 'Map 1 after the coin toss',
+  firstMapRuleImposed: 'Imposed map — A bans first, B bans second',
+  firstMapRuleTeamPick:
+    'B picks the map — A bans first, B picks the map, A picks the side, B bans second',
+  firstMapRuleHelp:
+    'A = the team that wins the coin toss (/pile-ou-face on Discord). Can be changed later on the tournament page.',
   maxTeamsLabel: 'Max. number of teams',
   minPlayersLabel: 'Min. players per team',
   maxPlayersLabel: 'Max. players per team',

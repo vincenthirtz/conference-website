@@ -40,6 +40,12 @@ export default adminNs('adminTournamentsCreate', {
   formatSwiss: 'Swiss',
   formatRoundRobin: 'Round Robin',
   formatShowmatch: 'Showmatch',
+  firstMapRuleLabel: '1re map après le pile ou face',
+  firstMapRuleImposed: 'Map imposée — A 1er ban, B 2e ban',
+  firstMapRuleTeamPick:
+    'B choisit la map — A 1er ban, B la map, A le côté, B 2e ban',
+  firstMapRuleHelp:
+    'A = l’équipe qui gagne le pile ou face (/pile-ou-face sur Discord). Modifiable ensuite dans la fiche du tournoi.',
   maxTeamsLabel: "Nombre max. d'equipes",
   minPlayersLabel: 'Nombre min. de joueurs par equipe',
   maxPlayersLabel: 'Nombre max. de joueurs par equipe',
