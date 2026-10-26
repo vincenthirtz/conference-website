@@ -54,4 +54,28 @@ export default adminNs('adminTournamentPool', {
     'Une des joueuses n’est plus en attente : la liste a été actualisée.',
   errGeneric: 'L’opération a échoué.',
   done: 'Répartition mise à jour.',
+
+  // Aperçu des inscrites (pages/admin/tournament/[id]/participants.tsx).
+  overviewHeadTitle: 'Admin – Inscrites',
+  overviewTitle: 'Aperçu des inscrites',
+  overviewSubtitle:
+    'Toutes les équipes inscrites avec leurs joueuses, la liste d’attente rangée par équipe d’origine et les joueuses inscrites seules. Lecture seule : la répartition se fait dans l’onglet Répartition.',
+  overviewToPool: 'Ouvrir la répartition',
+  overviewStatTeams: 'Équipes inscrites',
+  overviewStatPlayers: 'Joueuses en équipe',
+  overviewStatWaiting: 'En attente',
+  overviewStatSolos: 'Seules, sans équipe',
+  overviewTeamsTitle: 'Équipes inscrites',
+  overviewTeamCount: '{count} / {size}',
+  overviewFromRoster: 'effectif',
+  overviewFromRosterHelp:
+    'Inscrite directement : effectif de l’équipe, pas une inscription individuelle.',
+  overviewNoPlayers: 'Aucune joueuse connue pour cette équipe.',
+  overviewSubstitute: 'remplaçante',
+  overviewWaitingTitle: 'En attente, avec leur équipe',
+  overviewWaitingEmpty: 'Aucune joueuse en attente avec une équipe.',
+  overviewWaitingCount: '{count} / {size} inscrites',
+  overviewSolosTitle: 'Seules, sans équipe',
+  overviewSolosEmpty: 'Aucune joueuse inscrite seule.',
+  overviewSignedUpOn: 'inscrite le {date}',
 });

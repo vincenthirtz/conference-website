@@ -20,6 +20,7 @@ export default adminNs('adminTournamentNav', {
   tabBracket: 'Bracket',
   tabStages: 'Phases',
   subStagesList: 'Phases',
+  subStagesParticipants: 'Inscrites',
   subStagesPool: 'Répartition',
   tabResults: 'Résultats',
   tabSettings: 'Réglages',

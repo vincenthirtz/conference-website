@@ -48,7 +48,7 @@ export type PoolStatusView = {
 };
 
 /** Rôles hors effectif : ils encadrent, ils ne jouent pas. */
-const NON_PLAYER_ROLES = new Set(['coach', 'manager']);
+export const NON_PLAYER_ROLES = new Set(['coach', 'manager']);
 
 /**
  * Les équipes RÉELLES de la joueuse, celles qu'elle peut déclarer comme

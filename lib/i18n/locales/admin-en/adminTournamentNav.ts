@@ -20,6 +20,7 @@ export default {
   tabBracket: 'Bracket',
   tabStages: 'Phases',
   subStagesList: 'Stages',
+  subStagesParticipants: 'Sign-ups',
   subStagesPool: 'Distribution',
   tabResults: 'Results',
   tabSettings: 'Settings',

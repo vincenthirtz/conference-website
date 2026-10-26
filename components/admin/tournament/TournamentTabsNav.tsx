@@ -83,9 +83,11 @@ export const TOURNAMENT_TAB_GROUPS: TabGroup[] = [
     id: 'stages',
     labelKey: 'tabStages',
     // « Répartition » : la liste d'attente des tournois regroupés en équipes
-    // de 5 — elle alimente les phases, d'où sa place ici.
+    // de 5 — elle alimente les phases, d'où sa place ici. « Inscrites » la
+    // précède : l'aperçu de qui est où, avant de répartir.
     members: [
       { route: 'stages', labelKey: 'subStagesList' },
+      { route: 'participants', labelKey: 'subStagesParticipants' },
       { route: 'pool', labelKey: 'subStagesPool' },
     ],
   },

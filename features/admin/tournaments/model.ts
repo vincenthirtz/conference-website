@@ -12,6 +12,14 @@ export type AdminPoolEntry = {
   createdAt: string;
 };
 
+/** Une joueuse de l'effectif réel d'une équipe (`team_members`). */
+export type AdminPoolRosterMember = {
+  id: string;
+  displayName: string;
+  battleTag: string | null;
+  isSubstitute: boolean;
+};
+
 export type AdminPoolView = {
   teamSize: number;
   squads: Array<{
@@ -20,6 +28,12 @@ export type AdminPoolView = {
     /** Équipe mixte créée pour l'événement (inactive, hors annuaire). */
     mixed: boolean;
     members: AdminPoolEntry[];
+    /**
+     * Effectif réel de l'équipe, hors coachs et managers : la seule trace de
+     * ses joueuses quand elle a été inscrite sans passer par la liste
+     * d'attente (`members` vide). Vide pour une équipe mixte.
+     */
+    roster: AdminPoolRosterMember[];
   }>;
   waitlist: AdminPoolEntry[];
   proposal: {

@@ -48,4 +48,28 @@ export default {
     'One of the players is no longer waiting: the list was refreshed.',
   errGeneric: 'The operation failed.',
   done: 'Distribution updated.',
+
+  // Sign-up overview (pages/admin/tournament/[id]/participants.tsx).
+  overviewHeadTitle: 'Admin – Sign-ups',
+  overviewTitle: 'Sign-up overview',
+  overviewSubtitle:
+    'Every entered team with its players, the waitlist grouped by origin team, and the players who signed up alone. Read-only: distribution happens in the Distribution tab.',
+  overviewToPool: 'Open distribution',
+  overviewStatTeams: 'Teams entered',
+  overviewStatPlayers: 'Players in a team',
+  overviewStatWaiting: 'Waiting',
+  overviewStatSolos: 'Alone, no team',
+  overviewTeamsTitle: 'Entered teams',
+  overviewTeamCount: '{count} / {size}',
+  overviewFromRoster: 'roster',
+  overviewFromRosterHelp:
+    'Entered directly: the team’s roster, not individual sign-ups.',
+  overviewNoPlayers: 'No known player for this team.',
+  overviewSubstitute: 'substitute',
+  overviewWaitingTitle: 'Waiting, with their team',
+  overviewWaitingEmpty: 'No player waiting with a team.',
+  overviewWaitingCount: '{count} / {size} signed up',
+  overviewSolosTitle: 'Alone, no team',
+  overviewSolosEmpty: 'No player signed up alone.',
+  overviewSignedUpOn: 'signed up on {date}',
 };
