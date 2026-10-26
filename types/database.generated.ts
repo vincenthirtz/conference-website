@@ -3901,6 +3901,64 @@ export type Database = {
           },
         ]
       }
+      match_replay_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          map_number: number
+          match_id: string
+          submitted_by_discord_id: string | null
+          team_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          map_number: number
+          match_id: string
+          submitted_by_discord_id?: string | null
+          team_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          map_number?: number
+          match_id?: string
+          submitted_by_discord_id?: string | null
+          team_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_replay_codes_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_replay_codes_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_replay_codes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_score_reports: {
         Row: {
           discord_user_id: string | null
