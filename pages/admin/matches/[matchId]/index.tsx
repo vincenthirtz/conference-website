@@ -23,6 +23,7 @@ import Chip from '@/features/admin/_shared/ui/Chip';
 import {
   MatchCoinTossCard,
   MatchDisputeCard,
+  MatchReplayCodesCard,
   MatchInfoCards,
   MatchMapsSection,
   MatchScoreLine,
@@ -301,6 +302,9 @@ function MatchViewPage(_: StaffProps) {
 
             {/* Pile ou face avant la 1re map (lancé sur Discord). */}
             <MatchCoinTossCard match={match} />
+
+            {/* Codes de replay envoyés par les équipes (demandés par le bot). */}
+            <MatchReplayCodesCard match={match} />
 
             <MatchScoreLine match={match} />
 

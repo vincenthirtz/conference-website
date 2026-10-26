@@ -64,6 +64,11 @@ export default {
   coinTossStepMap: '{team} — picks the map',
   coinTossStepSide: '{team} — picks the side (attack or defense)',
   coinTossStepBan2: '{team} — second ban',
+  replayCodesHeading: 'Replay codes',
+  replayCodesEmpty:
+    'No code received yet. The bot asks for them in each team channel when the match ends.',
+  replayCodesMap: 'Map {n}',
+  replayCodesMapNamed: 'Map {n} — {name}',
   mapsHeading: 'Map details',
   mapsCount: '{count} map(s)',
   mapFallback: 'Map',

@@ -47,6 +47,14 @@ type GameRow = {
   went_overtime: boolean | null;
 };
 
+type ReplayCodeRow = {
+  map_number: number;
+  code: string;
+  team_id: string;
+  submitted_by_discord_id: string | null;
+  updated_at: string | null;
+};
+
 export type MatchRow = {
   id: string;
   tournament_id: string;
@@ -79,6 +87,8 @@ export type MatchRow = {
   coin_toss_winner_team_id?: string | null;
   coin_toss_at?: string | null;
   coin_toss_imposed_map?: string | null;
+  /** Codes de replay envoyés par les équipes (absent avant la migration match_replay_codes). */
+  replay_codes?: ReplayCodeRow[] | null;
   team1?: TeamMini | null;
   team2?: TeamMini | null;
   stage?: StageMini | null;
@@ -328,6 +338,65 @@ export function MatchCoinTossCard({ match }: { match: MatchRow }) {
             </p>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Codes de replay envoyés par les équipes à la fin du match (le bot les
+ * demande dans le salon de chaque équipe). Une ligne par map ; les deux
+ * équipes peuvent avoir envoyé le leur. Se tait sur un match sans équipes.
+ */
+export function MatchReplayCodesCard({ match }: { match: MatchRow }) {
+  const t = useAdminT(nsAdminMatchDetail);
+  if (!match.team1_id || !match.team2_id) return null;
+  const codes = match.replay_codes ?? [];
+  const teamName = (id: string) =>
+    id === match.team1_id
+      ? match.team1?.name || t.team1Fallback
+      : id === match.team2_id
+        ? match.team2?.name || t.team2Fallback
+        : '—';
+  const mapName = (n: number) =>
+    (match.games ?? []).find((g) => g.map_order === n)?.map_name ?? null;
+  const maps = [...new Set(codes.map((c) => c.map_number))].sort(
+    (a, b) => a - b
+  );
+
+  return (
+    <div className={CARD}>
+      <p className={EYEBROW}>{t.replayCodesHeading}</p>
+      {maps.length === 0 ? (
+        <p className={LINE}>{t.replayCodesEmpty}</p>
+      ) : (
+        <ul className="space-y-2">
+          {maps.map((n) => {
+            const name = mapName(n);
+            return (
+              <li key={n} className={LINE}>
+                <span className="text-[var(--t1,#f4edf7)]">
+                  {name
+                    ? format(t.replayCodesMapNamed, { n, name })
+                    : format(t.replayCodesMap, { n })}
+                </span>
+                {codes
+                  .filter((c) => c.map_number === n)
+                  .map((c) => (
+                    <span key={c.team_id} className="ml-3 whitespace-nowrap">
+                      <code className="rounded bg-[var(--s2,#1d1520)] px-1.5 py-0.5 font-mono text-[var(--t1,#f4edf7)]">
+                        {c.code}
+                      </code>{' '}
+                      <span className="text-xs text-[var(--t3,#a39ba6)]">
+                        {teamName(c.team_id)}
+                        {c.updated_at && ` · ${formatDateTime(c.updated_at)}`}
+                      </span>
+                    </span>
+                  ))}
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );

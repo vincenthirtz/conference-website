@@ -64,6 +64,11 @@ export default adminNs('adminMatchDetail', {
   coinTossStepMap: '{team} — choisit la map',
   coinTossStepSide: '{team} — choisit le côté (attaque ou défense)',
   coinTossStepBan2: '{team} — 2e ban',
+  replayCodesHeading: 'Codes de replay',
+  replayCodesEmpty:
+    'Aucun code reçu. Le bot les demande dans le salon de chaque équipe à la fin du match.',
+  replayCodesMap: 'Map {n}',
+  replayCodesMapNamed: 'Map {n} — {name}',
   mapsHeading: 'Détails des maps',
   mapsCount: '{count} map(s)',
   mapFallback: 'Map',
