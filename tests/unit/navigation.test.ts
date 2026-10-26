@@ -35,19 +35,23 @@ describe('activePublicLinkRef', () => {
   const key = (title: string) =>
     publicLinkKey(PUBLIC_LINKS.find((l) => l.title === title)!);
 
-  it('« Tournoi » actif sur les pages du tournoi — l’URL réelle, pas le motif', () => {
-    expect(activePublicLinkRef('/tournament/ow-womens-cup-2026')).toBe(
-      key('Tournoi')
+  it('« Event Halloween » actif sur les pages de l’event — l’URL réelle, pas le motif', () => {
+    expect(activePublicLinkRef('/tournament/halloween-2026')).toBe(
+      key('Event Halloween')
     );
-    expect(activePublicLinkRef('/tournament/ow-womens-cup-2026/matches')).toBe(
-      key('Tournoi')
-    );
+    expect(
+      activePublicLinkRef('/tournament/halloween-2026/inscription-solo')
+    ).toBe(key('Event Halloween'));
   });
 
   it('le lien le plus précis gagne : « Équipes » sur /teams', () => {
+    const links = [
+      { title: 'Tournoi', ref: '/tournament/ow-womens-cup-2026' },
+      { title: 'Équipes', ref: '/tournament/ow-womens-cup-2026/teams' },
+    ];
     expect(
-      activePublicLinkRef('/tournament/ow-womens-cup-2026/teams?x=1#top')
-    ).toBe(key('Équipes'));
+      activePublicLinkRef('/tournament/ow-womens-cup-2026/teams?x=1#top', links)
+    ).toBe('/tournament/ow-womens-cup-2026/teams');
   });
 
   it('l’accueil seulement en correspondance exacte ; rien hors menu', () => {

@@ -32,8 +32,7 @@ export default ns('navbar', {
   mobileMenuAria: 'Menu mobile',
   publicLinks: {
     Accueil: 'Accueil',
-    Tournoi: 'Tournoi',
-    Équipes: 'Équipes',
+    'Event Halloween': 'Event Halloween',
     Classement: 'Classement',
     Ligues: 'Ligues',
     // Le TCG au premier niveau : rangé sous « Communauté », personne ne le

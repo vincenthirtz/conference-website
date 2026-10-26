@@ -32,20 +32,15 @@ test.describe('en-tête — visiteur anonyme, bureau', () => {
     });
   }
 
-  test('« Tournoi » actif sur le tournoi, « Équipes » sur ses équipes', async ({
-    page,
-  }) => {
+  test('« Event Halloween » actif sur l’event', async ({ page }) => {
     test.skip(
-      (await open(page, `/tournament/${SLUG}`)) !== 200,
-      `tournoi ${SLUG} indisponible`
+      (await open(page, '/tournament/halloween-2026')) !== 200,
+      'event halloween-2026 indisponible'
     );
     await expect(
-      page.locator(`${NAV} a[aria-current="page"]`, { hasText: 'Tournoi' })
-    ).toHaveCount(1);
-
-    await open(page, `/tournament/${SLUG}/teams`);
-    await expect(
-      page.locator(`${NAV} a[aria-current="page"]`, { hasText: 'Équipes' })
+      page.locator(`${NAV} a[aria-current="page"]`, {
+        hasText: 'Event Halloween',
+      })
     ).toHaveCount(1);
   });
 

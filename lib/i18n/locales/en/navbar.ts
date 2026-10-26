@@ -33,8 +33,7 @@ export default {
   mobileMenuAria: 'Mobile menu',
   publicLinks: {
     Accueil: 'Home',
-    Tournoi: 'Tournament',
-    Équipes: 'Teams',
+    'Event Halloween': 'Halloween event',
     Classement: 'Leaderboard',
     Ligues: 'Leagues',
     Cartes: 'Cards',
