@@ -294,6 +294,15 @@
 # Service Worker for /admin PWA: served from /sw.js (registered with scope '/'
 # so it can receive push events outside the /admin route). no-cache so SW
 # updates propagate quickly. Service-Worker-Allowed lifts the scope cap.
+# Chargeur Turbopack (pages/_document.tsx, utils/csp/turbopackBootstrap.ts) :
+# appelé avec ?v=<empreinte>, il peut être gardé un an — une nouvelle version
+# change d'URL.
+[[headers]]
+  for = "/turbopack-bootstrap.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    Content-Type = "application/javascript; charset=utf-8"
+
 [[headers]]
   for = "/sw.js"
   [headers.values]

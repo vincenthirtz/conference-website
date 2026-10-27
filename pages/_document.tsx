@@ -1,6 +1,12 @@
-import { Html, Head, Main, NextScript } from 'next/document';
+import {
+  Html,
+  Head as BaseHead,
+  Main,
+  NextScript as BaseNextScript,
+} from 'next/document';
 import type { DocumentContext, DocumentInitialProps } from 'next/document';
 import Document from 'next/document';
+import { externalizeTurbopackBootstrap } from '@/utils/csp/turbopackBootstrap';
 import type { AppType } from 'next/app';
 import type { ComponentProps, ComponentType } from 'react';
 import { resolveTenantIdByHost, readTenantBranding } from '@/utils/tenant';
@@ -37,6 +43,25 @@ function brandCssVars(branding: TenantBranding): string {
   // `:root:root` : spécificité (0,0,2) > le `:root` (0,0,1) de globals.css, donc
   // l'override gagne quel que soit l'ordre d'injection des feuilles de style.
   return decls.length ? `:root:root{${decls.join('')}}` : '';
+}
+
+// Next ≥ 16.4 écrit dans chaque page un script inline qui amorce Turbopack ;
+// sans nonce sur les pages pré-rendues, notre CSP le refuse et rien ne
+// démarre. Ces deux sous-classes le remplacent par un fichier du site
+// (utils/csp/turbopackBootstrap.ts). `Head` rend les scripts en mode
+// optimisé (le nôtre), `NextScript` sinon : les deux sont couverts.
+type DocumentFiles = Parameters<BaseHead['getScripts']>[0];
+
+class Head extends BaseHead {
+  override getScripts(files: DocumentFiles) {
+    return externalizeTurbopackBootstrap(super.getScripts(files));
+  }
+}
+
+class NextScript extends BaseNextScript {
+  override getScripts(files: DocumentFiles) {
+    return externalizeTurbopackBootstrap(super.getScripts(files));
+  }
 }
 
 export default class MyDocument extends Document<MyDocumentProps> {
