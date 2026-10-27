@@ -110,7 +110,7 @@ export default function PublicNav({
                   triggerRefs.current.set(link.title, el);
                 }}
                 type="button"
-                className={`group/link relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-[14px] font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+                className={`group/link relative flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-[14px] font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
                   isActive ? 'text-white' : 'text-neutral-200 hover:text-white'
                 }`}
                 onClick={() => setOpenMenu(isOpen ? null : link.title)}
@@ -157,7 +157,7 @@ export default function PublicNav({
               <Link
                 href={link.ref ?? '#'}
                 aria-current={isActive ? 'page' : undefined}
-                className={`group/link relative inline-flex items-center rounded-lg px-3 py-2 text-[14px] font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+                className={`group/link relative inline-flex items-center whitespace-nowrap rounded-lg px-3 py-2 text-[14px] font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
                   isActive ? 'text-white' : 'text-neutral-200 hover:text-white'
                 }`}
               >
