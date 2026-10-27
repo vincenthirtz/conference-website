@@ -1,3 +1,5 @@
+// @vitest-environment happy-dom
+//
 // La source OBS « finales » (`/overlay/finales`) : la petite et la grande
 // finale de la soirée, une bande chacune.
 //
@@ -14,12 +16,17 @@
 //   - l'URL est proposée dans Diffusion › Overlays.
 
 import { describe, it, expect, vi } from 'vitest';
-import { createElement } from 'react';
+import { act, createElement } from 'react';
+import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 const routerQuery: { current: Record<string, string> } = { current: {} };
 vi.mock('next/router', () => ({
   useRouter: () => ({ query: routerQuery.current, isReady: true }),
+}));
+// Le signal de présence fait un `fetch` au montage : rien à envoyer ici.
+vi.mock('../../hooks/useOverlayHeartbeat', () => ({
+  useOverlayHeartbeat: () => {},
 }));
 
 import {
@@ -225,10 +232,21 @@ describe('FinalsSource — les bandes', () => {
 });
 
 describe('page /overlay/finales', () => {
-  it('dit ce qui manque quand l’URL n’a pas de tournoi', () => {
+  it('dit ce qui manque quand l’URL n’a pas de tournoi, une fois dans le navigateur', async () => {
     routerQuery.current = {};
-    const html = renderToStaticMarkup(createElement(FinalsOverlayPage));
-    expect(html).toContain('?tournament=');
+    // Rendu serveur : la page est pré-rendue sans URL, elle ne peut rien en
+    // dire — et doit rendre la même chose que l'hydratation (useRouterReady).
+    expect(
+      renderToStaticMarkup(createElement(FinalsOverlayPage))
+    ).not.toContain('?tournament=');
+    (
+      globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
+    const container = document.createElement('div');
+    const root = createRoot(container);
+    await act(async () => root.render(createElement(FinalsOverlayPage)));
+    expect(container.innerHTML).toContain('?tournament=');
+    await act(async () => root.unmount());
   });
 });
 

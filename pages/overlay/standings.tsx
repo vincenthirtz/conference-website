@@ -33,6 +33,7 @@ import {
 } from '@/utils/overlay/standingsOverlay';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
+import { useRouterReady } from '@/hooks/useRouterReady';
 
 function firstParam(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
@@ -46,6 +47,8 @@ function parseScale(raw: string | undefined): number {
 
 export default function StandingsOverlayPage() {
   const router = useRouter();
+  // Pas `router.isReady` : il change le rendu dès l'hydratation (cf. le hook).
+  const ready = useRouterReady();
   // Signal de présence (Diffusion › Overlays : « affichée »).
   useOverlayHeartbeat('standings');
   const t = useT(nsOverlay);
@@ -58,12 +61,12 @@ export default function StandingsOverlayPage() {
 
   // Une URL incomplète doit se voir dès qu'on la colle dans OBS.
   const configError =
-    router.isReady && !tournament ? t.standingsMissingTournament : null;
+    ready && !tournament ? t.standingsMissingTournament : null;
 
   const { data, fatal } = useStandingsOverlay({
     tournament,
     tenant,
-    enabled: router.isReady && !configError,
+    enabled: ready && !configError,
   });
 
   const message = configError ?? fatal;

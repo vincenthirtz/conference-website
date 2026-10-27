@@ -45,6 +45,7 @@ import {
 } from '@/utils/overlay/donAlert';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
+import { useRouterReady } from '@/hooks/useRouterReady';
 
 /** Logo de l'association, pour son propre espace (branding nul). */
 const DEFAULT_LOGO_SRC = '/img/logos/2026-logo.png';
@@ -106,6 +107,8 @@ function useDemoFeed(
 
 export default function DonationAlertOverlayPage() {
   const router = useRouter();
+  // Pas `router.isReady` : il change le rendu dès l'hydratation (cf. le hook).
+  const ready = useRouterReady();
   // Signal de présence (Diffusion › Overlays : « affichée »).
   useOverlayHeartbeat('donAlert');
   const t = useT(nsOverlay);
@@ -123,14 +126,12 @@ export default function DonationAlertOverlayPage() {
   const qs = params.toString();
   // Démo : pas d'URL, donc pas de polling du tout.
   const url =
-    router.isReady && !demo
-      ? `/api/overlay/donations${qs ? `?${qs}` : ''}`
-      : null;
+    ready && !demo ? `/api/overlay/donations${qs ? `?${qs}` : ''}` : null;
 
   const { data, fatal } = useOverlayPoll<OverlayDonationsResponse>(url, {
     intervalMs: 5000,
   });
-  const demoFeed = useDemoFeed(router.isReady && demo, goalCents);
+  const demoFeed = useDemoFeed(ready && demo, goalCents);
   const feed: DonationAlertFeed | null = demo ? demoFeed : data;
 
   const accent =
@@ -165,7 +166,7 @@ export default function DonationAlertOverlayPage() {
               {message}
             </p>
           </div>
-        ) : router.isReady ? (
+        ) : ready ? (
           <DonationAlertSource
             feed={feed}
             accent={accent}

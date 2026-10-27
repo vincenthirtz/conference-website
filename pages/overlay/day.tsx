@@ -27,6 +27,7 @@ import { DayScheduleSource } from '@/components/overlay/match/DayScheduleSource'
 import { parseDayLimit } from '@/utils/overlay/dayOverlay';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
+import { useRouterReady } from '@/hooks/useRouterReady';
 
 function firstParam(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
@@ -40,6 +41,8 @@ function parseScale(raw: string | undefined): number {
 
 export default function DayOverlayPage() {
   const router = useRouter();
+  // Pas `router.isReady` : il change le rendu dès l'hydratation (cf. le hook).
+  const ready = useRouterReady();
   // Signal de présence (Diffusion › Overlays : « affichée »).
   useOverlayHeartbeat('day');
   const t = useT(nsOverlay);
@@ -52,14 +55,13 @@ export default function DayOverlayPage() {
   const preview = firstParam(router.query.preview) === '1';
 
   // Une URL incomplète doit se voir dès qu'on la colle dans OBS.
-  const configError =
-    router.isReady && !tournament ? t.dayMissingTournament : null;
+  const configError = ready && !tournament ? t.dayMissingTournament : null;
 
   const { data, fatal } = useDayOverlay({
     tournament,
     date,
     tenant,
-    enabled: router.isReady && !configError,
+    enabled: ready && !configError,
   });
 
   const message = configError ?? fatal;
