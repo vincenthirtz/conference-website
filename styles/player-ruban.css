@@ -384,11 +384,11 @@
 }
 /* Champs à 16 px : sous cette taille, iOS zoome la page au focus. */
 [data-surface="player"]
-:is(
-  input:not([type="checkbox"], [type="radio"], [type="range"]),
-  select,
-  textarea
-) {
+  :is(
+    input:not([type="checkbox"], [type="radio"], [type="range"]),
+    select,
+    textarea
+  ) {
   font-size: max(var(--body-size, 16px), 1em);
 }
 
