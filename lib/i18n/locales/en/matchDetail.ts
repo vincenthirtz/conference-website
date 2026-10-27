@@ -34,7 +34,6 @@ export default {
   infoRound: 'Round',
   infoPool: 'Group',
   infoFormat: 'Format',
-  infoLobby: 'Lobby',
   infoStream: 'Stream',
   viewStream: 'Watch the stream',
   infoReplay: 'Replay',

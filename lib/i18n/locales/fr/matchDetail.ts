@@ -34,7 +34,6 @@ export default ns('matchDetail', {
   infoRound: 'Round',
   infoPool: 'Poule',
   infoFormat: 'Format',
-  infoLobby: 'Lobby',
   infoStream: 'Stream',
   viewStream: 'Voir le stream',
   infoReplay: 'Replay',

@@ -131,7 +131,6 @@ type Match = {
   completed_at: string | null;
   stream_url: string | null;
   replay_url: string | null;
-  lobby_code: string | null;
   notes: string | null;
   team1: SimpleTeam | null;
   team2: SimpleTeam | null;
@@ -311,7 +310,6 @@ export const getStaticProps: GetStaticProps<Props> = async (ctx) => {
       completed_at,
       stream_url,
       replay_url,
-      lobby_code,
       notes,
       team1:team1_id ( id, slug, name, short_name, logo_url, captain_id ),
       team2:team2_id ( id, slug, name, short_name, logo_url, captain_id ),
@@ -799,16 +797,8 @@ export default function MatchPage({ match, lineups, mvp, publicMvp }: Props) {
                   <InfoRow label={t.infoPool} value={match.group_key} />
                 )}
                 <InfoRow label={t.infoFormat} value={formatLabel} />
-                {match.lobby_code && (
-                  <InfoRow
-                    label={t.infoLobby}
-                    value={
-                      <code className="bg-black/60 border border-white/10 rounded px-1.5 py-[1px] text-[10px]">
-                        {match.lobby_code}
-                      </code>
-                    }
-                  />
-                )}
+                {/* Pas de code de lobby ici : réservé à l'admin (2026-10-27) —
+                    public, n'importe qui pouvait rejoindre la partie. */}
                 {streamUrl && (
                   <InfoRow
                     label={t.infoStream}
