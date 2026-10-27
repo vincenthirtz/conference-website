@@ -2,6 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   trailingSlash: false,
+  // `next dev` (16.4+) écrirait un AGENTS.md à la racine : la même consigne
+  // « This is NOT the Next.js you know » que CLAUDE.md porte déjà. Coupé pour
+  // ne pas laisser un fichier non suivi après chaque `next dev`.
+  agentRules: false,
   images: {
     formats: ['image/avif', 'image/webp'],
     // Les équipes peuvent envoyer un logo SVG (cf. utils/svgSanitize.ts, qui
