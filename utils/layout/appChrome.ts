@@ -40,6 +40,8 @@ export type AppChrome = {
   footer: boolean;
   floatingSocials: boolean;
   analytics: boolean;
+  /** Décoration saisonnière (Halloween…) : le site public seulement. */
+  seasonalDecor: boolean;
   noindex: boolean;
   /** Surface « application » (admin, espace joueuse). */
   appScope: boolean;
@@ -84,6 +86,9 @@ export function resolveAppChrome(pathname: string): AppChrome {
     floatingSocials: !bare && !isAdmin,
     // Surfaces internes non mesurées : leur trafic fausserait l'entonnoir.
     analytics: !bare && !isAdmin,
+    // Ni les outils (admin, espace joueuse, parcours à jeton : ils ont leur
+    // barre et leurs propres saisons), ni les pages nues (overlays OBS).
+    seasonalDecor: !bare && surface === null,
     noindex: appScope || bare || isTechnical,
     appScope,
     surface,

@@ -3002,3 +3002,414 @@ a:focus-visible,
 @utility scroll-mt-header {
   scroll-margin-top: calc(var(--app-header-h) + 16px);
 }
+
+/* ─────────────────────────────────────────────────────────
+ * Halloween — décoration saisonnière du site public
+ * (components/Halloween ; dates : config/halloweenDecor.ts).
+ * Un calque fixe qui ne capte aucun clic et ne déborde jamais ;
+ * on n'anime que des transformations ; tout ce qui vole
+ * disparaît sous prefers-reduced-motion (voir fin du bloc).
+ * ───────────────────────────────────────────────────────── */
+
+.hw-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Toiles : dans les deux coins, accrochées sous l'en-tête. */
+.hw-web {
+  position: absolute;
+  top: var(--app-header-h, 75px);
+  width: clamp(92px, 13vw, 190px);
+  aspect-ratio: 1;
+}
+.hw-web--left {
+  left: 0;
+}
+.hw-web--right {
+  right: 0;
+}
+.hw-web-threads {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: rgba(236, 228, 255, 0.5);
+  filter: drop-shadow(0 0 2px rgba(194, 77, 255, 0.45));
+}
+.hw-web--right .hw-web-threads {
+  transform: scaleX(-1);
+}
+
+/* Araignée au bout de son fil. Le fil part très haut : la boîte qui commence
+ * sur la toile le coupe, il semble toujours y être accroché. */
+.hw-spider-clip {
+  position: absolute;
+  width: 28px;
+  height: 240px;
+  overflow: hidden;
+}
+/* À gauche, loin du bord : la barre des réseaux (FloatingSocials) occupe les
+ * 80 premiers pixels et cacherait l'araignée. */
+.hw-web--left .hw-spider-clip {
+  top: 30%;
+  left: calc(68% - 14px);
+}
+.hw-web--right .hw-spider-clip {
+  top: 40%;
+  right: calc(40% - 14px);
+}
+.hw-spider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28px;
+  animation: hw-spider-drop 9s ease-in-out infinite both;
+  will-change: transform;
+}
+.hw-web--right .hw-spider {
+  animation-duration: 12s;
+  animation-delay: -5s;
+}
+.hw-spider-thread {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 7px);
+  width: 1px;
+  height: 400px;
+  background: rgba(236, 228, 255, 0.55);
+}
+.hw-spider-body {
+  display: block;
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 0 3px rgba(194, 77, 255, 0.9));
+}
+
+/* Chauves-souris : traversent l'écran en ondulant, puis se font oublier. */
+.hw-bat {
+  position: absolute;
+  left: 0;
+  animation: hw-fly-ltr 18s ease-in-out infinite both;
+  will-change: transform;
+}
+.hw-bat svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 0 7px rgba(255, 138, 30, 0.9));
+}
+.hw-bat--1 {
+  top: 22vh;
+  width: 54px;
+  animation-delay: 2s;
+}
+.hw-bat--2 {
+  top: 36vh;
+  width: 40px;
+  animation-name: hw-fly-rtl;
+  animation-duration: 21s;
+  animation-delay: 8s;
+}
+.hw-bat--3 {
+  top: 15vh;
+  width: 32px;
+  animation-duration: 25s;
+  animation-delay: 14s;
+}
+.hw-bat-wings {
+  transform-box: view-box;
+  transform-origin: 32px 16px;
+  animation: hw-bat-flap 0.3s ease-in-out infinite alternate;
+}
+
+/* Sorcière sur son balai, de gauche à droite, en haut de page. */
+.hw-witch {
+  position: absolute;
+  left: 0;
+  top: calc(var(--app-header-h, 75px) + 8vh);
+  width: clamp(110px, 13vw, 180px);
+  animation: hw-witch-fly 34s linear infinite both;
+  animation-delay: 4s;
+  will-change: transform;
+}
+.hw-witch-body {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 0 8px rgba(255, 138, 30, 0.45));
+  animation: hw-bob 1.8s ease-in-out infinite alternate;
+}
+
+/* Momie : se penche depuis le bord droit, regarde, repart. Le bas du corps
+ * s'estompe : elle sort de derrière le bord, pas d'une découpe. */
+.hw-mummy {
+  position: absolute;
+  right: 0;
+  top: 52vh;
+  width: clamp(76px, 9vw, 120px);
+  transform-origin: 100% 100%;
+  animation: hw-mummy-peek 21s ease-in-out infinite both;
+  animation-delay: 6s;
+  will-change: transform;
+}
+.hw-mummy svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 0 10px rgba(198, 255, 77, 0.25));
+  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent);
+  mask-image: linear-gradient(to bottom, #000 72%, transparent);
+}
+.hw-mummy-eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hw-blink 5s infinite;
+}
+
+/* Fantôme : s'échappe des citrouilles et monte en se dissipant. */
+.hw-ghost {
+  position: absolute;
+  left: 34px;
+  bottom: -90px;
+  width: clamp(40px, 4.5vw, 58px);
+  animation: hw-ghost-rise 26s ease-in-out infinite both;
+  animation-delay: 10s;
+  will-change: transform, opacity;
+}
+.hw-ghost svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 0 10px rgba(220, 200, 255, 0.6));
+}
+
+/* Citrouilles, en bas à gauche. La grande est le bouton marche/arrêt. */
+.hw-pumpkin {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.hw-pumpkin-small {
+  position: absolute;
+  left: 66px;
+  bottom: 12px;
+  width: 36px;
+  filter: drop-shadow(0 0 8px rgba(255, 138, 30, 0.5));
+}
+.hw-pumpkin-face {
+  animation: hw-flicker 2.8s linear infinite;
+}
+.hw-toggle {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  width: 54px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  filter: drop-shadow(0 0 10px rgba(255, 138, 30, 0.6));
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+.hw-toggle:hover {
+  transform: scale(1.08) rotate(-5deg);
+}
+.hw-toggle:focus-visible {
+  outline: 2px solid #ffd54a;
+  outline-offset: 4px;
+  border-radius: 14px;
+}
+.hw-toggle[data-off] {
+  width: 38px;
+  opacity: 0.6;
+  filter: grayscale(0.5);
+}
+.hw-toggle[data-off]:hover {
+  opacity: 1;
+}
+
+@keyframes hw-spider-drop {
+  0%,
+  15%,
+  100% {
+    transform: translateY(0);
+  }
+  45%,
+  65% {
+    transform: translateY(160px);
+  }
+}
+@keyframes hw-bat-flap {
+  to {
+    transform: scaleY(-0.4);
+  }
+}
+@keyframes hw-fly-ltr {
+  0% {
+    transform: translate(-110%, 0);
+  }
+  10% {
+    transform: translate(22vw, -36px);
+  }
+  20% {
+    transform: translate(44vw, 20px);
+  }
+  30% {
+    transform: translate(66vw, -28px);
+  }
+  40% {
+    transform: translate(88vw, 12px);
+  }
+  45%,
+  100% {
+    transform: translate(calc(100vw + 10%), -12px);
+  }
+}
+@keyframes hw-fly-rtl {
+  0% {
+    transform: translate(calc(100vw + 10%), 0);
+  }
+  10% {
+    transform: translate(78vw, 30px);
+  }
+  20% {
+    transform: translate(56vw, -22px);
+  }
+  30% {
+    transform: translate(34vw, 26px);
+  }
+  40% {
+    transform: translate(12vw, -14px);
+  }
+  45%,
+  100% {
+    transform: translate(-110%, 10px);
+  }
+}
+@keyframes hw-witch-fly {
+  0% {
+    transform: translate(-110%, 0);
+  }
+  30%,
+  100% {
+    transform: translate(calc(100vw + 10%), -6vh);
+  }
+}
+@keyframes hw-bob {
+  from {
+    transform: translateY(-4px) rotate(-2deg);
+  }
+  to {
+    transform: translateY(4px) rotate(2deg);
+  }
+}
+@keyframes hw-mummy-peek {
+  0%,
+  50% {
+    transform: translateX(110%) rotate(0deg);
+  }
+  57% {
+    transform: translateX(36%) rotate(-10deg);
+  }
+  68% {
+    transform: translateX(36%) rotate(-5deg);
+  }
+  73% {
+    transform: translateX(34%) rotate(-11deg);
+  }
+  80%,
+  100% {
+    transform: translateX(110%) rotate(0deg);
+  }
+}
+@keyframes hw-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes hw-ghost-rise {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  4% {
+    opacity: 0.9;
+  }
+  14% {
+    transform: translate(34px, -24vh);
+  }
+  24% {
+    transform: translate(-6px, -46vh);
+    opacity: 0.85;
+  }
+  32%,
+  100% {
+    transform: translate(26px, -64vh);
+    opacity: 0;
+  }
+}
+@keyframes hw-flicker {
+  0%,
+  56%,
+  100% {
+    opacity: 1;
+  }
+  12% {
+    opacity: 0.78;
+  }
+  20% {
+    opacity: 0.96;
+  }
+  48% {
+    opacity: 0.84;
+  }
+  80% {
+    opacity: 0.72;
+  }
+  86% {
+    opacity: 0.95;
+  }
+}
+
+/* Petits écrans : moins de monde, rien devant le texte plus que nécessaire. */
+@media (max-width: 640px) {
+  .hw-bat--3,
+  .hw-ghost {
+    display: none;
+  }
+  .hw-mummy {
+    top: 60vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hw-bat,
+  .hw-witch,
+  .hw-mummy,
+  .hw-ghost {
+    display: none;
+  }
+  .hw-spider,
+  .hw-pumpkin-face {
+    animation: none;
+  }
+  .hw-spider {
+    transform: translateY(70px);
+  }
+  .hw-toggle {
+    transition: none;
+  }
+}

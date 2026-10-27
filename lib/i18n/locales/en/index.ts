@@ -198,6 +198,7 @@ import enPlayerLibraryHalloween from './playerLibraryHalloween';
 import enPlayerLibraryReadingRoom from './playerLibraryReadingRoom';
 import enPlayerLibraryTeamHq from './playerLibraryTeamHq';
 import enPlayerLibraryArena from './playerLibraryArena';
+import enHalloweenDecor from './halloweenDecor';
 
 const enDict = {
   profileSummary: enProfileSummary,
@@ -385,6 +386,7 @@ const enDict = {
   playerLibraryReadingRoom: enPlayerLibraryReadingRoom,
   playerLibraryTeamHq: enPlayerLibraryTeamHq,
   playerLibraryArena: enPlayerLibraryArena,
+  halloweenDecor: enHalloweenDecor,
 };
 
 export default enDict;

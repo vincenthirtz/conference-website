@@ -192,6 +192,7 @@ import nsPlayerLibraryHalloween from './playerLibraryHalloween';
 import nsPlayerLibraryReadingRoom from './playerLibraryReadingRoom';
 import nsPlayerLibraryTeamHq from './playerLibraryTeamHq';
 import nsPlayerLibraryArena from './playerLibraryArena';
+import nsHalloweenDecor from './halloweenDecor';
 
 export const frDict = {
   profileSummary: nsProfileSummary.fr,
@@ -379,4 +380,5 @@ export const frDict = {
   playerLibraryReadingRoom: nsPlayerLibraryReadingRoom.fr,
   playerLibraryTeamHq: nsPlayerLibraryTeamHq.fr,
   playerLibraryArena: nsPlayerLibraryArena.fr,
+  halloweenDecor: nsHalloweenDecor.fr,
 };

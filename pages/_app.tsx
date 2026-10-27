@@ -14,6 +14,7 @@ import { LanguageProvider } from '@/lib/i18n/LanguageProvider';
 import { SessionProvider } from '@/hooks/useSession';
 import { TenantBrandingProvider } from '@/lib/branding/TenantBrandingProvider';
 import { ActiveTeamProvider } from '@/components/player/ActiveTeamContext';
+import HalloweenDecorGate from '@/components/Halloween/HalloweenDecorGate';
 import type { TenantBranding } from '@/utils/tenant';
 import { resolveAppChrome } from '@/utils/layout/appChrome';
 import { installRemoteApiFetch } from '@/utils/remoteApi';
@@ -173,6 +174,9 @@ function MyApp({ Component, pageProps, router, branding }: AppPropsWithSeo) {
                   {isAdmin && <OfflineBanner />}
                   {chrome.footer && <Footer />}
                   {chrome.floatingSocials && <FloatingSocials />}
+                  {/* Hors saison (config/halloweenDecor), ne rend rien et ne
+                      télécharge rien. */}
+                  {chrome.seasonalDecor && <HalloweenDecorGate />}
                   <BackToTopButton />
                   <CookieBanner />
                   {/* L'admin n'est pas mesuré : c'est une surface interne, son

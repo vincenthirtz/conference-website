@@ -63,6 +63,22 @@ describe('resolveAppChrome', () => {
     }
   });
 
+  it('décoration saisonnière : le site public seulement', () => {
+    for (const route of ['/', '/tournament/[id]', '/player/[userId]']) {
+      expect(resolveAppChrome(route).seasonalDecor, route).toBe(true);
+    }
+    for (const route of [
+      '/admin/tcg',
+      '/player/matches',
+      '/espace-capitaine',
+      '/checkin/[token]',
+      '/overlay/day',
+      '/embed/bracket/[id]',
+    ]) {
+      expect(resolveAppChrome(route).seasonalDecor, route).toBe(false);
+    }
+  });
+
   it('pages techniques : affichées normalement, jamais indexées', () => {
     expect(resolveAppChrome('/auth/discord-member')).toMatchObject({
       navbar: true,
