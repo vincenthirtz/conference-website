@@ -1,0 +1,19 @@
+# cloudflare/_headers — en-têtes des fichiers statiques servis par Cloudflare
+# (Workers Static Assets). Copié dans .open-next/assets/ par la CI
+# (.github/workflows/cloudflare.yml) : hors de public/, pour que Netlify ne le
+# lise pas en double. Équivalent des [[headers]] de netlify.toml, plus les
+# fichiers versionnés de Next, que Netlify garde déjà un an d'office.
+# X-Frame-Options « ALLOW-FROM » (bloc /* de netlify.toml) n'est pas repris :
+# les navigateurs l'ignorent ; l'encadrement est réglé par la CSP de proxy.ts.
+
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Chargeur Turbopack, appelé avec ?v=<empreinte> (pages/_document.tsx).
+/turbopack-bootstrap.js
+  Cache-Control: public, max-age=31536000, immutable
+
+# Service worker (PWA) : mises à jour prises tout de suite.
+/sw.js
+  Service-Worker-Allowed: /
+  Cache-Control: no-cache

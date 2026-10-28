@@ -1,0 +1,48 @@
+{
+  // Worker « owwomenscup » : le site sur Cloudflare (OpenNext), déployé par
+  // .github/workflows/cloudflare.yml à chaque mise à jour de `work`.
+  // Doc : docs/CLOUDFLARE.md. Tant que le domaine pointe sur Netlify, il
+  // n'est servi que sur https://owwomenscup.owwomenscup.workers.dev.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "owwomenscup",
+  // Relais /api/*, tâches planifiées, noindex sur *.workers.dev, autour du
+  // Worker OpenNext.
+  "main": "cloudflare/worker.mjs",
+  "compatibility_date": "2026-10-27",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    { "binding": "WORKER_SELF_REFERENCE", "service": "owwomenscup" }
+  ],
+  // Cache des pages (ISR) : bucket créé par la CI s'il manque.
+  "r2_buckets": [
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "owwomenscup-opennext-cache"
+    }
+  ],
+  // File de régénération ISR (Durable Object SQLite).
+  "durable_objects": {
+    "bindings": [
+      { "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],
+  "images": { "binding": "IMAGES" },
+  // Un seul déclencheur ; les horaires des tâches sont dans cloudflare/crons.ts.
+  "triggers": { "crons": ["* * * * *"] },
+  "vars": {
+    // Relais vers https://api.owwomenscup.fr (API_PROXY_ORIGIN par défaut).
+    "API_PROXY_PREFIXES": "/api/",
+    // « 1 » le jour de la bascule seulement, dans le même commit que la
+    // suppression des fonctions planifiées Netlify (sinon double exécution).
+    "CRONS_ENABLED": "0"
+  },
+  // Pas de placement : les pages viennent du cache, le Worker tourne au plus
+  // près de la visiteuse (mesure du 2026-10-27).
+  "observability": { "enabled": true }
+}

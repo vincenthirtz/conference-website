@@ -59,3 +59,8 @@ graphify-out/
 # .claude/ (agents, skills, contextes, settings.json) est partagé, donc suivi.
 .claude/worktrees/
 .claude/settings.local.json
+
+# Cloudflare / OpenNext (docs/CLOUDFLARE.md)
+.open-next/
+.wrangler/
+.dev.vars
