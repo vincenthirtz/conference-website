@@ -34,8 +34,9 @@ migration, ils passent en devDependencies.
 - **En-têtes** : ceux de netlify.toml sont repris dans `cloudflare/_headers`,
   sauf `X-Frame-Options: ALLOW-FROM …` (ignoré par les navigateurs ;
   l'encadrement est réglé par la CSP de `proxy.ts`).
-- **Page 404** : `pages/404.tsx` a un `getStaticProps` pour que la 404 d'un
-  `notFound` (tournoi supprimé…) soit la nôtre et non celle de Next.
+- **Page 404** : pour un `notFound` de getStaticProps (tournoi supprimé…),
+  Next sous OpenNext répond un texte brut « This page could not be found » ;
+  `cloudflare/worker.mjs` sert alors notre page 404 (statut 404).
 - **Fonction Telegram de la VM Freebox** : supprimée (2026-10-28).
 
 ## Secrets du Worker

@@ -1,4 +1,3 @@
-import type { GetStaticProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -16,14 +15,6 @@ const suggestions = (t: Error404Dict) => [
   { label: t.sSitemap, href: '/plan-du-site', emoji: '🗺️' },
   { label: t.sContact, href: '/contact', emoji: '✉️' },
 ];
-
-// getStaticProps vide, mais nécessaire : sans lui, Next range cette page en
-// simple fichier HTML (pages-manifest « /404 » → pages/404.html), que le
-// serveur relit sur disque quand un getStaticProps renvoie `notFound` (ex.
-// /tournament/<slug supprimé>). Sur Cloudflare (OpenNext), pas de disque : Next
-// retombait sur sa page 404 par défaut. Avec getStaticProps, la page devient
-// un module JS embarqué, toujours pré-rendue au build.
-export const getStaticProps: GetStaticProps = async () => ({ props: {} });
 
 export default function NotFoundPage() {
   const t = useT(nsError404);

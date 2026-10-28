@@ -22,7 +22,10 @@
 //    Rien ne part sans `CRONS_ENABLED=1` ET CRON_SECRET : tant que Netlify
 //    sert le site, ses fonctions planifiées restent la source.
 //
-// 3) *.workers.dev : `X-Robots-Tag: noindex, nofollow` sur les pages, pour
+// 3) PAGE 404 : notre page pour un `notFound` de getStaticProps, qu'OpenNext
+//    laisse en texte brut (cf. isBareNotFound).
+//
+// 4) *.workers.dev : `X-Robots-Tag: noindex, nofollow` sur les pages, pour
 //    que l'adresse technique ne soit jamais indexée à côté du vrai domaine.
 
 import handler from '../.open-next/worker.js';
@@ -94,6 +97,37 @@ async function relay(request, url, config, trusted) {
   );
 }
 
+// Un getStaticProps qui renvoie `notFound` (tournoi supprimé…) : Next, en
+// « minimal mode » comme sous OpenNext, répond par le texte brut « This page
+// could not be found », sans Content-Type, et laisse la plateforme servir la
+// page 404 (next/dist/server/route-modules/pages/pages-handler.js, render404
+// sans routerServerContext). Netlify le fait, OpenNext non : on sert la nôtre.
+function isBareNotFound(request, url, response) {
+  return (
+    response.status === 404 &&
+    (request.method === 'GET' || request.method === 'HEAD') &&
+    !response.headers.has('content-type') &&
+    !url.pathname.startsWith('/_next/')
+  );
+}
+
+async function notFoundPage(request, env, ctx) {
+  const page = await handler.fetch(
+    new Request(new URL('/404', request.url), {
+      method: request.method,
+      headers: request.headers,
+    }),
+    env,
+    ctx
+  );
+  const headers = new Headers(page.headers);
+  headers.set(
+    'cache-control',
+    'private, no-cache, no-store, max-age=0, must-revalidate'
+  );
+  return new Response(page.body, { status: 404, headers });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -107,7 +141,11 @@ export default {
       return relay(request, url, config, Boolean(secret));
     }
 
-    const response = await handler.fetch(request, env, ctx);
+    let response = await handler.fetch(request, env, ctx);
+    if (isBareNotFound(request, url, response)) {
+      await response.body?.cancel();
+      response = await notFoundPage(request, env, ctx);
+    }
     if (!url.hostname.endsWith('.workers.dev')) return response;
     const out = new Response(response.body, response);
     out.headers.set('X-Robots-Tag', 'noindex, nofollow');
