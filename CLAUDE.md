@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Session start
 
-**Production branch is `work`** (Netlify publishes `work`; `master` is stale since July 2026 — never target it). conference-api deploys from its `main`.
+**Production branch is `work`** (every push to `work` deploys the Cloudflare Worker that serves owwomenscup.fr, `.github/workflows/cloudflare.yml`; `master` is stale since July 2026 — never target it). conference-api deploys from its `main`. No deploy previews on Cloudflare; Netlify still builds `work` and PR previews until it is retired (~2026-11-11, rollback only — [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)).
 
 When I say « pull les repos » or start a session, `git pull` the repos below, report the branch and status of each, then wait for the next instruction:
 
@@ -55,12 +55,12 @@ For Playwright: never use `--ignore-pattern` (invalid flag), use `--grep-invert`
 
 ## Architecture Overview
 
-**Next.js 16** (Pages Router) + **React 19** + **Supabase** (Postgres + Auth + Realtime) + **Tailwind v4**. Deployed on **Netlify** (`@netlify/plugin-nextjs`), with scheduled functions for cron-style workloads.
+**Next.js 16** (Pages Router) + **React 19** + **Supabase** (Postgres + Auth + Realtime) + **Tailwind v4**. Deployed on **Cloudflare Workers** via OpenNext (`@opennextjs/cloudflare`, Worker `owwomenscup`, R2 page cache, routes on the owwomenscup.fr zone) since 2026-10-28, with the scheduled tasks in the same Worker — see [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md). Netlify stays deployed two weeks for rollback only (no scheduled functions left there).
 
 The site sits at the center of a small ecosystem:
 
 - **`conference-website`** (this repo) — public site, admin dashboard, REST API, PWA.
-- **`conference-api`** (private repo, local clone `C:\Users\hirtz\depot\conference-api`) — **owns the whole backend since the 2026-10-13 cutover**: routes (`pages/api`), business logic (`features/*/routes|service|repository`), contracts (`lib/apiContracts`, `docs/openapi`), domain utils, the **database schema** (`database/`: migrations, seeds, schema snapshot) and their tests. Served on `https://api.owwomenscup.fr` (CloudFront → Lightsail Stockholm). The Netlify Edge Function [netlify/edge-functions/api-proxy.ts](netlify/edge-functions/api-proxy.ts) relays `owwomenscup.fr/api/*` there same-origin (`API_PROXY_PREFIXES=/api/` in production AND deploy previews), and `/api/public/*` is additionally called cross-origin by the browser (`NEXT_PUBLIC_API_REMOTE_PREFIXES`, [utils/remoteApi.ts](utils/remoteApi.ts)). **This repo has no API code any more** except `pages/api/internal/*` (ISR regeneration, must run on Netlify). The ~350 shared files its pages still import (zod contracts, `utils/tcg`, `utils/teams`, `utils/matches`, `utils/overlay`, `config/games`, feature models/schemas…) are **copies delivered by the reverse sync**: `npm run sync:api` ([scripts/sync-from-api.mjs](scripts/sync-from-api.mjs), manifest `.api-sync-manifest.json`, `sync:api:check` = dry run, run by CI and by `.github/workflows/sync-from-api.yml` on `repository_dispatch api-updated` + hourly cron). **Never edit a manifest file here — edit it in conference-api.** Backend work (a route, a validation rule, a TCG rule, a migration) is done in conference-api. Guard here: `tests/unit/apiOwnershipGuard.test.ts` (no route outside `internal/`, no value import of a `routes|service|repository`, manifest consistent); the mirror guards `apiBoundariesGuard` and `apiTypeImportsGuard` live in conference-api. Route → UI tests were split at the cutover: route side there, UI side here against response fixtures, shared values frozen by the same literal on both sides. `tests/pending-4e/` is empty by design and `pending4eRatchet.test.ts` refuses any new `.pending`. Interactive reference: `https://api.owwomenscup.fr/api/docs` (Scalar, built from `docs/openapi/`).
+- **`conference-api`** (private repo, local clone `C:\Users\hirtz\depot\conference-api`) — **owns the whole backend since the 2026-10-13 cutover**: routes (`pages/api`), business logic (`features/*/routes|service|repository`), contracts (`lib/apiContracts`, `docs/openapi`), domain utils, the **database schema** (`database/`: migrations, seeds, schema snapshot) and their tests. Served on `https://api.owwomenscup.fr` (CloudFront → Lightsail Stockholm). The Worker ([cloudflare/worker.mjs](cloudflare/worker.mjs), same logic as [utils/edgeApiProxy.ts](utils/edgeApiProxy.ts)) relays `owwomenscup.fr/api/*` there same-origin (`API_PROXY_PREFIXES=/api/` in wrangler.jsonc), and `/api/public/*` is additionally called cross-origin by the browser (`NEXT_PUBLIC_API_REMOTE_PREFIXES`, [utils/remoteApi.ts](utils/remoteApi.ts)). **This repo has no API code any more** except `pages/api/internal/*` (ISR regeneration, must run on the site itself — the Worker never relays `/api/internal/`). The ~350 shared files its pages still import (zod contracts, `utils/tcg`, `utils/teams`, `utils/matches`, `utils/overlay`, `config/games`, feature models/schemas…) are **copies delivered by the reverse sync**: `npm run sync:api` ([scripts/sync-from-api.mjs](scripts/sync-from-api.mjs), manifest `.api-sync-manifest.json`, `sync:api:check` = dry run, run by CI and by `.github/workflows/sync-from-api.yml` on `repository_dispatch api-updated` + hourly cron). **Never edit a manifest file here — edit it in conference-api.** Backend work (a route, a validation rule, a TCG rule, a migration) is done in conference-api. Guard here: `tests/unit/apiOwnershipGuard.test.ts` (no route outside `internal/`, no value import of a `routes|service|repository`, manifest consistent); the mirror guards `apiBoundariesGuard` and `apiTypeImportsGuard` live in conference-api. Route → UI tests were split at the cutover: route side there, UI side here against response fixtures, shared values frozen by the same literal on both sides. `tests/pending-4e/` is empty by design and `pending4eRatchet.test.ts` refuses any new `.pending`. Interactive reference: `https://api.owwomenscup.fr/api/docs` (Scalar, built from `docs/openapi/`).
 - **`owwc-discord-bot`** (private sibling repo `vincenthirtz/owwc-discord-bot`, local clone `C:\Users\hirtz\workspace\owwc-discord-bot`; formerly `docker-box/services/discord-bot`) — Discord bot that consumes `/api/bot/v1/*`. Runs on a dedicated VPS since 2026-10-12 (no longer on the Freebox); public URL `https://bot.owwomenscup.fr`, site → bot webhooks on `/bot/site-events` (`BOT_WEBHOOK_URL`).
 - **`womenscup-caster`** (sibling) — separate caster-tooling repo.
 
@@ -78,7 +78,8 @@ The site sits at the center of a small ecosystem:
 - **types/** — domain TS types (`bracket`, `swiss`, `draft`, `matches`, `stages`, `staff`, `validation`, …)
 - **config/** — static config (speakers, teams, social links, past results)
 - **database/** — **moved to conference-api** (migrations, seeds, `schema-snapshot.json`, `scripts/refresh-schema-snapshot.mjs`). A migration is written there; the `new-migration` skill applies there.
-- **netlify/functions/** — Netlify scheduled functions (cron entry points calling `/api/cron/*` over HTTP — relayed to conference-api)
+- **cloudflare/** — the Worker: entry point `worker.mjs` (API relay, 404 fix, redirects, cache headers), `crons.ts` (the scheduled tasks), `responses.ts`, `_headers` (static files). Config in `wrangler.jsonc` + `open-next.config.ts`; post-deploy checks in `scripts/cloudflare-check.mjs`.
+- **netlify/** — leftovers kept until Netlify is retired (`api-proxy` edge function, orphan `functions/builds.ts`); no scheduled functions any more.
 - **docs/** — [ONBOARDING.md](docs/ONBOARDING.md), [EDGE-API-PROXY.md](docs/EDGE-API-PROXY.md) (the relay and the cutover). API contracts and the OpenAPI spec (`docs/openapi/`) live in conference-api; `/developpeurs/reference` fetches the public spec from `api.owwomenscup.fr/api/public/openapi` at build (ISR 1 h).
   - Feuilles de route par espace : [PLAN-espace-joueur.md](docs/PLAN-espace-joueur.md) (joueuse / coach / manager / capitaine) et [PLAN-espace-admin.md](docs/PLAN-espace-admin.md) (staff) — lots séquencés autour de la 1re journée Cup 2026 (14/09/2026)
 - **tests/e2e/** — Playwright specs (~95)
@@ -128,14 +129,14 @@ Three distinct session surfaces, all backed by Supabase Auth:
 
 ### PWA + Web Push
 
-- Service worker at `public/sw.js`, manifest at `public/site.webmanifest`. Registered with scope `/` (header `Service-Worker-Allowed: /` set in `netlify.toml`).
-- Gated by `NEXT_PUBLIC_ENABLE_PWA=1` — set ONLY on prod/master to avoid SW cache pollution on previews/dev.
+- Service worker at `public/sw.js`, manifest at `public/site.webmanifest`. Registered with scope `/` (header `Service-Worker-Allowed: /` set in `cloudflare/_headers`).
+- Gated by `NEXT_PUBLIC_ENABLE_PWA=1` — set ONLY in production (GitHub env `cloudflare-production`, through `CLOUDFLARE_LIVE=1`) to avoid SW cache pollution on previews/dev.
 - Push: VAPID keypair (`NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY`). Dispatcher cron `*/1` fans out `bot_event_outbox` rows to `web_push_deliveries`.
 - Client opt-in: `components/admin/PushOptIn.tsx`. Player-side push wired in Lot 13.A/B.
 
-### Netlify Scheduled Functions (cron)
+### Scheduled tasks (cron)
 
-Defined in `netlify.toml`, each calls a `pages/api/cron/*` handler:
+One Cron Trigger fires the Worker every minute; [cloudflare/crons.ts](cloudflare/crons.ts) lists the 28 tasks (UTC schedule, route, timeout) and POSTs the due ones to `https://api.owwomenscup.fr/api/cron/<route>` with `Authorization: Bearer <CRON_SECRET>` (handlers live in conference-api). `CRONS_ENABLED` in wrangler.jsonc is the kill switch; results show as `[crons] ok` / `[crons] échec` in the Worker logs. Among them:
 
 - `checkin-cron` `*/5` — per-match check-in (emails T-1h, Discord T-30/T-15, auto-forfeit T-0)
 - `broadcast-cron` `0 10 * * *` — daily broadcast email waves (Brevo 300/day cap)
@@ -225,14 +226,16 @@ Required in `.env.local` (see `example.env.local`):
 - `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` / `TWITCH_REDIRECT_URI` — Twitch OAuth
 - `NETLIFY_SITE_ID` / `NETLIFY_API_TOKEN` — public builds page
 - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` — Web Push (generate via `npx web-push generate-vapid-keys`)
-- `NEXT_PUBLIC_ENABLE_PWA` — set to `1` ONLY on master/prod to enable SW registration
+- `NEXT_PUBLIC_ENABLE_PWA` — set to `1` ONLY in production (GitHub env `cloudflare-production`, via `CLOUDFLARE_LIVE=1`) to enable SW registration
 - `CAPTCHA_SECRET` — optional override (falls back to service-role key). Challenges are stored server-side (`captcha_challenges`): the token carries only a signed nonce, a correct answer consumes the challenge, and 3 attempts max are counted.
 - `TURNSTILE_SECRET_KEY` — Cloudflare Turnstile (onboarding)
 - `BOT_API_KEY` — legacy key for **non-v1 routes only** (`/api/news` ingest, `/api/support/ticket`). `/api/bot/v1/*` auth is now 100% per-tenant (`tenant_secrets`); the v1 env fallback + the `BOT_WEBHOOK_SECRET` webhook-signing fallback were removed, so `BOT_WEBHOOK_SECRET` is no longer read by the site.
 - `BOT_WEBHOOK_URL` — bot webhook for site → bot events (prod `https://bot.owwomenscup.fr/bot/site-events`; guild inventory is resolved next to it). Unset → no HTTP push, events stay in the outbox for the bot's poller.
 - `NEXT_PUBLIC_API_BASE_URL` / `NEXT_PUBLIC_API_REMOTE_PREFIXES` — browser-side cross-origin calls to `conference-api` ([utils/remoteApi.ts](utils/remoteApi.ts)); prod: `https://api.owwomenscup.fr` + `/api/public/`. Unset → no rewrite.
-- `API_PROXY_PREFIXES` / `API_PROXY_ORIGIN` / `EDGE_PROXY_SECRET` — same-origin relay of `/api/*` to `conference-api` via the Netlify Edge Function [netlify/edge-functions/api-proxy.ts](netlify/edge-functions/api-proxy.ts) ([docs/EDGE-API-PROXY.md](docs/EDGE-API-PROXY.md)); prod: `/api/` (everything), deploy-preview: dummy prefix. Prefixes or secret unset → `context.next()`, Next serves as before.
-- `REVALIDATE_SECRET` — shared with conference-api for remote ISR regeneration (`/api/internal/revalidate`); `REVALIDATE_REMOTE_URL` must NEVER be set on Netlify.
+- `API_PROXY_PREFIXES` / `API_PROXY_ORIGIN` / `EDGE_PROXY_SECRET` — same-origin relay of `/api/*` to `conference-api` by the Worker ([cloudflare/worker.mjs](cloudflare/worker.mjs), [docs/EDGE-API-PROXY.md](docs/EDGE-API-PROXY.md)); prod: `/api/` (everything, wrangler.jsonc var). `EDGE_PROXY_SECRET` is a Worker secret: without it the API sees the Worker as a plain visitor (Host `api.owwomenscup.fr`, Cloudflare IP).
+- `CRON_SECRET` — Worker secret for the scheduled tasks (and the API's `/api/cron/*` routes).
+- `REVALIDATE_SECRET` — shared with conference-api for remote ISR regeneration (`/api/internal/revalidate`); `REVALIDATE_REMOTE_URL` must NEVER be set on the site (Worker).
+- Worker secrets (`SUPABASE_SERVICE_ROLE_KEY`, `EDGE_PROXY_SECRET`, `CRON_SECRET`, `REVALIDATE_SECRET`) and the build-time `NEXT_PUBLIC_*` live in the GitHub environment `cloudflare-production`; the deploy workflow pushes the secrets to the Worker.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
