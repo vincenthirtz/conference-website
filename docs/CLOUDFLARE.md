@@ -60,10 +60,12 @@ pour le retour arrière.
 
 1. **Workers Paid** (5 $/mois) activé sur le compte Cloudflare : l'offre
    gratuite plafonne à 10 ms de calcul et 100 000 appels par jour.
-2. **Environnement GitHub de production** (`cloudflare-production`) : les
-   secrets ci-dessus, les clés Supabase et toutes les `NEXT_PUBLIC_*` de
-   Netlify (dont `NEXT_PUBLIC_ENABLE_PWA` et les trois `NEXT_PUBLIC_ANALYTICS_*`).
-   Le workflow passe sur cet environnement.
+2. **Environnement GitHub `cloudflare-production`** (créé le 2026-10-28 :
+   clés Supabase, `CRON_SECRET`, les `NEXT_PUBLIC_*` de Netlify) : vérifier que
+   les quatre secrets du tableau ci-dessus y sont, puis poser la variable
+   `CLOUDFLARE_LIVE=1` et relancer le workflow — elle allume les statistiques
+   et la PWA, éteintes avant pour que les contrôles ne comptent pas comme des
+   visites.
 3. **Zone DNS** owwomenscup.fr créée chez Cloudflare, avec les 16
    enregistrements de Netlify DNS recopiés à l'identique, tous en « DNS only »
    (nuage gris) : MX OVH ×3, DKIM Brevo ×2, `_dmarc`, TXT `brevo-code` et

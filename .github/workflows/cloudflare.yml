@@ -6,9 +6,10 @@
 # en parallèle jusqu'à la bascule du domaine : avant, le Worker n'est servi
 # que sur https://owwomenscup.owwomenscup.workers.dev (noindex).
 #
-# Environnement GitHub : « cloudflare-trial » (clés Supabase et NEXT_PUBLIC_*
-# de l'essai) jusqu'à la bascule, où il est remplacé par un environnement de
-# production complet (checklist dans docs/CLOUDFLARE.md).
+# Environnement GitHub « cloudflare-production » : clés Supabase, secrets du
+# Worker, NEXT_PUBLIC_* de Netlify. Sa variable CLOUDFLARE_LIVE (« 1 » le jour
+# de la bascule, docs/CLOUDFLARE.md) allume les statistiques et la PWA :
+# avant, les pages ouvertes par les contrôles compteraient comme des visites.
 
 name: cloudflare
 
@@ -26,7 +27,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    environment: cloudflare-trial
+    environment: cloudflare-production
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
@@ -39,12 +40,11 @@ jobs:
       NEXT_PUBLIC_API_REMOTE_PREFIXES: ${{ vars.NEXT_PUBLIC_API_REMOTE_PREFIXES }}
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
-      # Absentes avant la bascule (pas de statistiques ni de PWA sur l'adresse
-      # technique) ; à poser dans l'environnement de production.
-      NEXT_PUBLIC_ENABLE_PWA: ${{ vars.NEXT_PUBLIC_ENABLE_PWA }}
-      NEXT_PUBLIC_ANALYTICS_HOST: ${{ vars.NEXT_PUBLIC_ANALYTICS_HOST }}
-      NEXT_PUBLIC_ANALYTICS_PROVIDER: ${{ vars.NEXT_PUBLIC_ANALYTICS_PROVIDER }}
-      NEXT_PUBLIC_ANALYTICS_SITE_ID: ${{ vars.NEXT_PUBLIC_ANALYTICS_SITE_ID }}
+      # Vides tant que CLOUDFLARE_LIVE n'est pas « 1 » (cf. en-tête).
+      NEXT_PUBLIC_ENABLE_PWA: ${{ vars.CLOUDFLARE_LIVE == '1' && vars.NEXT_PUBLIC_ENABLE_PWA || '' }}
+      NEXT_PUBLIC_ANALYTICS_HOST: ${{ vars.CLOUDFLARE_LIVE == '1' && vars.NEXT_PUBLIC_ANALYTICS_HOST || '' }}
+      NEXT_PUBLIC_ANALYTICS_PROVIDER: ${{ vars.CLOUDFLARE_LIVE == '1' && vars.NEXT_PUBLIC_ANALYTICS_PROVIDER || '' }}
+      NEXT_PUBLIC_ANALYTICS_SITE_ID: ${{ vars.CLOUDFLARE_LIVE == '1' && vars.NEXT_PUBLIC_ANALYTICS_SITE_ID || '' }}
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
