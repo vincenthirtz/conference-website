@@ -19,8 +19,7 @@
 //    servi que sur *.workers.dev.
 //
 // 2) TÂCHES PLANIFIÉES : un Cron Trigger chaque minute → cloudflare/crons.ts.
-//    Rien ne part sans `CRONS_ENABLED=1` ET CRON_SECRET : tant que Netlify
-//    sert le site, ses fonctions planifiées restent la source.
+//    Rien ne part sans `CRONS_ENABLED=1` (wrangler.jsonc) ET CRON_SECRET.
 //
 // 3) PAGE 404 : notre page pour un `notFound` de getStaticProps, qu'OpenNext
 //    laisse en texte brut (cf. isBareNotFound).

@@ -38,9 +38,9 @@
   "vars": {
     // Relais vers https://api.owwomenscup.fr (API_PROXY_ORIGIN par défaut).
     "API_PROXY_PREFIXES": "/api/",
-    // « 1 » le jour de la bascule seulement, dans le même commit que la
-    // suppression des fonctions planifiées Netlify (sinon double exécution).
-    "CRONS_ENABLED": "0"
+    // « 1 » depuis la bascule (2026-10-28) : les tâches planifiées tournent
+    // ici, plus chez Netlify. « 0 » coupe tout (retour arrière, docs/CLOUDFLARE.md).
+    "CRONS_ENABLED": "1"
   },
   // Pas de placement : les pages viennent du cache, le Worker tourne au plus
   // près de la visiteuse (mesure du 2026-10-27).

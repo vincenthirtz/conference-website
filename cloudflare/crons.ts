@@ -3,16 +3,15 @@
 // Tâches planifiées du site sur Cloudflare. UN seul déclencheur (Cron
 // Trigger « * * * * * », wrangler.jsonc) réveille le Worker chaque minute ;
 // `dueCronJobs` dit quelles tâches tombent sur cette minute et `runCronJob`
-// fait le même appel que les fonctions planifiées Netlify
-// (netlify/functions/*-cron.ts) : `POST <API>/api/cron/<route>`,
-// `Authorization: Bearer <CRON_SECRET>`, corps `{}`, mêmes horaires (UTC),
-// mêmes délais d'abandon.
+// fait l'appel : `POST <API>/api/cron/<route>`,
+// `Authorization: Bearer <CRON_SECRET>`, corps `{}`. Horaires (UTC) et délais
+// d'abandon repris tels quels des anciennes fonctions planifiées Netlify,
+// retirées à la bascule (2026-10-28) : cette table est désormais la seule
+// source.
 //
 // Un déclencheur par tâche n'est pas possible : 5 par compte en offre
-// gratuite. Tant que Netlify sert le site, ses fonctions restent la source :
-// le Worker ne lance rien sans `CRONS_ENABLED=1` (cf. cloudflare/worker.mjs),
-// sinon chaque tâche tournerait deux fois. tests/unit/cloudflareCrons.test.ts
-// vérifie que cette table reste identique à netlify.toml d'ici la bascule.
+// gratuite. Le Worker ne lance rien sans `CRONS_ENABLED=1` (wrangler.jsonc,
+// cf. cloudflare/worker.mjs) : « 0 » coupe tout d'un coup.
 //
 // APIs web standard uniquement : ce module tourne dans le Worker et sous
 // vitest.
@@ -274,8 +273,7 @@ export function dueCronJobs(
 
 /**
  * Origine de l'API visée : `CRON_API_BASE_URL` si c'est une origine https sans
- * identifiants, query ni fragment (mêmes règles que
- * netlify/functions/_lib/cronBaseUrl.ts), sinon l'API de prod. Jamais le site
+ * identifiants, query ni fragment, sinon l'API de prod. Jamais le site
  * lui-même : le secret partirait vers le Worker.
  */
 export function resolveCronApiBaseUrl(raw: string | undefined): string {
