@@ -1,15 +1,17 @@
 # Site sur Cloudflare (Worker « owwomenscup », OpenNext) — docs/CLOUDFLARE.md.
 #
 # Chaque mise à jour de `work` construit le site avec OpenNext, le déploie sur
-# le Worker, pose ses secrets et contrôle le résultat
-# (scripts/cloudflare-check.mjs). Netlify continue de servir owwomenscup.fr
-# en parallèle jusqu'à la bascule du domaine : avant, le Worker n'est servi
-# que sur https://owwomenscup.owwomenscup.workers.dev (noindex).
+# le Worker qui sert owwomenscup.fr (depuis la bascule du 2026-10-28), pose
+# ses secrets et contrôle le résultat sur https://owwomenscup.fr
+# (scripts/cloudflare-check.mjs).
 #
 # Environnement GitHub « cloudflare-production » : clés Supabase, secrets du
-# Worker, NEXT_PUBLIC_* de Netlify. Sa variable CLOUDFLARE_LIVE (« 1 » le jour
-# de la bascule, docs/CLOUDFLARE.md) allume les statistiques et la PWA :
-# avant, les pages ouvertes par les contrôles compteraient comme des visites.
+# Worker, NEXT_PUBLIC_* du site. Sa variable CLOUDFLARE_LIVE (« 1 » depuis la
+# bascule) allume les statistiques et la PWA au build.
+#
+# OpenNext et wrangler sont des devDependencies (versions exactes, arbre
+# figé par package-lock.json) : `npm ci` les installe, rien n'est résolu au
+# moment du déploiement.
 
 name: cloudflare
 
@@ -57,11 +59,6 @@ jobs:
       - name: Dépendances
         run: npm ci --no-audit --no-fund
 
-      # Hors package.json tant que Netlify construit aussi le site : ses builds
-      # n'ont pas à installer wrangler/workerd. Versions figées ici.
-      - name: Outils Cloudflare
-        run: npm install --no-save --no-audit --no-fund @opennextjs/cloudflare@1.20.13 wrangler@4.153.0
-
       - name: Bucket R2 du cache des pages (créé s'il manque)
         run: |
           if npx wrangler r2 bucket list 2>/dev/null | grep -q 'owwomenscup-opennext-cache'; then
@@ -99,21 +96,12 @@ jobs:
           npx wrangler secret bulk secrets.json
           rm -f secrets.json
 
-      - name: Adresse workers.dev
-        id: url
-        run: |
-          sub=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" \
-            | jq -r '.result.subdomain // empty')
-          test -n "$sub"
-          echo "url=https://owwomenscup.$sub.workers.dev" >> "$GITHUB_OUTPUT"
-          echo "## Adresse du Worker" >> "$GITHUB_STEP_SUMMARY"
-          echo "https://owwomenscup.$sub.workers.dev" >> "$GITHUB_STEP_SUMMARY"
-
       - name: Navigateur
         run: npx playwright install --with-deps chromium
 
+      # Le site en production lui-même (workers.dev est coupé, wrangler.jsonc) ;
+      # vérifie aussi les redirections www et http://.
       - name: Contrôles
         run: |
           sleep 15
-          node scripts/cloudflare-check.mjs "${{ steps.url.outputs.url }}"
+          node scripts/cloudflare-check.mjs https://owwomenscup.fr

@@ -4,9 +4,8 @@ Décision du 2026-10-28 : le **site** passe de Netlify à Cloudflare Workers
 (OpenNext) ; **l'API reste sur Lightsail** (conference-api, inchangée).
 Bascule faite le même jour : owwomenscup.fr est servi par le Worker. Netlify
 reste déployé deux semaines pour le retour arrière (plus de tâches
-planifiées chez lui). L'adresse technique
-https://owwomenscup.owwomenscup.workers.dev sert encore aux contrôles de la CI
-(noindex).
+planifiées chez lui). L'adresse technique *.workers.dev est coupée
+(`workers_dev: false`) : la CI contrôle directement https://owwomenscup.fr.
 
 ## Pièces
 
@@ -14,17 +13,21 @@ https://owwomenscup.owwomenscup.workers.dev sert encore aux contrôles de la CI
 |---|---|
 | `wrangler.jsonc` | Worker, R2 (cache des pages), Durable Object (file ISR), Images, Cron Trigger, variables |
 | `open-next.config.ts` | Cache R2 + cache régional « long-lived », file DO, interception du cache |
-| `cloudflare/worker.mjs` | Point d'entrée : relais `/api/*`, tâches planifiées, noindex sur *.workers.dev |
+| `cloudflare/worker.mjs` | Point d'entrée : relais `/api/*`, tâches planifiées, redirections, cache des pages |
 | `cloudflare/crons.ts` | Les 28 tâches planifiées (horaires UTC, routes, délais) et leur appel |
 | `cloudflare/responses.ts` | Redirections www / http:// et Cache-Control des pages au navigateur |
 | `cloudflare/_headers` | En-têtes des fichiers statiques (copié dans `.open-next/assets/` par la CI) |
 | `.github/workflows/cloudflare.yml` | Build + déploiement à chaque mise à jour de `work`, secrets, contrôles |
 | `scripts/cloudflare-check.mjs` | Contrôles après déploiement (pages, 404, relais, en-têtes, cache, noindex) |
 
-`@opennextjs/cloudflare` et `wrangler` ne sont installés que par la CI
-(versions figées dans le workflow) : les builds Netlify n'ont pas à les
-installer. `open-next.config.ts` est donc exclu du tsconfig. À la fin de la
-migration, ils passent en devDependencies.
+`@opennextjs/cloudflare` et `wrangler` sont des devDependencies en version
+exacte, et tout leur arbre est figé par package-lock.json : un déploiement
+ne résout aucune version. Il en résolvait avant (`npm install --no-save` dans
+la CI), et le 2026-10-28 un paquet publié cinq minutes plus tôt, encore
+indisponible, a fait échouer un déploiement. Pour les monter : `npm install
+-D --save-exact --before=<il y a 2 jours> @opennextjs/cloudflare@<x>
+wrangler@<y>`, pour ne verrouiller que des versions publiées depuis au moins
+deux jours.
 
 ## Ce qui change par rapport à Netlify
 
@@ -107,9 +110,6 @@ Reste à faire :
 
 - Connexion vérifiée par le propriétaire (mot de passe, MFA, Discord), admin,
   paiement test, régénération d'une page depuis l'API.
-- `workers_dev: false` dans wrangler.jsonc, et les contrôles de la CI sur
-  https://owwomenscup.fr au lieu de l'adresse technique (étape « Adresse
-  workers.dev » du workflow).
 
 ## Retour arrière
 
@@ -135,5 +135,4 @@ Inutile en principe.
   `owwomenscup-trial-opennext-cache`, branche `trial/cloudflare-opennext`,
   environnement GitHub `cloudflare-trial`, jeton CI
   `ci-github-conference-website-workers-trial` (expire le 2027-01-25).
-- `netlify/`, `netlify.toml` et `@netlify/*` retirés ; OpenNext et wrangler en
-  devDependencies.
+- `netlify/`, `netlify.toml` et `@netlify/*` retirés.

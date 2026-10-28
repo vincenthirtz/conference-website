@@ -40,8 +40,6 @@
       "@/features/*": ["./features/*"]
     }
   },
-  // open-next.config.ts : @opennextjs/cloudflare n'est installé que par la
-  // CI Cloudflare (docs/CLOUDFLARE.md).
-  "exclude": ["node_modules", "vitest.config.ts", "open-next.config.ts"],
+  "exclude": ["node_modules", "vitest.config.ts"],
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "types/**/*.d.ts"]
 }
