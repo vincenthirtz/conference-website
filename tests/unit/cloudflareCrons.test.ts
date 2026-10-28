@@ -1,11 +1,7 @@
 // Tâches planifiées du Worker Cloudflare (cloudflare/crons.ts).
 //
-// Le bloc « miroir de Netlify » garantit que la table reste identique aux
-// fonctions planifiées Netlify (horaire, route, délai) tant qu'elles existent.
-// Le jour de la bascule (docs/CLOUDFLARE.md), elles sont supprimées : ce bloc
-// part avec elles, cloudflare/crons.ts devient la seule source.
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+// Depuis la bascule (2026-10-28), cloudflare/crons.ts est la seule source des
+// tâches planifiées : les fonctions Netlify qu'elle reproduisait sont parties.
 import { describe, expect, it, vi } from 'vitest';
 import {
   CRON_JOBS,
@@ -180,47 +176,5 @@ describe('runCronJob', () => {
       },
     });
     expect(rNet).toMatchObject({ ok: false, status: 0, error: 'réseau' });
-  });
-});
-
-describe('miroir des fonctions planifiées Netlify (jusqu’à la bascule)', () => {
-  const root = join(__dirname, '..', '..');
-  const toml = readFileSync(join(root, 'netlify.toml'), 'utf8');
-  const fnDir = join(root, 'netlify', 'functions');
-  const netlifyCrons = readdirSync(fnDir)
-    .filter((f) => f.endsWith('-cron.ts'))
-    .map((f) => {
-      const name = f.replace(/\.ts$/, '');
-      const src = readFileSync(join(fnDir, f), 'utf8');
-      const schedule = toml.match(
-        new RegExp(`\\[functions\\."${name}"\\]\\s*\\n\\s*schedule = "([^"]+)"`)
-      )?.[1];
-      const route = src.match(/\/api\/cron\/([a-z0-9-]+)/)?.[1];
-      const timeout = src.match(/abort\(\), ([0-9_]+)\)/)?.[1];
-      return {
-        name,
-        schedule,
-        route,
-        timeoutMs: timeout ? Number(timeout.replace(/_/g, '')) : undefined,
-      };
-    });
-
-  it('même liste de tâches', () => {
-    expect(CRON_JOBS.map((j) => j.name).sort()).toEqual(
-      netlifyCrons.map((c) => c.name).sort()
-    );
-  });
-
-  it('même horaire, même route, même délai', () => {
-    for (const c of netlifyCrons) {
-      const job = CRON_JOBS.find((j) => j.name === c.name);
-      expect(job, c.name).toBeDefined();
-      expect(job?.schedule, c.name).toBe(c.schedule);
-      expect(job?.route, c.name).toBe(c.route);
-      // broadcast-cron n'a pas de délai côté Netlify (borné à 30 s ici).
-      if (c.timeoutMs !== undefined) {
-        expect(job?.timeoutMs, c.name).toBe(c.timeoutMs);
-      }
-    }
   });
 });
