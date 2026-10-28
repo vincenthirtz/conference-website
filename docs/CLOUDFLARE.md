@@ -51,45 +51,71 @@ Posés par la CI depuis l'environnement GitHub (seuls les présents) :
 | `REVALIDATE_SECRET` | l'API ne peut plus faire régénérer les pages (`/api/internal/revalidate` → 404) |
 
 Mêmes valeurs que sur Netlify et sur conference-api. Netlify masque
-`EDGE_PROXY_SECRET` et `REVALIDATE_SECRET` : les reprendre côté API.
+`EDGE_PROXY_SECRET` et `REVALIDATE_SECRET` : ils ont été repris sur le
+serveur de l'API (`/etc/conference-api/*.env`). Les quatre sont posés depuis
+le 2026-10-28 ; vérifiés : relais (l'API voit l'hôte du Worker) et
+régénération à la demande (`/mentions-legales`).
 
 ## Bascule (checklist)
 
-Un jour calme, jamais un soir de match. Netlify reste déployé deux semaines
-pour le retour arrière.
+En deux temps : d'abord les serveurs DNS, sans effet visible (le site reste
+chez Netlify) ; puis le site, en quelques minutes, un jour calme. Ainsi la
+propagation DNS (24-48 h) ne mélange jamais les deux sites.
 
-1. **Workers Paid** (5 $/mois) activé sur le compte Cloudflare : l'offre
+### Temps 1 — serveurs DNS (sans effet visible)
+
+1. **Zone DNS** owwomenscup.fr chez Cloudflare (créée le 2026-10-28, zone
+   `537bf7c4973a06bb276ccd8c2c36a3ac`, « en attente ») : les 14
+   enregistrements de Netlify DNS recopiés à l'identique, tous en « DNS only »
+   (nuage gris) — MX OVH ×3, DKIM Brevo ×2, `_dmarc`, TXT `brevo-code` et
+   TikTok, `ovh-zimbra-…`, `stats` (Freebox), `api` (CloudFront) et sa
+   validation ACM, `origin-api`, `bot` — et le domaine nu et `www` en CNAME
+   vers `owwomenscup.netlify.app` : le site reste servi par Netlify (le
+   domaine nu y gagne l'IPv6 de Netlify, vérifiée). Réponses des deux jeux de
+   serveurs comparées nom par nom : identiques.
+2. **Serveurs DNS** changés chez OVH (registrar, pas de DNSSEC) :
+   `barbara.ns.cloudflare.com` et `tanner.ns.cloudflare.com` (avant :
+   `dns1…dns4.p07.nsone.net`). Dès lors, toute modification DNS se fait chez
+   Cloudflare, plus dans Netlify DNS.
+3. **Zone active** chez Cloudflare (e-mail de Cloudflare) : son certificat
+   (domaine nu + `*.owwomenscup.fr`) est émis à ce moment, avant toute
+   bascule du site. Le certificat Netlify court jusqu'au 2027-01-07 : le
+   temps 2 doit avoir lieu avant son renouvellement (début décembre).
+
+### Temps 2 — le site (un jour calme, jamais un soir de match)
+
+Netlify reste déployé deux semaines pour le retour arrière.
+
+4. **Workers Paid** (5 $/mois) activé sur le compte Cloudflare : l'offre
    gratuite plafonne à 10 ms de calcul et 100 000 appels par jour.
-2. **Environnement GitHub `cloudflare-production`** (créé le 2026-10-28 :
-   clés Supabase, `CRON_SECRET`, les `NEXT_PUBLIC_*` de Netlify) : vérifier que
-   les quatre secrets du tableau ci-dessus y sont, puis poser la variable
+5. **Environnement GitHub `cloudflare-production`** : poser la variable
    `CLOUDFLARE_LIVE=1` et relancer le workflow — elle allume les statistiques
    et la PWA, éteintes avant pour que les contrôles ne comptent pas comme des
    visites.
-3. **Zone DNS** owwomenscup.fr créée chez Cloudflare, avec les 16
-   enregistrements de Netlify DNS recopiés à l'identique, tous en « DNS only »
-   (nuage gris) : MX OVH ×3, DKIM Brevo ×2, `_dmarc`, TXT `brevo-code` et
-   TikTok, `ovh-zimbra-…`, `stats` (Freebox), `api` (CloudFront) et sa
-   validation ACM, `origin-api`, `bot`.
-4. **Domaines personnalisés du Worker** : `owwomenscup.fr` et
-   `www.owwomenscup.fr`.
-5. **Serveurs DNS** changés chez OVH (registrar) pour ceux de Cloudflare.
-   Propagation jusqu'à 24-48 h : les deux sites lisent la même base.
-6. **Tâches planifiées**, dans un même commit sur `work` : `CRONS_ENABLED`
+6. **Domaines personnalisés du Worker** : `owwomenscup.fr` et
+   `www.owwomenscup.fr`, à la place des deux CNAME vers Netlify. Effet en
+   quelques minutes. La régénération des pages suit seule : l'API la demande
+   à `https://owwomenscup.fr/api/internal/revalidate`.
+7. **Tâches planifiées**, dans un même commit sur `work` : `CRONS_ENABLED`
    à `1` (wrangler.jsonc) et suppression des fonctions `netlify/functions/*-cron.ts`
    et de leurs blocs dans netlify.toml (le bloc « miroir » de
    `tests/unit/cloudflareCrons.test.ts` part avec).
-7. **Contrôles** : pages, connexion (mot de passe, MFA, Discord), admin,
+8. **Contrôles** : pages, connexion (mot de passe, MFA, Discord), admin,
    paiement test, e-mails (MX), régénération d'une page depuis l'API, tâches
    planifiées dans les journaux du Worker (`[crons] ok`).
-8. `workers_dev: false` dans wrangler.jsonc (l'adresse technique ne sert plus).
+9. `workers_dev: false` dans wrangler.jsonc (l'adresse technique ne sert plus).
 
 ## Retour arrière
 
-Tant que Netlify déploie encore : dans le DNS Cloudflare, retirer les
-domaines du Worker et faire pointer `owwomenscup.fr` / `www` vers
-`owwomenscup.netlify.app` (quelques minutes). Remettre `CRONS_ENABLED` à `0`
-et rétablir les fonctions planifiées Netlify (revert du commit de l'étape 6).
+Temps 2, tant que Netlify déploie encore : dans le DNS Cloudflare, retirer
+les domaines du Worker et recréer `owwomenscup.fr` / `www` en CNAME « DNS
+only » vers `owwomenscup.netlify.app` (quelques minutes). Remettre
+`CRONS_ENABLED` à `0` et rétablir les fonctions planifiées Netlify (revert du
+commit de l'étape 7).
+
+Temps 1 : remettre chez OVH les serveurs `dns1…dns4.p07.nsone.net` (la zone
+Netlify DNS est toujours là). Inutile en principe : les deux zones répondent
+pareil.
 
 ## Après deux semaines sans souci
 
