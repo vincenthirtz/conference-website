@@ -14,7 +14,7 @@ name: cloudflare
 
 on:
   push:
-    branches: [work, feat/cloudflare-worker]
+    branches: [work]
     paths-ignore: ['tests/**', 'docs/**', '**/*.md']
   workflow_dispatch:
 
