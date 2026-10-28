@@ -14,6 +14,7 @@ tourne en parallèle sur https://owwomenscup.owwomenscup.workers.dev
 | `open-next.config.ts` | Cache R2 + cache régional « long-lived », file DO, interception du cache |
 | `cloudflare/worker.mjs` | Point d'entrée : relais `/api/*`, tâches planifiées, noindex sur *.workers.dev |
 | `cloudflare/crons.ts` | Les 28 tâches planifiées (horaires UTC, routes, délais) et leur appel |
+| `cloudflare/responses.ts` | Redirections www / http:// et Cache-Control des pages au navigateur |
 | `cloudflare/_headers` | En-têtes des fichiers statiques (copié dans `.open-next/assets/` par la CI) |
 | `.github/workflows/cloudflare.yml` | Build + déploiement à chaque mise à jour de `work`, secrets, contrôles |
 | `scripts/cloudflare-check.mjs` | Contrôles après déploiement (pages, 404, relais, en-têtes, noindex) |
@@ -37,6 +38,12 @@ migration, ils passent en devDependencies.
 - **Page 404** : pour un `notFound` de getStaticProps (tournoi supprimé…),
   Next sous OpenNext répond un texte brut « This page could not be found » ;
   `cloudflare/worker.mjs` sert alors notre page 404 (statut 404).
+- **Redirections** : Netlify renvoyait `www.owwomenscup.fr` et `http://` vers
+  `https://owwomenscup.fr` (301) ; le Worker le fait lui-même.
+- **Cache des pages au navigateur** : pour une page ISR, Next écrit
+  `s-maxage=…, stale-while-revalidate=…` ; tel quel, Chrome resservirait la
+  page ou ses `/_next/data` périmées jusqu'à 30 jours. Le Worker remplace
+  l'en-tête par `public, max-age=0, must-revalidate`, comme Netlify.
 - **Fonction Telegram de la VM Freebox** : supprimée (2026-10-28).
 
 ## Secrets du Worker

@@ -8,7 +8,9 @@
 //    (getStaticProps → notFound), qui doit être LA NÔTRE, pas celle de Next.
 // 2. Relais /api/* : une route publique et une route admin sans session
 //    relayées vers l'API (réponse CloudFront), /api/internal servi sur place.
-// 3. En-têtes des fichiers statiques (cloudflare/_headers).
+// 3. En-têtes des fichiers statiques (cloudflare/_headers) ; Cache-Control
+//    des pages ISR au navigateur ; sur owwomenscup.fr, redirections www et
+//    http:// (cloudflare/responses.ts).
 // 4. *.workers.dev : X-Robots-Tag noindex.
 //
 // Usage : node scripts/cloudflare-check.mjs <url-du-worker>
@@ -214,6 +216,52 @@ for (const c of [
     (!c.swa || r.headers.get('service-worker-allowed') === '/');
   check(ok, `${c.path} → ${r.status}`, cc);
   md.push(`| ${ok ? '✅' : '❌'} \`${c.path}\` | \`${cc}\` | ${c.label} |`);
+}
+
+// 3 bis. Cache des pages au navigateur (cloudflare/responses.ts) : une page ISR
+// et ses données `/_next/data` doivent dire « toujours redemander », comme
+// sur Netlify — jamais `stale-while-revalidate`.
+md.push(
+  '',
+  '## Cache des pages (navigateur)',
+  '',
+  '| Chemin | Cache-Control | Attendu |',
+  '|---|---|---|'
+);
+const buildId = home.match(/"buildId":"([^"]+)"/)?.[1] ?? 'introuvable';
+for (const path of [
+  '/tournament/ow-womens-cup-2026',
+  `/_next/data/${buildId}/tcg.json`,
+]) {
+  const r = await fetch(base + path);
+  await r.arrayBuffer();
+  const cc = r.headers.get('cache-control') ?? '';
+  const ok =
+    r.status === 200 &&
+    /max-age=0/.test(cc) &&
+    /must-revalidate/.test(cc) &&
+    !/stale-while-revalidate/.test(cc);
+  check(ok, `${path} → ${r.status}`, cc);
+  md.push(
+    `| ${ok ? '✅' : '❌'} \`${path}\` | \`${cc}\` | max-age=0, must-revalidate |`
+  );
+}
+
+// 3 ter. Redirections du domaine (seulement une fois le domaine sur le Worker).
+if (new URL(base).hostname === 'owwomenscup.fr') {
+  md.push('', '## Redirections du domaine', '');
+  for (const [from, to] of [
+    ['https://www.owwomenscup.fr/tcg?x=1', 'https://owwomenscup.fr/tcg?x=1'],
+    ['http://owwomenscup.fr/tcg', 'https://owwomenscup.fr/tcg'],
+  ]) {
+    const r = await fetch(from, { redirect: 'manual' });
+    await r.arrayBuffer();
+    const ok = r.status === 301 && r.headers.get('location') === to;
+    check(ok, `${from} → ${r.status}`, r.headers.get('location') ?? '');
+    md.push(
+      `- ${ok ? '✅' : '❌'} \`${from}\` → ${r.status} \`${r.headers.get('location') ?? ''}\``
+    );
+  }
 }
 
 // 4. Indexation de l'adresse technique

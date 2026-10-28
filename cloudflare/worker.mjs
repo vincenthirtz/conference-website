@@ -27,6 +27,10 @@
 //
 // 4) *.workers.dev : `X-Robots-Tag: noindex, nofollow` sur les pages, pour
 //    que l'adresse technique ne soit jamais indexée à côté du vrai domaine.
+//
+// 5) CE QUE NETLIFY FAISAIT SEUL (cloudflare/responses.ts) : www et http://
+//    → 301 vers https://owwomenscup.fr ; Cache-Control « toujours
+//    redemander » au navigateur pour les pages ISR et leurs `/_next/data`.
 
 import handler from '../.open-next/worker.js';
 import {
@@ -43,6 +47,7 @@ import {
   upstreamUnavailableResponse,
 } from '../utils/edgeApiProxy.ts';
 import { dueCronJobs, resolveCronApiBaseUrl, runCronJob } from './crons.ts';
+import { browserCacheControl, canonicalRedirect } from './responses.ts';
 
 // File de régénération ISR (liée dans wrangler.jsonc).
 export { DOQueueHandler } from '../.open-next/worker.js';
@@ -131,6 +136,9 @@ async function notFoundPage(request, env, ctx) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const canonical = canonicalRedirect(url);
+    if (canonical) return Response.redirect(canonical, 301);
+
     const secret = env.EDGE_PROXY_SECRET || '';
     const config = resolveEdgeProxyConfig({
       prefixes: env.API_PROXY_PREFIXES,
@@ -146,9 +154,14 @@ export default {
       await response.body?.cancel();
       response = await notFoundPage(request, env, ctx);
     }
-    if (!url.hostname.endsWith('.workers.dev')) return response;
+    const cacheControl = browserCacheControl(
+      response.headers.get('cache-control')
+    );
+    const noindex = url.hostname.endsWith('.workers.dev');
+    if (!cacheControl && !noindex) return response;
     const out = new Response(response.body, response);
-    out.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    if (cacheControl) out.headers.set('cache-control', cacheControl);
+    if (noindex) out.headers.set('X-Robots-Tag', 'noindex, nofollow');
     return out;
   },
 
