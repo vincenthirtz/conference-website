@@ -47,8 +47,9 @@
     // Double authentification du staff (utils/staffMfa.ts) : « true » = toute
     // page admin exige le second facteur. À poser EN MÊME TEMPS que la même
     // variable dans l'API (/etc/conference-api/api.env), qui protège les
-    // routes sensibles. Procédure : docs/PLAN-espace-admin.md.
-    "STAFF_MFA_ENFORCED": "false"
+    // routes sensibles. Procédure : docs/PLAN-espace-admin.md. Allumée le
+    // 2026-10-29 (owner enrôlée) ; retour arrière : « false ».
+    "STAFF_MFA_ENFORCED": "true"
   },
   // Pas de placement : les pages viennent du cache, le Worker tourne au plus
   // près de la visiteuse (mesure du 2026-10-27).

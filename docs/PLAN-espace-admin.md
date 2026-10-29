@@ -517,8 +517,10 @@ coupée). Coupée, rien n'est bloqué : le staff ne voit que l'invitation à s'e
    appareil : supprimer son facteur dans Supabase (Authentication › Users › facteurs), il
    repassera par l'enrôlement.
 
-État au 2026-10-29 : 11 comptes staff actifs (4 owners, 5 admins, 2 casters), aucun facteur
-vérifié ; interrupteur posé à `false` dans `wrangler.jsonc`.
+État au 2026-10-29 : 11 comptes staff actifs (4 owners, 5 admins, 2 casters) ; une owner
+enrôlée, puis obligation **allumée** le même jour (`true` dans `wrangler.jsonc` ; côté API par
+le script de bascule lancé par la propriétaire). Les 10 autres s'enrôlent à leur prochaine
+visite de l'admin.
 
 ---
 
