@@ -112,7 +112,7 @@ chaque lot est fusionné et vérifié seul.
 
 | Lot | Contenu | État |
 |---|---|---|
-| 1 | `runInBackground` (`utils/background.ts`) à la place des ~140 envois lancés en fond ; garde-fou contre leur retour | en cours |
+| 1 | `runInBackground` (`utils/background.ts`) à la place des ~140 envois lancés en fond ; garde-fou contre leur retour | fait sur la branche (e819920 : 142 sites, 12 225 tests) — à fusionner après l'event, puis `sync:api` du site |
 | 2 | Verrous des tâches planifiées en base (au lieu de `cronSingleFlight` / `_inFlight` en mémoire) | à faire |
 | 3 | Caches vidés à l'écriture : durées ≤ 60 s (clés du bot, secrets d'intégration, espace, réglages) | à faire |
 | 4 | Signaux « une écriture a eu lieu » (`outboxActivity`, mémos de sommeil) : supprimés ou partagés | à faire |
