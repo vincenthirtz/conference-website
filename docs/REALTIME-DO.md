@@ -3,10 +3,12 @@
 Étape 1 faite le 2026-10-29 (Worker en ligne, aucun écran branché) ; étape 2
 en cours depuis le même jour, ~11 h UTC : domaine `realtime.owwomenscup.fr`,
 migration appliquée, réglages posés dans Vault, 12 contrôles sur 12. La base
-prévient les salons ; les écrans écoutent toujours Supabase. Étape 3
-construite le même jour, interrupteur coupé (essai écran par écran avec
-`?realtime=cloudflare`). La base et les comptes restent chez Supabase ; seul
-le « prévenir les écrans » change.
+prévient les salons. Étape 3 construite le même jour, puis **bascule des
+écrans le 2026-10-29** (variable `NEXT_PUBLIC_REALTIME_BACKEND=cloudflare`,
+déploiement 40871096927), après un essai de l'overlay OBS : modification
+d'une scène dans le cockpit → overlay à jour en 65 à 500 ms. La Women's
+Library reste sur Supabase Realtime. La base et les comptes restent chez
+Supabase ; seul le « prévenir les écrans » change.
 
 ## Ce qui écoute aujourd'hui
 
@@ -152,8 +154,10 @@ requêtes et 400 000 GB-s de calcul par mois pour les Durable Objects.
      page) — utile pour tester l'overlay dans OBS avant la bascule générale,
      ou pour replier un seul écran après.
 
-   Après la bascule : coupure de workers.dev (`workers_dev: false`) et
-   contrôles sur le seul domaine.
+   Bascule faite le 2026-10-29. Retour arrière : vider la variable et
+   relancer le workflow `cloudflare` (~10 min), ou `?realtime=supabase` sur un
+   seul écran. Reste : coupure de workers.dev (`workers_dev: false`) après
+   quelques jours sans souci, contrôles sur le seul domaine.
 4. **Après deux semaines** : retrait des tables de la publication
    `supabase_realtime`.
 
