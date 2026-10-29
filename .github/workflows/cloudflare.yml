@@ -18,7 +18,14 @@ name: cloudflare
 on:
   push:
     branches: [work]
-    paths-ignore: ['tests/**', 'docs/**', '**/*.md']
+    # Le Worker temps réel (realtime/) a son propre workflow (realtime.yml).
+    paths-ignore:
+      - 'tests/**'
+      - 'docs/**'
+      - '**/*.md'
+      - 'realtime/**'
+      - 'scripts/realtime-check.mjs'
+      - '.github/workflows/realtime.yml'
   workflow_dispatch:
 
 concurrency:
