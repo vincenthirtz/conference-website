@@ -117,6 +117,31 @@ describe('notifications signées', () => {
     });
   });
 
+  // Vecteur figé à l'identique dans conference-api (utils/realtime/tickets.ts,
+  // qui signe les tickets) : un changement de format d'un seul côté casse ce
+  // test.
+  it('ticket : même format que l’API (vecteur figé)', async () => {
+    const room = 'demandes:team:3f2a9c1e-0000-4000-8000-000000000001';
+    const ticket =
+      'eyJyIjoiZGVtYW5kZXM6dGVhbTozZjJhOWMxZS0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDEiLCJleHAiOjE3NjE3Mzk1MDAsInUiOiI5YjFjMGQyZS0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMGEifQ.b6a989643bbe0353a0ab7d29088d24e7955c8024504333ce07b50cda2d10b252';
+    expect(
+      await signTicket({
+        secret: SECRET,
+        room,
+        exp: 1761739500,
+        user: '9b1c0d2e-0000-4000-8000-00000000000a',
+      })
+    ).toBe(ticket);
+    expect(
+      await verifyTicket({
+        secret: SECRET,
+        ticket,
+        room,
+        now: 1761739500 * 1000 - 1,
+      })
+    ).toEqual({ ok: true, user: '9b1c0d2e-0000-4000-8000-00000000000a' });
+  });
+
   it('refusée : corps modifié, mauvais secret, trop vieille, en-têtes absents', async () => {
     const signature = await sign(NOW);
     const ts = String(NOW);

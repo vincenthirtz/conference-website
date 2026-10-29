@@ -161,6 +161,12 @@ export function useCaptainMessages({
       const row = (event.new ?? event.old) as
         | { type?: string; payload?: { conversation_id?: string } }
         | undefined;
+      // Salon Cloudflare : message sans données (docs/REALTIME-DO.md) —
+      // impossible de trier, on recharge la conversation ouverte.
+      if (row && !row.type && Object.keys(row).length === 0) {
+        silentReloadActive();
+        return;
+      }
       if (!row || row.type !== 'captain_message') return;
       if (
         activeConvId &&

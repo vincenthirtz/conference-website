@@ -12,9 +12,21 @@
 //     filter: teamId ? `team_id=eq.${teamId}` : undefined,
 //     onChange: () => reload(),
 //   });
+//
+// Transport Cloudflare (docs/REALTIME-DO.md, étape 3) : avec l'interrupteur
+// `NEXT_PUBLIC_REALTIME_BACKEND=cloudflare` (ou `?realtime=cloudflare` dans
+// l'adresse), l'écoute passe par le salon du Worker qui correspond à la table
+// et au filtre (utils/realtime/rooms.ts `roomFor`). Le salon ne transmet
+// AUCUNE donnée : `payload.new` et `payload.old` arrivent vides, l'écran
+// recharge. Une écoute sans salon prévu reste sur Supabase.
 
 import { useEffect } from 'react';
 import { supabaseClient } from '@/utils/supabaseBrowser';
+import {
+  joinRoom,
+  REALTIME_BACKEND,
+} from '@/utils/realtime/cloudflareRealtime';
+import { changePayload, roomFor } from '@/utils/realtime/rooms';
 import type {
   RealtimePostgresChangesFilter,
   RealtimePostgresChangesPayload,
@@ -58,6 +70,21 @@ export function useRealtimeChannel({
 }: Options) {
   useEffect(() => {
     if (!enabled) return undefined;
+
+    const room =
+      REALTIME_BACKEND === 'cloudflare' && schema === 'public'
+        ? roomFor(table, filter)
+        : null;
+    if (room) {
+      return joinRoom(room, {
+        onMessage: (m) => {
+          if (m.type !== 'change' || m.table !== table) return;
+          if (event !== '*' && m.op !== event) return;
+          onChange(changePayload(m));
+        },
+        onStatus,
+      });
+    }
 
     // The Supabase types for `.on('postgres_changes', config, cb)` are
     // notoriously strict about narrow event literals; cast at the boundary.

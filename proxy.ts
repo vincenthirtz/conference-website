@@ -69,8 +69,10 @@ const LOCAL_SUPABASE_SRC = localSupabaseConnectSrc(
 const REMOTE_API = readRemoteApiConfig();
 const REMOTE_API_SRC = REMOTE_API ? ` ${REMOTE_API.origin}` : '';
 
+// wss://realtime.owwomenscup.fr : salons temps réel du Worker Cloudflare
+// (utils/realtime/cloudflareRealtime.ts, docs/REALTIME-DO.md).
 const CONNECT_SRC_BASE =
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.twitch.tv https://id.twitch.tv https://challenges.cloudflare.com" +
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://realtime.owwomenscup.fr https://api.twitch.tv https://id.twitch.tv https://challenges.cloudflare.com" +
   ANALYTICS_SRC +
   LOCAL_SUPABASE_SRC +
   REMOTE_API_SRC;

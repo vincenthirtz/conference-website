@@ -3,8 +3,10 @@
 Étape 1 faite le 2026-10-29 (Worker en ligne, aucun écran branché) ; étape 2
 en cours depuis le même jour, ~11 h UTC : domaine `realtime.owwomenscup.fr`,
 migration appliquée, réglages posés dans Vault, 12 contrôles sur 12. La base
-prévient les salons ; les écrans écoutent toujours Supabase. La base et les
-comptes restent chez Supabase ; seul le « prévenir les écrans » change.
+prévient les salons ; les écrans écoutent toujours Supabase. Étape 3
+construite le même jour, interrupteur coupé (essai écran par écran avec
+`?realtime=cloudflare`). La base et les comptes restent chez Supabase ; seul
+le « prévenir les écrans » change.
 
 ## Ce qui écoute aujourd'hui
 
@@ -125,10 +127,33 @@ requêtes et 400 000 GB-s de calcul par mois pour les Durable Objects.
    `select status_code, count(*) from net._http_response group by 1;`
    Les couper sans rien retirer : supprimer `realtime_notify_url` dans Vault.
 3. **Bascule des écrans** par l'interrupteur, un jour calme ; overlay et draft
-   testés en conditions de match. Avec : la route de l'API qui émet les
-   tickets (elle lit `realtime_ticket_secret` par `realtime_ticket_secret()`,
-   service_role), l'interrupteur `NEXT_PUBLIC_REALTIME_BACKEND` et
-   `NEXT_PUBLIC_REALTIME_URL` côté site, puis la coupure de workers.dev.
+   testés en conditions de match. Construite le 2026-10-29, interrupteur
+   coupé :
+   - API (conference-api) : `GET /api/admin/realtime/ticket?room=`
+     (`matches:tournament:<id>` du tenant, staff ; `caster:presence`, rôle
+     caster, identité = staffId) et `GET /api/player/realtime/ticket?room=`
+     (`demandes:team:<id>`, équipe gérée) → `{ room, ticket, expiresAt }`,
+     5 min. Le secret est lu dans Vault (`realtime_ticket_secret()`).
+     Format du ticket figé par le même vecteur des deux côtés ;
+   - site : `utils/realtime/rooms.ts` (règles pures : salon d'une écoute,
+     route du ticket, messages, présence) et
+     `utils/realtime/cloudflareRealtime.ts` (une WebSocket par salon,
+     partagée ; ticket à chaque connexion ; reconnexion ; ping 30 s ;
+     présence une fois par seconde au plus). `useRealtimeChannel` et
+     `useCasterPresence` passent par les salons quand l'interrupteur est sur
+     `cloudflare` ; l'overlay OBS et les messages capitaine rechargent quand
+     le message arrive sans données. CSP : `wss://realtime.owwomenscup.fr`
+     dans `connect-src` (proxy.ts) ;
+   - interrupteur : variable `NEXT_PUBLIC_REALTIME_BACKEND` de
+     l'environnement GitHub `cloudflare-production` (`cloudflare`, ou vide =
+     Supabase), lue au build. **Par écran**, sans rien redéployer :
+     `?realtime=cloudflare` dans l'adresse d'une page l'essaie,
+     `?realtime=supabase` la ramène sur Supabase (lu au chargement de la
+     page) — utile pour tester l'overlay dans OBS avant la bascule générale,
+     ou pour replier un seul écran après.
+
+   Après la bascule : coupure de workers.dev (`workers_dev: false`) et
+   contrôles sur le seul domaine.
 4. **Après deux semaines** : retrait des tables de la publication
    `supabase_realtime`.
 

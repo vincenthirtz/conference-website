@@ -151,19 +151,21 @@ function CasterOverlayPage() {
   }, [sceneKey, fetchScene]);
 
   // Realtime sur la ligne résolue : UPDATE ⇒ payload.new = ligne complète,
-  // appliquée directement (pas de refetch). DELETE ⇒ on efface (si le filtre
-  // le laisse passer ; sinon le poll s'en charge).
+  // appliquée directement (pas de refetch) ; salon Cloudflare (message sans
+  // données, docs/REALTIME-DO.md) ⇒ on recharge la scène. DELETE ⇒ on efface
+  // (si le filtre le laisse passer ; sinon le poll s'en charge).
   const sceneId = scene?.id ?? null;
   const onChange = useCallback(
     (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
       if (payload.eventType === 'UPDATE') {
         const next = payload.new as unknown as CasterScene;
         if (next && next.id) setScene(next);
+        else void fetchScene();
       } else if (payload.eventType === 'DELETE') {
         setScene(null);
       }
     },
-    []
+    [fetchScene]
   );
   useRealtimeChannel({
     enabled: !!sceneId,

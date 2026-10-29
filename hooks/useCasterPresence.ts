@@ -23,6 +23,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabaseClient } from '@/utils/supabaseBrowser';
 import { logger } from '@/utils/logger';
 import { formatPresenceState } from '@/utils/caster/presence';
+import {
+  joinRoom,
+  REALTIME_BACKEND,
+  setRoomPresence,
+} from '@/utils/realtime/cloudflareRealtime';
+import {
+  CASTER_PRESENCE_ROOM,
+  presenceStateFor,
+  presenceUsersFrom,
+} from '@/utils/realtime/rooms';
 import type { CasterPresenceUser } from '@/types/caster';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -81,6 +91,22 @@ export function useCasterPresence({
   useEffect(() => {
     if (!enabled || !staffId) return undefined;
 
+    // Salon Cloudflare `caster:presence` (docs/REALTIME-DO.md) : ticket staff,
+    // l'identité de chaque caster vient du ticket, pas de l'écran.
+    if (REALTIME_BACKEND === 'cloudflare') {
+      const leave = joinRoom(CASTER_PRESENCE_ROOM, {
+        onMessage: (m) => {
+          if (m.type === 'presence') setUsers(presenceUsersFrom(m.users));
+        },
+        onStatus: (status) => setConnected(status === 'SUBSCRIBED'),
+      });
+      return () => {
+        leave();
+        setConnected(false);
+        setUsers([]);
+      };
+    }
+
     const channel = supabaseClient.channel(CASTER_PRESENCE_CHANNEL, {
       config: { presence: { key: staffId } },
     });
@@ -114,7 +140,12 @@ export function useCasterPresence({
   // 2) Publication du payload : à la souscription puis à chaque changement de
   //    scène/champ actif (sans jamais toucher au canal lui-même).
   useEffect(() => {
-    if (!connected || !channelRef.current) return;
+    if (!connected) return;
+    if (REALTIME_BACKEND === 'cloudflare') {
+      setRoomPresence(CASTER_PRESENCE_ROOM, presenceStateFor(payload));
+      return;
+    }
+    if (!channelRef.current) return;
     void channelRef.current.track(payload).catch((err: unknown) => {
       logger.error('[useCasterPresence] track error', err);
     });

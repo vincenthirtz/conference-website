@@ -148,6 +148,18 @@ describe('proxy.ts CSP — scène caméra (surfaces caster uniquement)', () => {
     }
   });
 
+  it('autorise les salons temps réel Cloudflare partout (pages, admin, cockpit, overlays)', () => {
+    for (const p of [
+      '/',
+      '/admin/dashboard',
+      '/admin/caster',
+      '/overlay/caster/camera',
+    ]) {
+      const csp = getCsp(proxy(makeRequest(p) as never));
+      expect(csp['connect-src'], p).toContain('wss://realtime.owwomenscup.fr');
+    }
+  });
+
   it('garde le cockpit sur son connect-src OBS/IRC sans https: générique', () => {
     // Le cockpit n'a pas besoin de lire un flux tiers en XHR (l'aperçu se fait
     // dans une iframe /overlay/*, qui a sa propre politique).
