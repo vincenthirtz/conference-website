@@ -57,6 +57,12 @@ table**, le nombre de lignes avec la sauvegarde
 ([`scripts/db-restore-verify.mjs`](../scripts/db-restore-verify.mjs)). Un
 écart fait échouer le travail (e-mail de GitHub).
 
+Premier essai réussi le 2026-10-29 (run 40885370331), sur la sauvegarde du
+jour : les 129 tables avec des lignes restaurées à l'identique (17 107
+lignes, 115 comptes). Il a fallu exclure les tables internes, vides, des
+« vector buckets » de Supabase (interdites d'écriture en local) : la
+sauvegarde ne les prend plus, et l'essai ignore toute table vide.
+
 **Le dépôt est public, ses journaux aussi** : les deux workflows n'y écrivent
 que des noms de tables et des nombres. En cas d'erreur de restauration, seuls
 l'endroit (la table visée) et le message de Postgres valeurs masquées sont
