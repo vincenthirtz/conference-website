@@ -116,7 +116,9 @@ export function mediaPublicUrl(path: string): string {
  * segment vide, `.` ou `..` (même encodé), un `\` ou un caractère de contrôle
  * est refusée : on ne rend jamais un chemin qui sortirait du bucket.
  */
-export function mediaPathFromUrl(url: string | null | undefined): string | null {
+export function mediaPathFromUrl(
+  url: string | null | undefined
+): string | null {
   if (typeof url !== 'string') return null;
   const value = url.trim();
   if (!value) return null;

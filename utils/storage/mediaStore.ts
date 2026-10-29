@@ -392,7 +392,9 @@ async function r2Copy(
   const from = objectKey(fromPath);
   const to = objectKey(toPath);
   if (!from || !to) {
-    return failure(`R2 COPY : chemin invalide (« ${fromPath} » → « ${toPath} »).`);
+    return failure(
+      `R2 COPY : chemin invalide (« ${fromPath} » → « ${toPath} »).`
+    );
   }
   try {
     const res = await r2Client(config).fetch(objectUrl(config, bucket, to), {
