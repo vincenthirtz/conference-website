@@ -98,7 +98,9 @@ const CONNECT_SRC_CASTER_COCKPIT =
 const FRAME_SRC_BASE =
   "frame-src 'self' https://player.twitch.tv https://www.twitch.tv https://www.youtube.com https://www.youtube-nocookie.com https://challenges.cloudflare.com";
 const FRAME_SRC_CASTER = `${FRAME_SRC_BASE} https://vdo.ninja https://*.vdo.ninja`;
-const MEDIA_SRC_BASE = `media-src 'self' https://*.supabase.co`;
+// media.owwomenscup.fr : fichiers sur R2, qui remplace Supabase Storage
+// (sons des alertes de stream) — docs/R2-MEDIA.md.
+const MEDIA_SRC_BASE = `media-src 'self' https://*.supabase.co https://media.owwomenscup.fr`;
 const MEDIA_SRC_CASTER = `${MEDIA_SRC_BASE} https: blob:`;
 
 // Everything between the nonce and the (variable) frame-ancestors directive.

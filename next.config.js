@@ -27,6 +27,12 @@ const nextConfig = {
         hostname: '**.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
+      // Fichiers des utilisatrices et du staff sur R2 (Cloudflare), qui
+      // remplace Supabase Storage — docs/R2-MEDIA.md.
+      {
+        protocol: 'https',
+        hostname: 'media.owwomenscup.fr',
+      },
       {
         protocol: 'https',
         hostname: 'overwatch.blizzard.com',
