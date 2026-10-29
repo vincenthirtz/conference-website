@@ -149,10 +149,12 @@ function invalid(message: string): Backend {
 
 /** Une base posée mais refusée par `mediaBaseUrl()` ne doit pas passer inaperçue. */
 function warnOnUnusableBaseUrl() {
-  const raw = process.env.NEXT_PUBLIC_MEDIA_BASE_URL?.trim();
+  const raw = (
+    process.env.MEDIA_BASE_URL || process.env.NEXT_PUBLIC_MEDIA_BASE_URL
+  )?.trim();
   if (raw && !mediaBaseUrl()) {
     logOnce(
-      'NEXT_PUBLIC_MEDIA_BASE_URL ignorée : origine https attendue, sans requête ni ancre.'
+      'MEDIA_BASE_URL / NEXT_PUBLIC_MEDIA_BASE_URL ignorée : origine https attendue, sans requête ni ancre.'
     );
   }
 }
@@ -169,7 +171,7 @@ function failure<T>(message: string): StorageResult<T> {
 function r2MediaWriteRefusal(): string | null {
   if (mediaBaseUrl()) return null;
   const message =
-    'MEDIA_BACKEND=r2 sans NEXT_PUBLIC_MEDIA_BASE_URL (figée au build) : les adresses rendues pointeraient vers Supabase.';
+    'MEDIA_BACKEND=r2 sans MEDIA_BASE_URL (ni NEXT_PUBLIC_MEDIA_BASE_URL) : les adresses rendues pointeraient vers Supabase.';
   logOnce(message);
   return message;
 }

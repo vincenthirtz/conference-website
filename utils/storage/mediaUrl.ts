@@ -12,12 +12,15 @@
 // passer d'une adresse à l'autre revient à remplacer le préfixe
 // (conference-website, docs/R2-MEDIA.md).
 //
-// L'ADRESSE SUIT `NEXT_PUBLIC_MEDIA_BASE_URL`. Posée (origine https, sans `/`
-// final) : `${base}/${clé}`. Absente : l'adresse Supabase, CARACTÈRE POUR
-// CARACTÈRE celle que rendait `storage.from('teams-images').getPublicUrl()`
-// (même normalisation de l'URL du projet, même `encodeURI` sur le tout) — sans
-// la variable, rien ne change. ⚠️ Une `NEXT_PUBLIC_*` est FIGÉE AU BUILD par
-// Next, code serveur compris : la changer demande de reconstruire l'image.
+// L'ADRESSE SUIT LA BASE CONFIGURÉE. Posée (origine https, sans `/` final) :
+// `${base}/${clé}`. Absente : l'adresse Supabase, CARACTÈRE POUR CARACTÈRE
+// celle que rendait `storage.from('teams-images').getPublicUrl()` (même
+// normalisation de l'URL du projet, même `encodeURI` sur le tout) — sans
+// variable, rien ne change. Deux variables, la première posée l'emporte :
+//   - `MEDIA_BASE_URL` : lue AU DÉMARRAGE, côté serveur (l'API) — basculer
+//     = changer /etc/conference-api/api.env et relancer, sans reconstruire ;
+//   - `NEXT_PUBLIC_MEDIA_BASE_URL` : FIGÉE AU BUILD par Next (le site, son
+//     SSR et le navigateur) ; posée dans l'environnement GitHub du site.
 //
 // LA LECTURE D'UNE ADRESSE reconnaît les DEUX hébergements, quelle que soit la
 // configuration : une base qui contient encore des liens Supabase après la
@@ -42,8 +45,12 @@ const SUPABASE_MEDIA_PATH = `/storage/v1/object/public/${MEDIA_SUPABASE_BUCKET}/
  * `mediaStore.ts` le journalise côté serveur.
  */
 export function mediaBaseUrl(): string | null {
-  // Lecture LITTÉRALE : c'est la forme que Next sait remplacer au build.
-  return normalizeMediaBaseUrl(process.env.NEXT_PUBLIC_MEDIA_BASE_URL);
+  // `NEXT_PUBLIC_…` en lecture LITTÉRALE : c'est la forme que Next sait
+  // remplacer au build. `MEDIA_BASE_URL` n'est jamais remplacée : lue au
+  // démarrage, absente du navigateur.
+  return normalizeMediaBaseUrl(
+    process.env.MEDIA_BASE_URL || process.env.NEXT_PUBLIC_MEDIA_BASE_URL
+  );
 }
 
 export function normalizeMediaBaseUrl(
