@@ -3,6 +3,16 @@
 Mises en place le 2026-10-29. L'offre gratuite de Supabase ne fait **aucune**
 sauvegarde : avant, une erreur ou une suppression était définitive.
 
+Première sauvegarde le 2026-10-29 (run 40880760867) : 177 tables publiques,
+129 avec des lignes (17 107 lignes), 115 comptes, 69 matchs ; fichiers
+689 Ko (structure) et 5,2 Mo (données) avant compression. Bucket créé et
+règles de conservation posées par ce même passage.
+
+À surveiller : l'image Docker de la CLI est parfois refusée par un premier
+registre (« Data limit exceeded ») avant d'être prise ailleurs ; si un soir
+aucun ne répond, le travail échoue et GitHub prévient par e-mail — relancer
+à la main.
+
 ## Ce qui tourne
 
 Chaque nuit à 2 h 17 UTC (3 h 17 à Paris l'hiver), le workflow
