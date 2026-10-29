@@ -9,12 +9,18 @@
 //      affinités, la règle non.
 //   2. La LISTE D'ATTENTE, pour corriger à la main : cocher des joueuses, les
 //      placer dans une équipe inscrite qui a de la place, ou dans une nouvelle
-//      équipe mixte.
-//   3. Les ÉQUIPES INSCRITES, avec leurs joueuses et « remettre en attente ».
+//      équipe mixte. On y ajoute aussi une joueuse inscrite hors formulaire
+//      (sans compte), on corrige un pseudo, on retire une joueuse.
+//   3. Les ÉQUIPES INSCRITES : créer une équipe vide, renommer une équipe
+//      formée par le staff, la supprimer (joueuses remises en attente),
+//      déplacer une joueuse d'une équipe à l'autre, « remettre en attente ».
+//   Plus bas, les RETIRÉES, qu'on remet en attente d'un clic.
+// Les blocs de gestion vivent dans features/admin/tournaments/ui/pool/.
 //
-// Toutes les règles (5 max, joueuses en attente, inscription de l'équipe)
-// sont tenues côté base : cet écran peut être en retard sur la réalité, il ne
-// peut pas la corrompre. Un refus recharge simplement l'état.
+// Toutes les règles (5 max, joueuses en attente, inscription de l'équipe,
+// pas de suppression d'une équipe qui a des matchs) sont tenues côté base :
+// cet écran peut être en retard sur la réalité, il ne peut pas la corrompre.
+// Un refus recharge simplement l'état.
 
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -30,12 +36,25 @@ import {
   useTournamentPoolAction,
 } from '@/features/admin/tournaments/hooks/useTournamentPool';
 import { useToast } from '@/components/Toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import TournamentTabsNav from '@/components/admin/tournament/TournamentTabsNav';
+import PoolAddEntryForm from '@/features/admin/tournaments/ui/pool/PoolAddEntryForm';
+import PoolCreateTeamForm from '@/features/admin/tournaments/ui/pool/PoolCreateTeamForm';
+import PoolEntryLine from '@/features/admin/tournaments/ui/pool/PoolEntryLine';
+import PoolSquadHeader from '@/features/admin/tournaments/ui/pool/PoolSquadHeader';
+import PoolWithdrawnList from '@/features/admin/tournaments/ui/pool/PoolWithdrawnList';
+import {
+  poolInner as inner,
+  poolInput as input,
+  poolLinkBtn,
+} from '@/features/admin/tournaments/ui/pool/poolUi';
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import Chip from '@/features/admin/_shared/ui/Chip';
 import type { StaffProps } from '@/types/admin';
-import type { AdminPoolEntry } from '@/features/admin/tournaments/model';
+import type {
+  AdminPoolEntry,
+  AdminPoolView,
+} from '@/features/admin/tournaments/model';
 import nsAdminTournamentPool from '@/lib/i18n/locales/admin-fr/adminTournamentPool';
 
 export const getServerSideProps = withStaffPage({
@@ -44,17 +63,13 @@ export const getServerSideProps = withStaffPage({
 
 const card =
   'rounded-[var(--r-card,14px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s1,#100812)] p-4';
-/** Bloc logé dans une carte (une équipe, le placement manuel). */
-const inner =
-  'rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)]';
 const sectionTitle =
   'font-[family-name:var(--fd)] text-[13px] font-bold uppercase tracking-[0.18em] text-[var(--t1,#f4edf7)] [font-stretch:75%]';
-const input =
-  'rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] px-3 py-1.5 text-sm text-[var(--t1,#f4edf7)] focus:border-[var(--or,#b467d1)] focus:outline-none';
 
 const NEW_TEAM = '__new__';
 
 type Action = PoolAction;
+type Squad = AdminPoolView['squads'][number];
 
 export default withAdminQuery(AdminTournamentPoolPage);
 
@@ -66,6 +81,7 @@ function AdminTournamentPoolPage(_: StaffProps) {
   const poolQuery = useTournamentPool(tournamentId);
   const poolAction = useTournamentPoolAction(tournamentId);
   const { addToast } = useToast();
+  const { confirm, dialog } = useConfirmDialog();
 
   const view = poolQuery.data ?? null;
   const state: 'loading' | 'ready' | 'notPooled' | 'error' = poolQuery.error
@@ -82,30 +98,72 @@ function AdminTournamentPoolPage(_: StaffProps) {
   const [newName, setNewName] = useState('');
   const [mixedNames, setMixedNames] = useState<Record<number, string>>({});
 
-  async function run(body: Action) {
+  function errorText(code: string | undefined) {
+    switch (code) {
+      case 'TEAM_FULL':
+        return t.errTeamFull;
+      case 'NOT_WAITING':
+        return t.errNotWaiting;
+      case 'INVALID_TARGET':
+        return t.errInvalidTarget;
+      case 'HAS_MATCHES':
+        return t.errHasMatches;
+      case 'NOT_MIXED':
+        return t.errNotMixed;
+      case 'NOT_ACTIVE':
+      case 'NOT_PLACED':
+      case 'NOT_WITHDRAWN':
+      case 'NOT_FOUND':
+        return t.errNotActive;
+      case 'INVALID_BODY':
+        return t.errInvalidBody;
+      default:
+        return t.errGeneric;
+    }
+  }
+
+  /** `true` si l'action a réussi (les formulaires se vident alors). */
+  async function run(body: Action): Promise<boolean> {
     setBusy(true);
     try {
       await poolAction.mutateAsync(body);
       setSelected(new Set());
       setMixedNames({});
       addToast(t.done, 'success');
+      return true;
     } catch (err) {
       const code =
         err instanceof AdminHttpError
           ? (err.payload as { code?: string } | null)?.code
           : undefined;
-      addToast(
-        code === 'TEAM_FULL'
-          ? t.errTeamFull
-          : code === 'NOT_WAITING'
-            ? t.errNotWaiting
-            : t.errGeneric,
-        'error'
-      );
+      addToast(errorText(code), 'error');
       await poolQuery.refetch();
+      return false;
     } finally {
       setBusy(false);
     }
+  }
+
+  async function withdraw(e: AdminPoolEntry) {
+    const ok = await confirm({
+      title: fmt(t.withdrawConfirmTitle, { name: e.displayName }),
+      subtitle: t.withdrawConfirmBody,
+      variant: 'danger',
+      confirmLabel: t.withdraw,
+      cancelLabel: t.cancel,
+    });
+    if (ok) await run({ action: 'withdraw', entryId: e.id });
+  }
+
+  async function dissolve(s: Squad) {
+    const ok = await confirm({
+      title: fmt(t.dissolveConfirmTitle, { team: s.teamName }),
+      subtitle: t.dissolveConfirmBody,
+      variant: 'danger',
+      confirmLabel: t.dissolve,
+      cancelLabel: t.cancel,
+    });
+    if (ok) await run({ action: 'dissolve-team', teamId: s.teamId });
   }
 
   const byId = useMemo(() => {
@@ -129,6 +187,20 @@ function AdminTournamentPoolPage(_: StaffProps) {
       .sort(([a], [b]) => (a === '' ? 1 : b === '' ? -1 : 0))
       .map(([key, g]) => ({ key, ...g }));
   }, [view, t.noTeam]);
+
+  // Équipes d'origine proposées à l'ajout : celles déjà connues de l'écran.
+  const originChoices = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of view?.squads ?? []) {
+      if (!s.mixed) m.set(s.teamId, s.teamName);
+    }
+    for (const e of [...(view?.waitlist ?? []), ...(view?.withdrawn ?? [])]) {
+      if (e.originTeamId && e.originTeamName) {
+        m.set(e.originTeamId, e.originTeamName);
+      }
+    }
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], 'fr'));
+  }, [view]);
 
   if (state === 'loading') {
     return (
@@ -157,9 +229,12 @@ function AdminTournamentPoolPage(_: StaffProps) {
   const size = view.teamSize;
   const placedCount = view.squads.reduce((n, s) => n + s.members.length, 0);
   const mixedCount = view.squads.filter((s) => s.mixed).length;
-  const openSquads = view.squads.filter(
-    (s) => s.members.length > 0 && s.members.length < size
-  );
+  // Cible possible : une équipe qui a de la place, déjà nourrie par la liste
+  // d'attente ou formée par le staff (même vide). Une équipe inscrite
+  // directement, sans joueuse de la liste, n'en est pas une.
+  const roomy = (s: Squad) =>
+    s.members.length < size && (s.members.length > 0 || s.mixed);
+  const openSquads = view.squads.filter(roomy);
   const selection = [...selected];
   const targetSquad = view.squads.find((s) => s.teamId === target);
   const room = targetSquad ? size - targetSquad.members.length : size;
@@ -178,10 +253,20 @@ function AdminTournamentPoolPage(_: StaffProps) {
     });
   }
 
+  /** Props communes d'une ligne de joueuse (liste d'attente ou équipe). */
+  const lineProps = (e: AdminPoolEntry) => ({
+    entry: e,
+    busy,
+    onSave: (draft: { displayName: string; battleTag: string }) =>
+      run({ action: 'edit-entry', entryId: e.id, ...draft }),
+    onWithdraw: (entry: AdminPoolEntry) => void withdraw(entry),
+  });
+
   let mixedIndex = 0;
 
   return (
     <Shell id={tournamentId} title={t.headTitle}>
+      {dialog}
       <AdminPageHeader
         title={t.title}
         subtitle={<span className="block max-w-3xl">{t.subtitle}</span>}
@@ -298,9 +383,14 @@ function AdminTournamentPoolPage(_: StaffProps) {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* 2) Liste d'attente + placement manuel */}
+        {/* 2) Liste d'attente + ajout + placement manuel */}
         <section className={card} data-testid="pool-waitlist">
           <h2 className={sectionTitle}>{t.waitlistTitle}</h2>
+          <PoolAddEntryForm
+            busy={busy}
+            origins={originChoices}
+            onAdd={(entry) => run({ action: 'add-entry', ...entry })}
+          />
           {view.waitlist.length === 0 ? (
             <p className="mt-3 text-sm text-[var(--t3,#a39ba6)]">
               {t.waitlistEmpty}
@@ -315,18 +405,19 @@ function AdminTournamentPoolPage(_: StaffProps) {
                   <ul className="mt-1 space-y-1">
                     {g.entries.map((e) => (
                       <li key={e.id}>
-                        <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--t2,#c7bfca)]">
-                          <input
-                            type="checkbox"
-                            className="accent-[var(--or,#b467d1)]"
-                            checked={selected.has(e.id)}
-                            onChange={() => toggle(e.id)}
-                          />
-                          <span>{e.displayName}</span>
-                          <span className="text-[var(--t4,#807984)]">
-                            {e.battleTag}
-                          </span>
-                        </label>
+                        <PoolEntryLine
+                          {...lineProps(e)}
+                          detail={e.battleTag}
+                          lead={
+                            <input
+                              type="checkbox"
+                              aria-label={e.displayName}
+                              className="accent-[var(--or,#b467d1)]"
+                              checked={selected.has(e.id)}
+                              onChange={() => toggle(e.id)}
+                            />
+                          }
+                        />
                       </li>
                     ))}
                   </ul>
@@ -398,65 +489,115 @@ function AdminTournamentPoolPage(_: StaffProps) {
         {/* 3) Équipes inscrites */}
         <section className={card} data-testid="pool-squads">
           <h2 className={sectionTitle}>{t.squadsTitle}</h2>
+          <PoolCreateTeamForm
+            busy={busy}
+            onCreate={(teamName) => run({ action: 'create-team', teamName })}
+          />
           {view.squads.length === 0 ? (
             <p className="mt-3 text-sm text-[var(--t3,#a39ba6)]">
               {t.squadsEmpty}
             </p>
           ) : (
             <ul className="mt-3 space-y-3">
-              {view.squads.map((s) => (
-                <li key={s.teamId} className={`${inner} p-3`}>
-                  <p className="flex flex-wrap items-center gap-2 font-medium text-[var(--t1,#f4edf7)]">
-                    {s.teamName}
-                    {s.mixed && <Chip tone="brand">{t.squadMixed}</Chip>}
-                    {s.members.length > 0 && s.members.length < size && (
-                      <Chip tone="warn">
-                        {fmt(t.squadIncomplete, {
-                          count: String(s.members.length),
-                          size: String(size),
-                        })}
-                      </Chip>
+              {view.squads.map((s) => {
+                const moveTargets = view.squads.filter(
+                  (o) => o.teamId !== s.teamId && roomy(o)
+                );
+                return (
+                  <li key={s.teamId} className={`${inner} p-3`}>
+                    <PoolSquadHeader
+                      squad={s}
+                      size={size}
+                      busy={busy}
+                      onRename={(teamName) =>
+                        run({
+                          action: 'rename-team',
+                          teamId: s.teamId,
+                          teamName,
+                        })
+                      }
+                      onDissolve={() => void dissolve(s)}
+                    />
+                    {s.members.length === 0 ? (
+                      !s.mixed && (
+                        <p className="mt-1 text-xs text-[var(--t4,#807984)]">
+                          {t.squadNoPool}
+                        </p>
+                      )
+                    ) : (
+                      <ul className="mt-2 space-y-1">
+                        {s.members.map((m) => (
+                          <li key={m.id}>
+                            <PoolEntryLine
+                              {...lineProps(m)}
+                              detail={
+                                m.originTeamName && m.originTeamId !== s.teamId
+                                  ? fmt(t.fromTeam, { team: m.originTeamName })
+                                  : m.battleTag
+                              }
+                              actions={
+                                <>
+                                  {moveTargets.length > 0 && (
+                                    <select
+                                      aria-label={`${t.moveTo} ${m.displayName}`}
+                                      className={`${input} py-0.5 text-xs`}
+                                      value=""
+                                      disabled={busy}
+                                      onChange={(e) => {
+                                        if (e.target.value) {
+                                          void run({
+                                            action: 'move',
+                                            entryId: m.id,
+                                            teamId: e.target.value,
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      <option value="">{t.moveTo}</option>
+                                      {moveTargets.map((o) => (
+                                        <option key={o.teamId} value={o.teamId}>
+                                          {o.teamName} ({o.members.length}/
+                                          {size})
+                                        </option>
+                                      ))}
+                                    </select>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className={poolLinkBtn}
+                                    disabled={busy}
+                                    onClick={() =>
+                                      void run({
+                                        action: 'unplace',
+                                        entryId: m.id,
+                                      })
+                                    }
+                                  >
+                                    {t.unplace}
+                                  </button>
+                                </>
+                              }
+                            />
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                  </p>
-                  {s.members.length === 0 ? (
-                    <p className="mt-1 text-xs text-[var(--t4,#807984)]">
-                      {t.squadNoPool}
-                    </p>
-                  ) : (
-                    <ul className="mt-2 space-y-1">
-                      {s.members.map((m) => (
-                        <li
-                          key={m.id}
-                          className="flex items-center justify-between gap-2 text-sm text-[var(--t2,#c7bfca)]"
-                        >
-                          <span>
-                            {m.displayName}{' '}
-                            <span className="text-[var(--t4,#807984)]">
-                              {m.originTeamName && m.originTeamId !== s.teamId
-                                ? fmt(t.fromTeam, { team: m.originTeamName })
-                                : m.battleTag}
-                            </span>
-                          </span>
-                          <button
-                            type="button"
-                            className="text-xs text-[var(--t3,#a39ba6)] underline-offset-2 hover:text-[var(--t1,#f4edf7)] hover:underline disabled:opacity-50"
-                            disabled={busy}
-                            onClick={() =>
-                              void run({ action: 'unplace', entryId: m.id })
-                            }
-                          >
-                            {t.unplace}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
       </div>
+
+      {/* 4) Retirées */}
+      <PoolWithdrawnList
+        entries={view.withdrawn}
+        busy={busy}
+        onRestore={(entryId) => void run({ action: 'restore', entryId })}
+        className={`${card} mt-6`}
+        titleClassName={sectionTitle}
+      />
     </Shell>
   );
 }

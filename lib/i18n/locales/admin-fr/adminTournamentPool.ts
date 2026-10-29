@@ -55,6 +55,47 @@ export default adminNs('adminTournamentPool', {
   errGeneric: 'L’opération a échoué.',
   done: 'Répartition mise à jour.',
 
+  // Gestion à la main : joueuses (ajout, correction, retrait) et équipes
+  // (création, nom, suppression, déplacement).
+  addTitle: 'Ajouter une joueuse',
+  addHelp:
+    'Pour une joueuse inscrite hors du formulaire (Discord, message…). Pas besoin de compte sur le site.',
+  fieldName: 'Pseudo',
+  fieldBattleTag: 'BattleTag',
+  fieldOrigin: 'Équipe d’origine',
+  addSubmit: 'Ajouter à la liste d’attente',
+  manualChip: 'ajoutée à la main',
+  edit: 'Modifier',
+  save: 'Enregistrer',
+  cancel: 'Annuler',
+  withdraw: 'Retirer',
+  withdrawConfirmTitle: 'Retirer {name} du tournoi ?',
+  withdrawConfirmBody:
+    'Elle quitte la liste d’attente ou son équipe. Tu pourras la remettre en attente depuis « Retirées ».',
+  moveTo: 'Déplacer vers…',
+  createTeamTitle: 'Créer une équipe vide',
+  createTeamHelp:
+    'Une équipe mixte inscrite sans joueuse : remplis-la ensuite depuis la liste d’attente.',
+  teamNameLabel: 'Nom de l’équipe',
+  createTeamSubmit: 'Créer l’équipe',
+  rename: 'Renommer',
+  dissolve: 'Supprimer l’équipe',
+  dissolveConfirmTitle: 'Supprimer {team} du tournoi ?',
+  dissolveConfirmBody:
+    'Ses joueuses repartent en liste d’attente et l’équipe est retirée du tournoi. Une vraie équipe du site n’est pas supprimée : elle est seulement désinscrite.',
+  dissolveLocked: 'A déjà des matchs : elle ne peut plus être supprimée.',
+  withdrawnTitle: 'Retirées · {count}',
+  restore: 'Remettre en attente',
+  errInvalidTarget:
+    'Cette équipe n’est pas inscrite à ce tournoi : la liste a été actualisée.',
+  errHasMatches:
+    'Cette équipe a déjà des matchs : elle ne peut pas être supprimée.',
+  errNotMixed: 'Seule une équipe formée par le staff se renomme ici.',
+  errNotActive:
+    'Cette joueuse n’est plus inscrite : la liste a été actualisée.',
+  errInvalidBody:
+    'Vérifie les champs : pseudo de 2 à 40 caractères, BattleTag de 3 à 40, nom d’équipe de 2 à 60.',
+
   // Aperçu des inscrites (pages/admin/tournament/[id]/participants.tsx).
   overviewHeadTitle: 'Admin – Inscrites',
   overviewTitle: 'Aperçu des inscrites',

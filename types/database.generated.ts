@@ -9049,7 +9049,7 @@ export type Database = {
           tenant_id: string
           tournament_id: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           battle_tag: string
@@ -9063,7 +9063,7 @@ export type Database = {
           tenant_id: string
           tournament_id: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           battle_tag?: string
@@ -9077,7 +9077,7 @@ export type Database = {
           tenant_id?: string
           tournament_id?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -10027,6 +10027,24 @@ export type Database = {
         }
         Returns: Json
       }
+      pool_add_team: {
+        Args: { p_team_id: string; p_tenant_id: string; p_tournament_id: string }
+        Returns: undefined
+      }
+      pool_dissolve: {
+        Args: { p_team_id: string; p_tenant_id: string; p_tournament_id: string }
+        Returns: number
+      }
+      pool_move: {
+        Args: {
+          p_entry_id: string
+          p_team_id: string
+          p_team_size?: number
+          p_tenant_id: string
+          p_tournament_id: string
+        }
+        Returns: string
+      }
       pool_place: {
         Args: {
           p_entry_ids: string[]
@@ -10053,7 +10071,19 @@ export type Database = {
           team_registered: boolean
         }[]
       }
+      pool_release_team: {
+        Args: { p_team_id: string; p_tournament_id: string }
+        Returns: boolean
+      }
       pool_unplace: {
+        Args: {
+          p_entry_id: string
+          p_tenant_id: string
+          p_tournament_id: string
+        }
+        Returns: string
+      }
+      pool_withdraw: {
         Args: {
           p_entry_id: string
           p_tenant_id: string

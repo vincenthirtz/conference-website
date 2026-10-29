@@ -19,6 +19,7 @@ const entry = (
   originTeamId,
   originTeamName,
   createdAt: '2026-10-01T00:00:00Z',
+  manual: false,
 });
 
 function view(over: Partial<AdminPoolView> = {}): AdminPoolView {
@@ -26,6 +27,7 @@ function view(over: Partial<AdminPoolView> = {}): AdminPoolView {
     teamSize: 5,
     squads: [],
     waitlist: [],
+    withdrawn: [],
     proposal: { squads: [], leftoverIds: [] },
     ...over,
   };
@@ -55,6 +57,7 @@ describe('buildPoolOverview', () => {
                 isSubstitute: true,
               },
             ],
+            hasMatches: false,
           },
         ],
       })
@@ -88,6 +91,7 @@ describe('buildPoolOverview', () => {
                 isSubstitute: false,
               },
             ],
+            hasMatches: false,
           },
         ],
       })
@@ -105,6 +109,7 @@ describe('buildPoolOverview', () => {
       mixed: true,
       members: [],
       roster: [],
+      hasMatches: false,
     };
     expect(buildPoolOverview(view({ squads: [squad] })).teams[0].source).toBe(
       'none'

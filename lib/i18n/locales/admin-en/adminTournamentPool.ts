@@ -49,6 +49,43 @@ export default {
   errGeneric: 'The operation failed.',
   done: 'Distribution updated.',
 
+  addTitle: 'Add a player',
+  addHelp:
+    'For a player who signed up outside the form (Discord, message…). No site account needed.',
+  fieldName: 'Name',
+  fieldBattleTag: 'BattleTag',
+  fieldOrigin: 'Original team',
+  addSubmit: 'Add to the waitlist',
+  manualChip: 'added by hand',
+  edit: 'Edit',
+  save: 'Save',
+  cancel: 'Cancel',
+  withdraw: 'Remove',
+  withdrawConfirmTitle: 'Remove {name} from the tournament?',
+  withdrawConfirmBody:
+    'She leaves the waitlist or her team. You can put her back on the waitlist from “Removed”.',
+  moveTo: 'Move to…',
+  createTeamTitle: 'Create an empty team',
+  createTeamHelp:
+    'A mixed team entered with no players: fill it from the waitlist afterwards.',
+  teamNameLabel: 'Team name',
+  createTeamSubmit: 'Create the team',
+  rename: 'Rename',
+  dissolve: 'Delete the team',
+  dissolveConfirmTitle: 'Delete {team} from the tournament?',
+  dissolveConfirmBody:
+    'Its players go back to the waitlist and the team is withdrawn from the tournament. A real site team is not deleted: it is only withdrawn.',
+  dissolveLocked: 'Already has matches: it can no longer be deleted.',
+  withdrawnTitle: 'Removed · {count}',
+  restore: 'Back to the waitlist',
+  errInvalidTarget:
+    'This team is not entered in this tournament: the list was refreshed.',
+  errHasMatches: 'This team already has matches: it cannot be deleted.',
+  errNotMixed: 'Only a team formed by the staff can be renamed here.',
+  errNotActive: 'This player is no longer signed up: the list was refreshed.',
+  errInvalidBody:
+    'Check the fields: name 2 to 40 characters, BattleTag 3 to 40, team name 2 to 60.',
+
   // Sign-up overview (pages/admin/tournament/[id]/participants.tsx).
   overviewHeadTitle: 'Admin – Sign-ups',
   overviewTitle: 'Sign-up overview',

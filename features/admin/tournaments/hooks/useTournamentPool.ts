@@ -10,10 +10,29 @@ import { adminRequest } from '@/utils/admin/adminHttp';
 import { tournamentsClient, tournamentUrls } from '../client';
 import { MOUNT_ONLY, tournamentKeys } from './keys';
 
+// Miroir du corps accepté par l'API (conference-api, `poolPostSchema`).
 export type PoolAction =
   | { action: 'place'; entryIds: string[]; teamId: string }
   | { action: 'place-new'; entryIds: string[]; teamName: string }
-  | { action: 'unplace'; entryId: string };
+  | { action: 'unplace'; entryId: string }
+  | { action: 'move'; entryId: string; teamId: string }
+  | { action: 'withdraw'; entryId: string }
+  | { action: 'restore'; entryId: string }
+  | {
+      action: 'add-entry';
+      displayName: string;
+      battleTag: string;
+      originTeamId: string | null;
+    }
+  | {
+      action: 'edit-entry';
+      entryId: string;
+      displayName: string;
+      battleTag: string;
+    }
+  | { action: 'create-team'; teamName: string }
+  | { action: 'rename-team'; teamId: string; teamName: string }
+  | { action: 'dissolve-team'; teamId: string };
 
 const poolKey = (id: string) => tournamentKeys.part(id, 'pool');
 

@@ -10,6 +10,8 @@ export type AdminPoolEntry = {
   originTeamId: string | null;
   originTeamName: string | null;
   createdAt: string;
+  /** Ajoutée à la main par le staff, sans compte sur le site. */
+  manual: boolean;
 };
 
 /** Une joueuse de l'effectif réel d'une équipe (`team_members`). */
@@ -34,8 +36,12 @@ export type AdminPoolView = {
      * d'attente (`members` vide). Vide pour une équipe mixte.
      */
     roster: AdminPoolRosterMember[];
+    /** A déjà un match dans ce tournoi : ne peut plus être dissoute. */
+    hasMatches: boolean;
   }>;
   waitlist: AdminPoolEntry[];
+  /** Joueuses retirées (désistement, doublon), les plus récentes d'abord. */
+  withdrawn: AdminPoolEntry[];
   proposal: {
     squads: Array<
       | { kind: 'core'; teamId: string; teamName: string; entryIds: string[] }
