@@ -43,7 +43,12 @@
     "API_PROXY_PREFIXES": "/api/",
     // « 1 » depuis la bascule (2026-10-28) : les tâches planifiées tournent
     // ici, plus chez Netlify. « 0 » coupe tout (retour arrière, docs/CLOUDFLARE.md).
-    "CRONS_ENABLED": "1"
+    "CRONS_ENABLED": "1",
+    // Double authentification du staff (utils/staffMfa.ts) : « true » = toute
+    // page admin exige le second facteur. À poser EN MÊME TEMPS que la même
+    // variable dans l'API (/etc/conference-api/api.env), qui protège les
+    // routes sensibles. Procédure : docs/PLAN-espace-admin.md.
+    "STAFF_MFA_ENFORCED": "false"
   },
   // Pas de placement : les pages viennent du cache, le Worker tourne au plus
   // près de la visiteuse (mesure du 2026-10-27).

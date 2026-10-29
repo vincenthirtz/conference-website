@@ -1,0 +1,94 @@
+# Sauvegarde de la base Supabase, chaque nuit, dans R2 — docs/SAUVEGARDES.md.
+#
+# L'offre gratuite de Supabase n'en fait AUCUNE. Ici : export par la CLI
+# Supabase (`supabase db dump`, méthode recommandée par Supabase : rôles,
+# structure, données ; restaurable sur une autre version de Postgres),
+# contrôle (scripts/db-backup-check.mjs : une sauvegarde vide ou tronquée
+# fait échouer le travail, et GitHub prévient par e-mail), puis envoi dans le
+# bucket privé R2 `owwomenscup-backups` (Union européenne) :
+#   quotidien/owwc-AAAA-MM-JJ.tar.gz   gardé 35 jours
+#   mensuel/owwc-AAAA-MM.tar.gz        le 1er du mois, gardé 400 jours
+# (règles scripts/db-backup-lifecycle.json, reposées à chaque passage).
+#
+# Secret SUPABASE_DB_URL (environnement GitHub « cloudflare-production ») :
+# chaîne « Session pooler » du tableau de bord Supabase (Connect), mot de
+# passe compris. Aucune donnée n'est écrite dans les journaux ni gardée par
+# GitHub : seulement des nombres dans le résumé.
+
+name: db-backup
+
+on:
+  schedule:
+    # 2 h 17 UTC : 3 h 17 à Paris l'hiver, 4 h 17 l'été.
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: cloudflare-production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      BUCKET: owwomenscup-backups
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      # wrangler (version exacte, package-lock.json) pour R2.
+      - name: Dépendances
+        run: npm ci --no-audit --no-fund
+
+      # La CLI fait tourner pg_dump dans l'image Postgres de Supabase (Docker).
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.121.0
+
+      - name: Export de la base
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo '::error::Secret SUPABASE_DB_URL absent (docs/SAUVEGARDES.md)'
+            exit 1
+          fi
+          mkdir -p dump
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f dump/roles.sql --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f dump/schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f dump/data.sql --use-copy --data-only
+
+      - name: Contrôle
+        run: node scripts/db-backup-check.mjs dump
+
+      - name: Envoi dans R2
+        run: |
+          set -euo pipefail
+          if ! npx wrangler r2 bucket info "$BUCKET" --jurisdiction eu >/dev/null 2>&1; then
+            npx wrangler r2 bucket create "$BUCKET" --jurisdiction eu
+          fi
+          npx wrangler r2 bucket lifecycle set "$BUCKET" --file scripts/db-backup-lifecycle.json --jurisdiction eu --force
+          day="$(date -u +%Y-%m-%d)"
+          tar -czf backup.tar.gz -C dump roles.sql schema.sql data.sql
+          npx wrangler r2 object put "$BUCKET/quotidien/owwc-$day.tar.gz" --file backup.tar.gz --content-type application/gzip --jurisdiction eu --remote
+          keys="quotidien/owwc-$day.tar.gz"
+          if [ "$(date -u +%d)" = '01' ]; then
+            month="$(date -u +%Y-%m)"
+            npx wrangler r2 object put "$BUCKET/mensuel/owwc-$month.tar.gz" --file backup.tar.gz --content-type application/gzip --jurisdiction eu --remote
+            keys="$keys, mensuel/owwc-$month.tar.gz"
+          fi
+          size="$(du -k backup.tar.gz | cut -f1)"
+          printf -- '- Envoyé dans R2 (%s) : %s (%s Ko compressés)\n' "$BUCKET" "$keys" "$size" >> "$GITHUB_STEP_SUMMARY"
+          rm -rf dump backup.tar.gz

@@ -26,6 +26,9 @@ on:
       - 'realtime/**'
       - 'scripts/realtime-check.mjs'
       - '.github/workflows/realtime.yml'
+      # Sauvegarde nocturne de la base (db-backup.yml) : rien à redéployer.
+      - 'scripts/db-backup-*'
+      - '.github/workflows/db-backup.yml'
   workflow_dispatch:
 
 concurrency:

@@ -508,10 +508,17 @@ coupée). Coupée, rien n'est bloqué : le staff ne voit que l'invitation à s'e
 2. Demander à chaque membre du staff de s'enrôler (profil › Sécurité, ou `/admin/mfa`), et
    vérifier dans Supabase (`auth.mfa_factors`, `status = 'verified'`) que tous les comptes
    staff actifs — owners d'abord — ont un facteur vérifié.
-3. Poser `STAFF_MFA_ENFORCED=true` dans Netlify, redéployer.
-4. **Retour arrière** : retirer la variable (ou `false`) et redéployer. Un staff qui a perdu son
+3. Poser `STAFF_MFA_ENFORCED=true` aux DEUX endroits, ensemble : dans `wrangler.jsonc` (`vars`,
+   pages admin du site — commit sur `work`, le déploiement suit) et dans
+   `/etc/conference-api/api.env` sur le serveur de l'API (routes sensibles), puis relance
+   bleu/vert (`conference-api-switch`). Un membre du staff sans facteur n'est pas bloqué : il est
+   envoyé sur `/admin/mfa` pour s'enrôler à sa prochaine visite.
+4. **Retour arrière** : `false` aux deux endroits. Un staff qui a perdu son
    appareil : supprimer son facteur dans Supabase (Authentication › Users › facteurs), il
    repassera par l'enrôlement.
+
+État au 2026-10-29 : 11 comptes staff actifs (4 owners, 5 admins, 2 casters), aucun facteur
+vérifié ; interrupteur posé à `false` dans `wrangler.jsonc`.
 
 ---
 
