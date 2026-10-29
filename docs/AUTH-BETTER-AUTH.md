@@ -1,87 +1,115 @@
 # Comptes et connexion : Better Auth à la place de Supabase Auth
 
-Préparation du 2026-10-29 — rien n'est construit. La base reste chez
-Supabase ; seul le système de comptes changerait.
+Plan du 2026-10-29, **étude technique faite le même jour** — rien n'est
+construit. La base reste chez Supabase ; seul le système de comptes
+changerait.
 
-## Aujourd'hui (mesuré le 2026-10-29)
+## Verdict de l'étude
 
-- 114 comptes : 89 avec mot de passe (tous chiffrés en bcrypt), 70 liés à
-  Discord, 85 identités e-mail ; aucune double authentification activée ;
-  30 connexions sur les 30 derniers jours.
-- Base : 54 clés étrangères vers `auth.users` ; 26 des 98 règles d'accès
-  (RLS) reconnaissent la personne connectée par `auth.uid()` / `auth.jwt()` ;
-  une fonction aussi.
-- Code : `supabase.auth.*` appelé 71 fois dans le site (32 fichiers) et 72 fois
-  dans conference-api (47 fichiers) ; 29 fichiers du site interrogent la base
-  depuis le navigateur sous la session de la joueuse (donc sous les règles
-  d'accès).
+**Faisable, sans obstacle technique ; à ne pas lancer maintenant.**
 
-## L'idée qui rend la chose faisable
+- Aucune économie tant que la base reste chez Supabase : Supabase Auth y est
+  compris, et les comptes d'un fournisseur externe sont gratuits jusqu'à
+  50 000 par mois (100 000 en Pro) — on en a 30.
+- Le risque est le plus élevé de toute la sortie de Supabase : une erreur
+  empêche tout le monde de se connecter, staff compris.
+- Le seul gain concret avancé — la double authentification — existe déjà :
+  écran `components/admin/profile/StaffMfaPanel.tsx` et interrupteur
+  `STAFF_MFA_ENFORCED` (conference-api `utils/staffMfa.ts`), mais aucun
+  compte ne l'a activée.
 
-Supabase accepte un fournisseur d'identité externe (« Third-Party Auth »,
-**Custom OIDC**) : un service OpenID Connect qui publie sa découverte
-(`/.well-known/openid-configuration`, `jwks_uri`) et signe ses jetons avec une
-clé asymétrique (`kid`). Better Auth sait jouer ce rôle (greffons `jwt` et
-fournisseur OIDC). La base continue alors de reconnaître la personne
-connectée (`auth.uid()` = `sub` du jeton) : les 26 règles d'accès, le temps
-réel privé et les requêtes du navigateur restent tels quels ; supabase-js
-reçoit le jeton par son option `accessToken`.
+À reconsidérer seulement si la sortie de la base elle-même est décidée
+(c'est elle qui coûte : Supabase Pro). Les comptes passeraient alors avant
+la base, par le chemin décrit plus bas.
 
-Conditions : `sub` = l'UUID actuel du compte (on garde les mêmes
-identifiants) ; les claims exigés par Supabase pour un jeton tiers (`role:
-authenticated`, `aud`…) — **à vérifier** à l'étude technique.
+## Aujourd'hui (remesuré le 2026-10-29)
 
-## Ce qu'on construirait
+- 114 comptes : 89 avec mot de passe (tous en bcrypt), 70 liés à Discord,
+  85 identités e-mail ; aucun e-mail non confirmé, aucun compte anonyme ;
+  aucune double authentification activée ; 30 connexions sur 30 jours ;
+  11 membres du staff. Les 114 portent des métadonnées (`role`, nom…), lues
+  84 fois dans le code (58 dans l'API, 26 dans le site).
+- Base : **44** clés étrangères vers `auth.users` depuis 34 tables (et non 54
+  comme écrit d'abord : ce premier compte incluait les tables internes de
+  Supabase) ; 26 des 98 règles d'accès reconnaissent la personne connectée
+  (`auth.uid()` / `auth.jwt()`), sur 13 tables dont 6 ne servent plus (retrait
+  de l'application de bureau) ; 1 fonction utilise `auth.uid()`, 8 lisent
+  `auth.users` (listes et recherches admin, TCG).
+- Code : `supabase.auth.*` 73 fois dans le site (33 fichiers), 70 fois dans
+  conference-api (46 fichiers), dont 51 appels d'administration
+  (`auth.admin.getUserById` ×28, `updateUserById` ×7, `createUser` ×5,
+  `generateLink` ×4, `deleteUser` ×4, `listUsers` ×3). Le bot Discord n'y
+  touche pas.
 
-1. **Better Auth dans un Worker** (`auth.owwomenscup.fr`), comptes rangés dans
-   la base Supabase (schéma dédié, accès par Hyperdrive) : même base, donc les
-   54 liens peuvent pointer vers la nouvelle table des comptes.
-2. **Reprise des comptes** : mêmes UUID et e-mails, hash bcrypt repris tels
-   quels (vérification bcrypt configurée ; personne ne change de mot de
-   passe), comptes Discord repris d'`auth.identities`.
-3. **Fonctions** : e-mail + mot de passe, Discord, mot de passe oublié (envoi
-   par Brevo, comme aujourd'hui), double authentification TOTP — l'occasion
-   de l'activer pour le staff —, sessions par cookie sur owwomenscup.fr.
-4. **Supabase** : ajout du fournisseur Custom OIDC ; client supabase-js avec
-   `accessToken`.
-5. **Code** : remplacer les ~143 appels `supabase.auth.*` (site + API) ; mêmes
-   pages (`/login`, retours OAuth).
-6. **Les 54 clés étrangères** repointées vers la table des comptes Better Auth
-   (migration SQL dans conference-api, appliquée par la propriétaire).
-7. **Bascule** un soir calme, derrière un interrupteur ; chacune se reconnecte
-   une fois (les sessions Supabase ne se transfèrent pas). Retour arrière :
-   l'interrupteur, les comptes Supabase étant restés en place.
+## Ce que l'étude a vérifié
 
-## Coût
+1. **Supabase accepte un fournisseur externe** (« Third-Party Auth », Custom
+   OIDC) : découverte à `<issuer>/.well-known/openid-configuration`, jetons
+   signés par clé asymétrique avec `kid`, émetteur en HTTPS. Le jeton doit
+   porter `role: authenticated` (sans lui, la requête passe en `anon`). La
+   base, les fichiers et l'autorisation du temps réel le reconnaissent.
+   `auth.uid()` lit le `sub` du jeton converti en UUID : en gardant les
+   identifiants actuels, les 26 règles d'accès restent telles quelles.
+   Supabase relit les clés publiques périodiquement (30 min pour une
+   rotation). Supabase Auth ne peut pas être désactivé, il resterait en
+   place (inutilisé).
+2. **Algorithme** : Supabase vérifie ES256 et RS256 ; EdDSA, le choix par
+   défaut du greffon `jwt` de Better Auth, y est « à venir ». → régler
+   `jwks.keyPairConfig.alg: 'ES256'`.
+3. **Better Auth** (1.7.14 au 2026-10-27) : greffon `jwt` (route `/token`,
+   JWKS, `kid` dans l'en-tête, charge utile réglable par `definePayload` —
+   on y met `role: 'authenticated'` et `aal` pour la double
+   authentification —, `sub` = identifiant du compte, émetteur et audience
+   réglables, rotation des clés). Il ne publie pas la découverte OIDC : le
+   Worker la sert lui-même (document fixe qui pointe vers le JWKS).
+   Discord, mot de passe oublié (envoi par nos soins, via Brevo) et double
+   authentification TOTP sont fournis.
+4. **Reprise des comptes** : le guide officiel de migration depuis Supabase
+   lit `auth.users` et `auth.identities`, **garde les identifiants** et
+   recopie les hash bcrypt (vérification bcrypt configurée : personne ne
+   change de mot de passe). Il utilise le module natif `bcrypt`, absent des
+   Workers → `bcryptjs` (JavaScript pur, ~0,1 s de calcul par connexion,
+   dans les limites du forfait). Les sessions ne se transfèrent pas : chacun
+   se reconnecte une fois. La double authentification et les règles d'accès
+   ne sont pas couvertes par le guide (ici : aucune 2FA à reprendre, règles
+   d'accès conservées grâce au point 1).
 
-0 $ : Better Auth est libre ; Worker et Hyperdrive tiennent dans les 5 $ de
-Workers Paid ; les comptes tiers sont comptés par Supabase comme les autres,
-très en dessous du quota.
+## Comment on le construirait (si on y va)
 
-Mais **aucune économie tant que la base reste chez Supabase** : Supabase Auth
-y est compris. Le bénéfice : un pas vers une sortie complète de Supabase (la
-base resterait alors le dernier morceau) et des fonctions (double
-authentification, passkeys) sous notre contrôle.
+1. **Un Worker `owwomenscup-auth` servi sur `owwomenscup.fr/auth/*`** (route
+   du Worker sur la zone, comme le site) : même origine que le site, donc
+   cookie de session sur owwomenscup.fr, lisible par le rendu serveur des
+   pages, sans cookie partagé entre sous-domaines (que la doc de sécurité de
+   Better Auth déconseille derrière un relais). Déploiements indépendants du
+   site. Comptes dans la base Supabase (schéma dédié) via Hyperdrive, cache
+   de Hyperdrive coupé pour les sessions.
+   Alternative : l'intégrer à conference-api (Node, base en direct, bcrypt
+   natif, déjà servi sur owwomenscup.fr/api/*) — à trancher avec la décision
+   sur l'hébergement de l'API (rappel du 2026-11-11).
+2. **Reprise** : mêmes UUID, e-mails, hash bcrypt, comptes Discord,
+   métadonnées en champs additionnels. Adresse de retour à déclarer dans
+   l'application Discord.
+3. **Supabase** : fournisseur Custom OIDC (émetteur `https://owwomenscup.fr/auth`) ;
+   supabase-js reçoit le jeton par son option `accessToken` (navigateur et
+   rendu serveur).
+4. **API** : vérification du jeton par le JWKS (au lieu de `auth.getUser`) ;
+   les 51 appels d'administration deviennent des lectures et écritures de la
+   table des comptes.
+5. **Base** (migration conference-api, appliquée par la propriétaire) : les 44
+   clés étrangères repointées vers la table des comptes, les 8 fonctions qui
+   lisent `auth.users` réécrites.
+6. **Bascule** un soir calme derrière un interrupteur ; retour arrière par
+   l'interrupteur, les comptes Supabase restant en place deux semaines.
 
-## Effort et risques
+Effort : environ 3 semaines, surtout les ~143 appels, les 84 lectures de
+métadonnées et leurs tests.
 
-Estimation : 2 à 4 semaines de travail, surtout les ~143 appels et leurs
-tests. Risques : une panne de connexion touche tout le monde ; adresse de
-retour à déclarer dans l'application Discord ; e-mails de réinitialisation ;
-cohérence des UUID entre les deux systèmes pendant la transition.
+## En attendant : ce qui protège déjà, sans migration
 
-## Ordre conseillé
-
-Après la bascule des fichiers (docs/R2-MEDIA.md) et du temps réel
-(docs/REALTIME-DO.md), et seulement si la sortie de la base est envisagée :
-sinon, garder Supabase Auth, qui ne coûte rien de plus.
-
-## Étapes (si on y va)
-
-1. **Étude technique** : claims exigés par Supabase pour un jeton tiers,
-   temps réel privé avec un jeton tiers, vérification bcrypt de Better Auth
-   dans un Worker, accès à la base par Hyperdrive.
-2. **Worker Better Auth en parallèle** : comptes copiés, essai sur un compte
-   de test, sans rien brancher.
-3. **Branchement** derrière l'interrupteur, côté site et API.
-4. **Bascule**, puis retrait de Supabase Auth après deux semaines.
+- **Activer la double authentification du staff** (Supabase Auth, déjà
+  construite) : chacun l'active depuis son profil admin, puis
+  `STAFF_MFA_ENFORCED` l'exige sur les routes sensibles.
+- **Cloudflare Access devant `/admin`**, en option : connexion
+  supplémentaire pour le staff, gratuite jusqu'à 50 personnes (on est 11).
+  Ne remplace rien ; à étudier à part (le cockpit `/admin/caster` et les
+  routes `/api/admin/*` passent par la même origine).
