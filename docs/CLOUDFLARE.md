@@ -144,7 +144,7 @@ Gardé volontairement :
   remplacer le secret avant cette date.
 - Le site Netlify et la zone Netlify DNS owwomenscup.fr (secours ci-dessus).
 
-À faire par la propriétaire : passer l'équipe Netlify en offre gratuite
-(Team settings › Billing). Variables du site Netlify devenues inutiles
+L'équipe Netlify passe en offre gratuite le 2026-10-31 (fin de la période
+Pro en cours, demandé par la propriétaire). Variables du site Netlify devenues inutiles
 (`CRON_API_BASE_URL`, `API_PROXY_*`, `EDGE_PROXY_SECRET`…) : sans effet
 tant que les constructions sont coupées.
