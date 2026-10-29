@@ -43,11 +43,11 @@ export default ns('mentionsLegales', {
   postalLabel:
     "Correspondance postale : transmise sur demande pour éviter la diffusion publique d'adresses personnelles.",
   hostingEyebrow: 'Hébergement',
-  hostingTitle: 'Netlify',
+  hostingTitle: 'Cloudflare',
   hostingDesc:
-    'Le site est hébergé par Netlify, Inc. – www.netlify.com (hébergement statique et CDN).',
+    'Le site est hébergé par Cloudflare, Inc. – 101 Townsend St, San Francisco, CA 94107, États-Unis – +1 (650) 319-8930 – www.cloudflare.com.',
   hostingServices:
-    'Services techniques utilisés : Supabase (authentification et base de données), Formspree (formulaire de contact) et outils internes pour la gestion des tournois.',
+    'Autres prestataires techniques : Supabase (authentification, base de données et fichiers, serveurs en Irlande), Amazon Web Services (API du site, serveurs en Suède), Formspree (formulaire de contact) et outils internes pour la gestion des tournois.',
   respEyebrow: 'Responsabilités',
   respTitle: 'Utilisation du site',
   respIntro:
