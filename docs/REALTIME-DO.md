@@ -1,9 +1,10 @@
 # Temps réel sur Cloudflare (Durable Objects) à la place de Supabase Realtime
 
 Étape 1 faite le 2026-10-29 (Worker en ligne, aucun écran branché) ; étape 2
-préparée le même jour (migration et workflow prêts, en attente du domaine et
-de la migration). La base et les comptes restent chez Supabase ; seul le
-« prévenir les écrans » change.
+en cours depuis le même jour, ~11 h UTC : domaine `realtime.owwomenscup.fr`,
+migration appliquée, réglages posés dans Vault, 12 contrôles sur 12. La base
+prévient les salons ; les écrans écoutent toujours Supabase. La base et les
+comptes restent chez Supabase ; seul le « prévenir les écrans » change.
 
 ## Ce qui écoute aujourd'hui
 
@@ -110,10 +111,12 @@ requêtes et 400 000 GB-s de calcul par mois pour les Durable Objects.
    - le Worker journalise chaque notification (`[notify] table op salon ·
      délai · écrans`).
 
-   Ordre : (1) domaine `realtime.owwomenscup.fr` sur le Worker (tableau de
-   bord Cloudflare → Workers → owwomenscup-realtime → Domaines) ;
-   (2) migration appliquée par la propriétaire ; (3) secrets renouvelés dans
-   GitHub et workflow relancé → la base prévient les salons.
+   Mise en route (faite le 2026-10-29) : (1) domaine
+   `realtime.owwomenscup.fr` sur le Worker (tableau de bord Cloudflare →
+   Workers → owwomenscup-realtime → Domaines) ; (2) migration appliquée par
+   la propriétaire ; (3) workflow lancé → réglages posés, la base prévient les
+   salons. Les secrets de l'étape 1 n'ont pas eu à être renouvelés : le
+   workflow les recopie depuis GitHub, il n'a jamais fallu les ressortir.
 
    Comparaison : chaque modification d'une table suivie doit donner une
    réponse 200 du Worker (`net._http_response`, gardée 6 h) et une ligne
