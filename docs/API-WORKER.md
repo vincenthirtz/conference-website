@@ -100,3 +100,27 @@ pas).
 Si la sortie de la base n'est finalement pas décidée, l'option A reste
 raisonnable : 7 $/mois pour un serveur qui marche. La phase 1 vaut la peine
 dans les deux cas.
+
+## Décision et suivi
+
+**2026-10-29 : option C retenue par la propriétaire**, pour pouvoir ensuite
+passer la base sur D1 et finir la sortie de Supabase.
+
+Phase 1 sur la branche `worker-phase1` de conference-api (non déployée).
+Rien n'est mis en ligne avant la fin de l'Event Halloween 2026 ; ensuite,
+chaque lot est fusionné et vérifié seul.
+
+| Lot | Contenu | État |
+|---|---|---|
+| 1 | `runInBackground` (`utils/background.ts`) à la place des ~140 envois lancés en fond ; garde-fou contre leur retour | en cours |
+| 2 | Verrous des tâches planifiées en base (au lieu de `cronSingleFlight` / `_inFlight` en mémoire) | à faire |
+| 3 | Caches vidés à l'écriture : durées ≤ 60 s (clés du bot, secrets d'intégration, espace, réglages) | à faire |
+| 4 | Signaux « une écriture a eu lieu » (`outboxActivity`, mémos de sommeil) : supprimés ou partagés | à faire |
+| 5 | Tâches longues découpées (`broadcast-process`, `email-digest`, `recycle-bin-purge`, `tenant-purge`) | à faire |
+| 6 | web-push en WebCrypto ; `node:dns` par HTTPS ; clé `scrypt` gardée en mémoire | à faire |
+| 7 | Spécification OpenAPI embarquée au build (plus de lecture disque) | à faire |
+| 8 | Envois de fichiers directs vers R2 / Drive (URL signée) au lieu du base64 | à faire |
+
+Phase 2 (après la phase 1) : Worker OpenNext de l'API, limites de fréquence
+partagées (`cf-connecting-ip`), tâches planifiées dans le Worker de l'API,
+bascule par familles de routes derrière le relais du site.
