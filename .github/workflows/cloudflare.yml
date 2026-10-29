@@ -49,6 +49,8 @@ jobs:
       NEXT_PUBLIC_API_REMOTE_PREFIXES: ${{ vars.NEXT_PUBLIC_API_REMOTE_PREFIXES }}
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ vars.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+      # Adresse publique des fichiers (R2, docs/R2-MEDIA.md). Vide = Supabase.
+      NEXT_PUBLIC_MEDIA_BASE_URL: ${{ vars.NEXT_PUBLIC_MEDIA_BASE_URL }}
       # Vides tant que CLOUDFLARE_LIVE n'est pas « 1 » (cf. en-tête).
       NEXT_PUBLIC_ENABLE_PWA: ${{ vars.CLOUDFLARE_LIVE == '1' && vars.NEXT_PUBLIC_ENABLE_PWA || '' }}
       NEXT_PUBLIC_ANALYTICS_HOST: ${{ vars.CLOUDFLARE_LIVE == '1' && vars.NEXT_PUBLIC_ANALYTICS_HOST || '' }}

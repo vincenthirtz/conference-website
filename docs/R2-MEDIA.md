@@ -72,10 +72,18 @@ Les chemins seuls (cartes TCG, photos, fan-arts) n'ont pas à bouger.
 1. **Préparer R2** (sans effet) — 2026-10-29 : buckets, domaine, CORS,
    en-têtes, site prêt. Copie d'essai des 150 fichiers, relus et comparés
    (MD5) sur `media.owwomenscup.fr`.
-2. **API** : module unique + backend R2 derrière `MEDIA_BACKEND`, déployé en
-   `supabase` (aucun changement visible).
-3. **Bascule** : clé R2 sur le serveur de l'API ; `MEDIA_BACKEND=r2` ; copie
-   finale (fichiers arrivés depuis l'essai, avec leur `Cache-Control`) ;
+2. **API** — **fait le 2026-10-29** : module unique (`utils/storage/mediaStore.ts`,
+   `mediaUrl.ts`) + backend R2 derrière `MEDIA_BACKEND`, déployé en
+   `supabase` (aucun changement visible ; adresses servies vérifiées
+   identiques). L'adresse publique suit `MEDIA_BASE_URL` côté API (lue au
+   démarrage) et `NEXT_PUBLIC_MEDIA_BASE_URL` côté site (au build, variable
+   de l'environnement GitHub `cloudflare-production`).
+3. **Bascule** : clé R2 (limitée aux deux buckets) dans
+   `/etc/conference-api/api.env` avec `MEDIA_BACKEND=r2` et
+   `MEDIA_BASE_URL=https://media.owwomenscup.fr`, relance bleu/vert
+   (`conference-api-switch $(cat /opt/conference-api/.tag)`) ; côté site,
+   `NEXT_PUBLIC_MEDIA_BASE_URL` puis redéploiement ; copie finale (avec
+   `Cache-Control`) ; migration `media_urls_to_r2.sql` (conference-api) ;
    migration SQL des liens ; contrôles (logos, cartes, actualités, alerte
    de stream, preuve de match) ; mentions légales : les fichiers passent de
    Supabase à Cloudflare (`hostingServices`, FR et EN).
