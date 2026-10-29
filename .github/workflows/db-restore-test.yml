@@ -76,10 +76,12 @@ jobs:
           mkdir -p dump
           tar -xzf backup.tar.gz -C dump
           rm backup.tar.gz
-          # Sauvegardes d'avant le 2026-10-29 au soir : elles contiennent encore
-          # les tables internes des « vector buckets » de Supabase, interdites
-          # d'écriture (exclues depuis par db-backup.yml). On les retire.
-          awk 'BEGIN{end=sprintf("%c.", 92)} /^COPY "storage"[.]"(buckets_vectors|vectors)" /{skip=1} skip{if($0==end)skip=0; next} {print}' dump/data.sql > dump/data.tmp
+          # Tables VIDES retirées de l'import : elles n'apportent rien, et
+          # certaines tables internes de Supabase (« vector buckets »,
+          # partitions de realtime.messages) n'existent pas ou sont interdites
+          # d'écriture dans un Supabase local. Une table non vide qui échoue
+          # reste, elle, une vraie alerte.
+          awk 'BEGIN{end=sprintf("%c.", 92)} pending!=""{if($0==end){pending="";next} print pending; pending=""; incopy=1} incopy{print; if($0==end)incopy=0; next} /^COPY .* FROM stdin;$/{pending=$0; next} {print}' dump/data.sql > dump/data.tmp
           mv dump/data.tmp dump/data.sql
           node scripts/db-backup-check.mjs dump
 

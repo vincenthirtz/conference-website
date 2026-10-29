@@ -72,7 +72,7 @@ jobs:
           # interdites d'écriture à la restauration : exclues, comme le
           # recommande Supabase (Backup and restore using the CLI).
           supabase db dump --db-url "$SUPABASE_DB_URL" -f dump/data.sql --use-copy --data-only \
-            -x storage.buckets_vectors -x storage.vectors
+            -x storage.buckets_vectors -x storage.vectors -x storage.vector_indexes
 
       - name: Contrôle
         run: node scripts/db-backup-check.mjs dump
