@@ -78,19 +78,34 @@ Les chemins seuls (cartes TCG, photos, fan-arts) n'ont pas à bouger.
    identiques). L'adresse publique suit `MEDIA_BASE_URL` côté API (lue au
    démarrage) et `NEXT_PUBLIC_MEDIA_BASE_URL` côté site (au build, variable
    de l'environnement GitHub `cloudflare-production`).
-3. **Bascule** : clé R2 (limitée aux deux buckets) dans
-   `/etc/conference-api/api.env` avec `MEDIA_BACKEND=r2` et
-   `MEDIA_BASE_URL=https://media.owwomenscup.fr`, relance bleu/vert
-   (`conference-api-switch $(cat /opt/conference-api/.tag)`) ; côté site,
-   `NEXT_PUBLIC_MEDIA_BASE_URL` puis redéploiement ; copie finale (avec
-   `Cache-Control`) ; migration `media_urls_to_r2.sql` (conference-api) ;
-   migration SQL des liens ; contrôles (logos, cartes, actualités, alerte
-   de stream, preuve de match) ; mentions légales : les fichiers passent de
-   Supabase à Cloudflare (`hostingServices`, FR et EN).
-4. **Après deux semaines** : suppression des buckets Supabase.
+3. **Bascule** — **faite le 2026-10-29** :
+   - copie finale des 150 fichiers avec leur `Cache-Control` d'origine (1 h,
+     ou 1 an pour les 35 à empreinte), relus identiques (MD5, type, cache) ;
+   - réglage de zone **Browser Cache TTL = « Respect Existing Headers »**
+     (il était à 4 h et remplaçait toute durée plus courte) ;
+   - clé R2 « conference-api-media » (Object Read & Write sur les deux
+     buckets) dans `/etc/conference-api/api.env`, avec `MEDIA_BACKEND=r2` et
+     `MEDIA_BASE_URL=https://media.owwomenscup.fr`, relance bleu/vert sans
+     coupure (`conference-api-switch $(cat /opt/conference-api/.tag)`) ;
+   - site : variable `NEXT_PUBLIC_MEDIA_BASE_URL` (environnement
+     `cloudflare-production`) et redéploiement ;
+   - migration `media_urls_to_r2.sql` (conference-api) appliquée par la
+     propriétaire : 84 vignettes, 15 actualités, 7 logos, le règlement, un
+     réglage et une scène caster ; `updated_at` conservés ;
+   - contrôles : plus aucune adresse Supabase sur l'accueil, `/tcg`,
+     `/tcg/fan-art`, une équipe et un tournoi ; images en 200 en direct et
+     par l'optimiseur ; mentions légales à jour (fichiers chez Cloudflare R2,
+     UE).
+4. **Vers le 2026-11-12** : suppression des buckets Supabase `teams-images`
+   et `match-evidence` (les liens historiques des journaux pointeront alors
+   dans le vide, c'est accepté).
 
-## Retour arrière
+## Retour arrière (avant l'étape 4)
 
-Avant l'étape 4 : `MEDIA_BACKEND=supabase` et migration inverse des liens
-(remplacement du préfixe dans l'autre sens). Les fichiers envoyés pendant la
-période R2 sont à recopier vers Supabase avant.
+1. API : dans `/etc/conference-api/api.env`, `MEDIA_BACKEND=supabase` et
+   `MEDIA_BASE_URL=` (vide), puis relance bleu/vert.
+2. Site : vider la variable `NEXT_PUBLIC_MEDIA_BASE_URL` et relancer le
+   workflow `cloudflare`.
+3. Recopier vers Supabase les fichiers envoyés dans R2 depuis la bascule.
+4. Migration `media_urls_to_r2_revert.sql` (conference-api) dans l'éditeur
+   SQL de Supabase.
