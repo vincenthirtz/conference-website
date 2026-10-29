@@ -1,7 +1,7 @@
 # Temps réel sur Cloudflare (Durable Objects) à la place de Supabase Realtime
 
-Préparation du 2026-10-29 — rien n'est encore construit. La base et les
-comptes restent chez Supabase ; seul le « prévenir les écrans » change.
+Étape 1 faite le 2026-10-29 (Worker en ligne, aucun écran branché). La base
+et les comptes restent chez Supabase ; seul le « prévenir les écrans » change.
 
 ## Ce qui écoute aujourd'hui
 
@@ -34,12 +34,12 @@ modifications au total sur les tables suivies (`matches` ~900,
    À part du site : chaque déploiement d'un Worker redémarre ses Durable
    Objects et coupe leurs connexions ; le site se déploie plusieurs fois par
    jour, le temps réel presque jamais.
-2. **Un « salon » (Durable Object) par sujet** : `matches:tournoi:<id>`,
-   `draft:<id>`, `demandes:equipe:<id>`, `caster:scenes`, `caster:themes`,
-   `caster:scene:<id>`, `caster:presence`. Bibliothèque **PartyServer**
-   (ex-PartyKit) côté Worker, **PartySocket** côté navigateur (reconnexion
-   automatique), API d'hibernation activée (`hibernate: true`) : un salon
-   sans message ne coûte rien.
+2. **Un « salon » (Durable Object) par sujet** : `matches:tournament:<id>`,
+   `draft:<id>`, `demandes:team:<id>`, `caster:scenes`, `caster:themes`,
+   `caster:scene:<id>`, `caster:presence`. Durable Objects natifs (plutôt
+   que PartyServer : une centaine de lignes, aucune dépendance), API
+   d'hibernation : un salon sans message ne coûte rien, et le `ping` des
+   écrans reçoit son `pong` sans réveiller l'objet.
 3. **Des messages sans données** : « la table X, ligne Y, a changé ». L'écran
    recharge avec ses propres droits, comme aujourd'hui. Aucune donnée ne
    transite par le salon : les règles d'accès restent dans l'API et la base.
@@ -76,10 +76,22 @@ requêtes et 400 000 GB-s de calcul par mois pour les Durable Objects.
 
 ## Étapes
 
-1. **Worker et salons** (sans effet) : `owwomenscup-realtime`, routes, tests.
+1. **Worker et salons** (sans effet) — **fait le 2026-10-29** :
+   `realtime/worker.mjs` (Worker `owwomenscup-realtime`, adresse technique
+   https://owwomenscup-realtime.owwomenscup.workers.dev), règles pures et
+   testées dans `realtime/protocol.ts` (`tests/unit/realtimeProtocol.test.ts`),
+   workflow `.github/workflows/realtime.yml` (déploie seulement quand
+   `realtime/` change), contrôles `scripts/realtime-check.mjs` (refus sans
+   signature ni ticket, ping/pong, présence, changement reçu sans données).
+   Secrets `REALTIME_NOTIFY_SECRET` et `REALTIME_TICKET_SECRET` dans
+   l'environnement GitHub `cloudflare-production` : à **renouveler** à
+   l'étape 2, en les posant en même temps dans Supabase Vault (déclencheurs)
+   et dans l'API (tickets).
 2. **Déclencheurs en double** : la base prévient les salons, mais les écrans
    écoutent toujours Supabase. On compare les deux pendant quelques jours de
-   matchs.
+   matchs. Avec : `realtime.owwomenscup.fr` (domaine du Worker), route de
+   l'API qui émet les tickets, migration SQL (`pg_net`, déclencheurs, secret
+   dans Vault) appliquée par la propriétaire.
 3. **Bascule des écrans** par l'interrupteur, un jour calme ; overlay et draft
    testés en conditions de match.
 4. **Après deux semaines** : retrait des tables de la publication
