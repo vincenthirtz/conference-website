@@ -107,6 +107,11 @@ Les chemins seuls (cartes TCG, photos, fan-arts) n'ont pas à bouger.
    `match-evidence` (vide) › Delete bucket. Après ça, plus de retour arrière
    vers Supabase Storage. Les fichiers n'ont alors qu'une copie, dans R2
    (comme ils n'en avaient qu'une chez Supabase).
+   **Faite le 2026-10-29** : essai d'envoi réussi (3 logos d'équipe,
+   ~14 h 41 UTC), les 99 adresses de fichiers de la base en 200, puis les deux
+   buckets supprimés (0 bucket, 0 fichier chez Supabase) ; accueil, /tcg, un
+   tournoi et une équipe ne citent plus aucune adresse Supabase Storage.
+   Le retour arrière ci-dessous n'est plus possible.
 
 ## Retour arrière (avant l'étape 4)
 
