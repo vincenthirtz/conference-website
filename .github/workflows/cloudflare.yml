@@ -28,7 +28,9 @@ on:
       - '.github/workflows/realtime.yml'
       # Sauvegarde nocturne de la base (db-backup.yml) : rien à redéployer.
       - 'scripts/db-backup-*'
+      - 'scripts/db-restore-*'
       - '.github/workflows/db-backup.yml'
+      - '.github/workflows/db-restore-test.yml'
   workflow_dispatch:
 
 concurrency:

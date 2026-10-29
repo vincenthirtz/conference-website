@@ -1,0 +1,131 @@
+# Essai de restauration d'une sauvegarde de la base — docs/SAUVEGARDES.md.
+#
+# Une sauvegarde qu'on n'a jamais restaurée ne prouve rien. Ici, sur la
+# machine jetable de GitHub : téléchargement d'une sauvegarde depuis R2
+# (db-backup.yml), démarrage d'un Supabase local (CLI, Docker), restauration
+# selon la procédure officielle de Supabase, puis comparaison table par table
+# du nombre de lignes avec la sauvegarde (scripts/db-restore-verify.mjs).
+# Tout disparaît avec la machine ; le résumé ne contient que des nombres.
+#
+# Le 5 de chaque mois, et à la main (choix de la date possible).
+
+name: db-restore-test
+
+on:
+  schedule:
+    - cron: '47 3 5 * *'
+  workflow_dispatch:
+    inputs:
+      day:
+        description: 'Sauvegarde à restaurer (AAAA-MM-JJ) ; vide = la plus récente'
+        required: false
+
+concurrency:
+  group: db-restore-test
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: cloudflare-production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      BUCKET: owwomenscup-backups
+      LOCAL_DB: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Dépendances
+        run: npm ci --no-audit --no-fund
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.121.0
+
+      - name: Téléchargement de la sauvegarde
+        env:
+          DAY: ${{ inputs.day }}
+        run: |
+          set -euo pipefail
+          if [ -n "${DAY:-}" ]; then
+            days="$DAY"
+          else
+            days="$(for i in 0 1 2 3; do date -u -d "-$i day" +%Y-%m-%d; done)"
+          fi
+          for d in $days; do
+            if npx wrangler r2 object get "$BUCKET/quotidien/owwc-$d.tar.gz" --file backup.tar.gz --jurisdiction eu --remote >/dev/null 2>&1; then
+              echo "Sauvegarde : quotidien/owwc-$d.tar.gz"
+              printf -- '- Sauvegarde restaurée : quotidien/owwc-%s.tar.gz\n' "$d" >> "$GITHUB_STEP_SUMMARY"
+              break
+            fi
+          done
+          if [ ! -s backup.tar.gz ]; then
+            echo '::error::Aucune sauvegarde trouvée dans R2 pour ces dates.'
+            exit 1
+          fi
+          mkdir -p dump
+          tar -xzf backup.tar.gz -C dump
+          rm backup.tar.gz
+          node scripts/db-backup-check.mjs dump
+
+      # Base jetable : Postgres de Supabase + services qui créent les schémas
+      # auth, storage et realtime (comme sur la plateforme). Le reste est coupé.
+      - name: Supabase local
+        run: |
+          set -euo pipefail
+          mkdir -p restore
+          cd restore
+          supabase init
+          sed -i 's/^major_version = .*/major_version = 17/' supabase/config.toml
+          supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,postgres-meta,kong,postgrest
+
+      # Procédure officielle (« Restore a Platform Project ») : une seule
+      # transaction, déclencheurs coupés pendant l'import des données.
+      # DÉPÔT PUBLIC, journaux publics : un message d'erreur de Postgres peut
+      # recopier une ligne de données. On n'affiche que l'endroit (début de
+      # la commande : table visée) et le message, valeurs masquées.
+      - name: Restauration
+        run: |
+          set -uo pipefail
+          if psql \
+            --single-transaction \
+            --variable ON_ERROR_STOP=1 \
+            --quiet \
+            --file dump/roles.sql \
+            --file dump/schema.sql \
+            --command 'SET session_replication_role = replica' \
+            --file dump/data.sql \
+            --dbname "$LOCAL_DB" > /dev/null 2> restore.err; then
+            echo 'Restauration terminée sans erreur.'
+            rm -f restore.err
+            exit 0
+          fi
+          first="$(grep -m1 -E 'ERROR:' restore.err || true)"
+          file="$(printf '%s' "$first" | sed -nE 's/^psql:([^:]+):([0-9]+):.*/\1/p')"
+          line="$(printf '%s' "$first" | sed -nE 's/^psql:([^:]+):([0-9]+):.*/\2/p')"
+          if [ -n "$file" ] && [ -f "$file" ]; then
+            where="$(head -n "$line" "$file" | grep -E '^(COPY|CREATE|ALTER|GRANT|REVOKE|COMMENT|SELECT|SET|DO) ' | tail -1 | sed -E 's/ \(.*//' | cut -c1-120)"
+            echo "::error::Restauration échouée dans $file ligne $line, commande : $where"
+          fi
+          printf '%s\n' "$first" | sed -E "s/\"[^\"]*\"/\"…\"/g; s/'[^']*'/'…'/g; s/\([^)]*\)=\([^)]*\)/(…)=(…)/g" | cut -c1-300
+          rm -f restore.err
+          exit 1
+
+      - name: Vérification
+        run: node scripts/db-restore-verify.mjs dump "$LOCAL_DB"
+
+      - name: Nettoyage
+        if: always()
+        run: |
+          rm -rf dump
+          (cd restore && supabase stop --no-backup) || true

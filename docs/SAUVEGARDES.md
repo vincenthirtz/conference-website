@@ -47,6 +47,21 @@ jour.
 Lancer une sauvegarde à la main : onglet Actions › `db-backup` › Run
 workflow, ou `gh workflow run db-backup.yml --ref work`.
 
+## Essai de restauration
+
+Le 5 de chaque mois (et à la main : Actions › `db-restore-test` › Run
+workflow, date au choix), [`.github/workflows/db-restore-test.yml`](../.github/workflows/db-restore-test.yml)
+télécharge une sauvegarde, démarre un Supabase local jetable sur la machine
+de GitHub, la restaure selon la procédure ci-dessous et compare, **table par
+table**, le nombre de lignes avec la sauvegarde
+([`scripts/db-restore-verify.mjs`](../scripts/db-restore-verify.mjs)). Un
+écart fait échouer le travail (e-mail de GitHub).
+
+**Le dépôt est public, ses journaux aussi** : les deux workflows n'y écrivent
+que des noms de tables et des nombres. En cas d'erreur de restauration, seuls
+l'endroit (la table visée) et le message de Postgres valeurs masquées sont
+affichés.
+
 ## Ce qui n'y est pas
 
 - Les **fichiers** (logos, images) : ils sont dans R2
