@@ -15,6 +15,8 @@
 // tournoi `tournamentId`, que la finalisation admin fige. Tant qu'elle n'a pas
 // eu lieu, l'accueil n'affiche que la championne.
 
+import { mediaPublicUrl } from '@/utils/storage/mediaUrl';
+
 export type HomeChampion = {
   /** Année de l'édition remportée. */
   year: number;
@@ -41,8 +43,9 @@ export const homeChampion: HomeChampion | null = {
   tournamentSlug: 'ow-womens-cup-2026',
   teamName: 'Chocomates',
   teamSlug: 'chocomates',
-  logoUrl:
-    'https://yhfdhpqgmazfxyyklomp.supabase.co/storage/v1/object/public/teams-images/team-f51e782f-c95b-4b8c-95b3-b62660504212/Chocomates_DONE2__3_-512-6a2b994f02031015.webp',
+  logoUrl: mediaPublicUrl(
+    'team-f51e782f-c95b-4b8c-95b3-b62660504212/Chocomates_DONE2__3_-512-6a2b994f02031015.webp'
+  ),
   runnerUp: 'Hinode Sparkles',
   finalScore: '3–1',
   visibleUntil: '2026-12-01T00:00:00+01:00',

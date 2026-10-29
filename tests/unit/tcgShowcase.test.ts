@@ -30,6 +30,7 @@ import {
   readPublicShowcase,
 } from '../../utils/tcg/showcase';
 import { SHOWCASE_MAX_CARDS } from '../../features/player/tcg/schemas';
+import { mediaPublicUrl } from '../../utils/storage/mediaUrl';
 import { getStaticProps } from '@/pages/player/[userId]';
 
 const TENANT = DEFAULT_TENANT_ID;
@@ -39,7 +40,8 @@ const OTHER = '5f607182-93a4-45b6-87d8-e9f0a1b2c3d4';
 const TEAM = '60718293-a4b5-46c7-98e9-f0a1b2c3d4e5';
 
 const PHOTO_PATH = 'tcg/star.png';
-const PHOTO_URL = `https://storage.example.test/teams-images/${PHOTO_PATH}`;
+// Adresse publique telle que la calcule le code (utils/storage/mediaUrl.ts).
+const PHOTO_URL = mediaPublicUrl(PHOTO_PATH);
 const STAR_AVATAR = 'https://cdn.test/star-avatar.png';
 
 function seedPeople() {

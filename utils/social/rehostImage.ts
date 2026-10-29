@@ -18,15 +18,16 @@
 // journée. On copie donc le fichier dans notre bucket au moment de publier :
 // l'actualité ne dépend plus d'un serveur tiers ni d'une signature.
 //
-// Les URLs DÉJÀ chez nous (Supabase Storage) et les chemins relatifs sont
-// laissés tels quels — rien à recopier.
+// Les URLs DÉJÀ chez nous (Supabase Storage ou media.owwomenscup.fr) et les
+// chemins relatifs sont laissés tels quels — rien à recopier.
 
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { uploadMedia } from '@/utils/storage/mediaStore';
+import { isMediaUrl, mediaPublicUrl } from '@/utils/storage/mediaUrl';
 
 /** Même bucket public que les logos d'équipe (cf. pages/api/admin/upload.ts). */
-const BUCKET = 'teams-images';
 const DEFAULT_PREFIX = 'news';
 
 /** 8 Mio : au-delà, ce n'est plus une image d'article. */
@@ -53,19 +54,23 @@ export type RehostResult = {
  * Vrai si l'URL pointe déjà chez nous (ou est relative) : rien à faire.
  *
  * On reconnaît le stockage Supabase par son chemin public, pas seulement par
- * l'hôte : un projet Supabase sert aussi d'autres choses.
+ * l'hôte : un projet Supabase sert aussi d'autres choses. Le bucket média sur
+ * R2 (`media.owwomenscup.fr`, ou la base configurée) est aussi chez nous.
  */
 export function isOwnImageUrl(url: string): boolean {
   if (url.startsWith('/')) return true;
   try {
     const u = new URL(url);
-    return (
+    if (
       u.hostname.endsWith('.supabase.co') &&
       u.pathname.includes('/storage/v1/object/public/')
-    );
+    ) {
+      return true;
+    }
   } catch {
     return false;
   }
+  return isMediaUrl(url);
 }
 
 /**
@@ -156,9 +161,10 @@ export async function rehostImage(
     .slice(0, 32);
   const path = `${prefix}/${hash}${EXT_BY_MIME[mimeType]}`;
 
-  const { error: uploadError } = await supabaseAdmin.storage
-    .from(BUCKET)
-    .upload(path, buffer, { contentType: mimeType, upsert: true });
+  const { error: uploadError } = await uploadMedia(path, buffer, {
+    contentType: mimeType,
+    upsert: true,
+  });
 
   if (uploadError) {
     logger.error('[rehostImage] upload échoué: %s', uploadError.message);
@@ -169,6 +175,5 @@ export async function rehostImage(
     };
   }
 
-  const { data } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path);
-  return { url: data.publicUrl, rehosted: true, error: null };
+  return { url: mediaPublicUrl(path), rehosted: true, error: null };
 }

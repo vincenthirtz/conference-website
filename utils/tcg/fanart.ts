@@ -18,6 +18,7 @@
 // non plus.
 
 import type { OverwatchRole } from '../heroes/overwatch';
+import { MEDIA_SUPABASE_BUCKET, mediaPathFromUrl } from '../storage/mediaUrl';
 import type { TcgRarity } from './rarity';
 
 export const FANART_STATUSES = [
@@ -260,6 +261,9 @@ export function isPartnerSourceRef(ref: string | null | undefined): boolean {
  * Un logo d'événement est une URL (upload du back-office → bucket public, ou
  * chemin du site). Seul le premier cas se copie en carte : la carte a besoin
  * d'un objet du bucket qui lui appartienne, pas d'un lien qui pourrait changer.
+ *
+ * Le bucket média est aussi servi par R2 (`media.owwomenscup.fr`, mêmes
+ * clés) : pour lui, une telle adresse donne le même chemin.
  */
 export function bucketPathFromPublicUrl(
   url: string,
@@ -267,7 +271,9 @@ export function bucketPathFromPublicUrl(
 ): string | null {
   const marker = `/storage/v1/object/public/${bucket}/`;
   const at = url.indexOf(marker);
-  if (at === -1) return null;
+  if (at === -1) {
+    return bucket === MEDIA_SUPABASE_BUCKET ? mediaPathFromUrl(url) : null;
+  }
   const path = decodeURIComponent(url.slice(at + marker.length).split('?')[0]);
   if (!path || path.includes('..') || path.startsWith('/')) return null;
   return path;

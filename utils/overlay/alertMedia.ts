@@ -13,6 +13,7 @@
 // la source OBS le télécharge sans session, comme n'importe quel navigateur.
 
 import { supabaseAdmin } from '@/utils/supabase';
+import { mediaPublicUrl } from '@/utils/storage/mediaUrl';
 
 /** Bucket public, partagé avec les autres habillages d'overlay. */
 export const ALERT_MEDIA_BUCKET = 'teams-images';
@@ -29,10 +30,7 @@ export function isAlertFrameKind(value: unknown): value is AlertFrameKind {
 /** Un chemin de bucket redevient une URL servable. `null` reste `null`. */
 export function alertMediaUrl(path: string | null | undefined): string | null {
   if (!path || !supabaseAdmin) return null;
-  return (
-    supabaseAdmin.storage.from(ALERT_MEDIA_BUCKET).getPublicUrl(path).data
-      ?.publicUrl ?? null
-  );
+  return mediaPublicUrl(path);
 }
 
 export type AlertMediaRow = {

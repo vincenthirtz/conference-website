@@ -533,7 +533,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
 
   // L'ASSOCIATION : ses visuels publiés. Pas les fan arts de la communauté,
   // qui ont leur page de crédits (`/tcg/fan-art`).
-  const { TCG_BUCKET } = await import('@/utils/tcg/teamCardImage');
+  const { mediaPublicUrl } = await import('@/utils/storage/mediaUrl');
   const { isMissingColumnError } = await import(
     '@/utils/moderation/missingColumn'
   );
@@ -577,9 +577,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     kind: 'association',
     id: row.id,
     name: row.title,
-    imageUrl:
-      supabaseAdmin.storage.from(TCG_BUCKET).getPublicUrl(row.image_path).data
-        ?.publicUrl ?? null,
+    imageUrl: mediaPublicUrl(row.image_path),
     credit: row.artist_name,
     // Le site d'un partenaire : https seulement, comme sur la carte.
     creditUrl: displayableLogoCreditUrl(row.artist_url),

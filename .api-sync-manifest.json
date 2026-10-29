@@ -1,6 +1,6 @@
 {
-  "apiCommit": "6d6f190aef33499bfb75c5deac537b87d247a050",
-  "syncedAt": "2026-10-26T16:27:27.238Z",
+  "apiCommit": "8929fa3f39efeed91d011cf9d66c68cc2f3bb896",
+  "syncedAt": "2026-10-29T08:55:08.230Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -276,6 +276,8 @@
     "utils/stages/standingsCache.ts",
     "utils/stages/tiebreakers.ts",
     "utils/statusConfig.ts",
+    "utils/storage/mediaStore.ts",
+    "utils/storage/mediaUrl.ts",
     "utils/subject.ts",
     "utils/subjectParam.ts",
     "utils/supabase.ts",

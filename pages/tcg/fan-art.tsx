@@ -22,7 +22,7 @@ import { isOptimizableImageUrl } from '@/utils/images/optimizableImage';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { supabaseAdmin } from '@/utils/supabase';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
-import { TCG_BUCKET } from '@/utils/tcg/teamCardImage';
+import { mediaPublicUrl } from '@/utils/storage/mediaUrl';
 import { displayableArtistUrl } from '@/utils/tcg/fanart';
 import { logger } from '@/utils/logger';
 import { useT, format } from '@/lib/i18n/useT';
@@ -65,9 +65,7 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
           title: row.title,
           artistName: row.artist_name,
           artistUrl: displayableArtistUrl(row.artist_url),
-          imageUrl:
-            supabaseAdmin.storage.from(TCG_BUCKET).getPublicUrl(row.image_path)
-              .data?.publicUrl ?? null,
+          imageUrl: mediaPublicUrl(row.image_path),
         });
       }
     }
@@ -127,10 +125,10 @@ function FanArtCreditsPage({ credits }: Props) {
                   className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]"
                 >
                   {credit.imageUrl ? (
-                    // `getPublicUrl()` rend une URL
-                    // `https://<ref>.supabase.co/storage/v1/object/public/…` :
-                    // elle EST couverte par `images.remotePatterns`
-                    // (`**.supabase.co`, préfixe de stockage public). L'ancien
+                    // `mediaPublicUrl()` rend une URL Supabase
+                    // (`https://<ref>.supabase.co/storage/v1/object/public/…`)
+                    // ou `https://media.owwomenscup.fr/…` (R2) : les deux SONT
+                    // couvertes par `images.remotePatterns`. L'ancien
                     // commentaire affirmait le contraire et servait jusqu'à 200
                     // illustrations pleine résolution dans des vignettes
                     // d'environ 310 px. `isOptimizableImageUrl` reste en garde-

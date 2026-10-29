@@ -27,6 +27,10 @@
 export const OPTIMIZABLE_REMOTE_HOSTS: readonly string[] = [
   // `**.supabase.co`, restreint au préfixe de stockage public.
   '.supabase.co',
+  // Le bucket média sur R2, qui remplace Supabase Storage
+  // (utils/storage/mediaUrl.ts). Écrit en dur, comme dans next.config.js :
+  // une base configurée ailleurs ne serait pas déclarée là-bas.
+  'media.owwomenscup.fr',
   'overwatch.blizzard.com',
   'static-cdn.jtvnw.net',
   'cdn.discordapp.com',

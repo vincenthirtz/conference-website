@@ -9,6 +9,8 @@
 // Trois copies de la même chaîne, c'est trois occasions de les désaccorder — et
 // un désaccord ici ne casse rien : il affiche simplement une image morte.
 
+import { mediaPublicUrl } from '@/utils/storage/mediaUrl';
+
 /** Le bucket public commun à tous les médias d'équipe. */
 export const TCG_BUCKET = 'teams-images';
 
@@ -28,11 +30,12 @@ export function tcgTeamImagePrefix(teamId: string): string {
  * carte doit retomber sur le logo de l'équipe, et il ne doit pas se transformer
  * en URL vide quelque part en chemin.
  *
- * Le client Supabase est passé en argument plutôt qu'importé : ce module est
- * aussi utilisé côté rendu, où l'on ne veut pas tirer le client d'admin.
+ * L'adresse se calcule sans client (`mediaPublicUrl`, Supabase ou R2). Le
+ * premier argument, un client de stockage, n'est plus lu : il reste dans la
+ * signature parce que les appelants du site le passent encore.
  */
 export function tcgTeamImageUrl(
-  storage: {
+  _storage: {
     from: (bucket: string) => {
       getPublicUrl: (path: string) => { data: { publicUrl: string } };
     };
@@ -40,5 +43,5 @@ export function tcgTeamImageUrl(
   path: string | null | undefined
 ): string | null {
   if (!path) return null;
-  return storage.from(TCG_BUCKET).getPublicUrl(path).data.publicUrl;
+  return mediaPublicUrl(path);
 }

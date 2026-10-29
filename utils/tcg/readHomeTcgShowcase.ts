@@ -221,7 +221,7 @@ async function readAssociationCard(
 ): Promise<Extract<HomeTcgCard, { kind: 'association' }> | null> {
   if (!supabaseAdmin) return null;
   const db = supabaseAdmin;
-  const { TCG_BUCKET } = await import('@/utils/tcg/teamCardImage');
+  const { mediaPublicUrl } = await import('@/utils/storage/mediaUrl');
   const { isMissingColumnError } = await import(
     '@/utils/moderation/missingColumn'
   );
@@ -254,9 +254,7 @@ async function readAssociationCard(
     kind: 'association',
     id: row.id,
     name: row.title,
-    imageUrl:
-      db.storage.from(TCG_BUCKET).getPublicUrl(row.image_path).data
-        ?.publicUrl ?? null,
+    imageUrl: mediaPublicUrl(row.image_path),
     credit: row.artist_name,
     // Le site d'un partenaire : https seulement, comme sur la carte.
     creditUrl: displayableLogoCreditUrl(row.artist_url),

@@ -36,7 +36,8 @@ import { logger } from '@/utils/logger';
 import { isMissingColumnError } from '@/utils/moderation/missingColumn';
 import { recommendCardHero } from '@/utils/heroes/recommendCardHero';
 import { maskBattleTag } from '@/utils/battleTag';
-import { TCG_BUCKET, tcgTeamImageUrl } from '@/utils/tcg/teamCardImage';
+import { tcgTeamImageUrl } from '@/utils/tcg/teamCardImage';
+import { mediaPublicUrl } from '@/utils/storage/mediaUrl';
 import {
   displayableArtistUrl,
   fanartCategoryOf,
@@ -61,9 +62,6 @@ import {
   normalizeFigureColor,
   type FigureRole,
 } from '@/utils/tcg/roleFigures';
-
-/** Même bucket public que les logos d'équipe. */
-const BUCKET = TCG_BUCKET;
 
 export type PlayerFace = {
   userId: string;
@@ -215,11 +213,7 @@ export async function readPlayerFaces(
     // qu'elle complète plutôt que répartie entre deux couches.
     if (row.photo_status !== 'approved' || row.revoked_at) continue;
     if (!row.photo_path) continue;
-    photoByUser.set(
-      row.user_id,
-      supabaseAdmin.storage.from(BUCKET).getPublicUrl(row.photo_path).data
-        .publicUrl
-    );
+    photoByUser.set(row.user_id, mediaPublicUrl(row.photo_path));
   }
 
   const prefsByUser = new Map<string, { picks: string[]; bans: string[] }>();
@@ -563,10 +557,7 @@ export async function readFanartFaces(
         category === 'association'
           ? displayableLogoCreditUrl(row.artist_url)
           : displayableArtistUrl(row.artist_url),
-      imageUrl: row.image_path
-        ? (supabaseAdmin.storage.from(BUCKET).getPublicUrl(row.image_path).data
-            ?.publicUrl ?? null)
-        : null,
+      imageUrl: row.image_path ? mediaPublicUrl(row.image_path) : null,
     });
   }
   return faces;
