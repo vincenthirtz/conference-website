@@ -96,9 +96,17 @@ Les chemins seuls (cartes TCG, photos, fan-arts) n'ont pas à bouger.
      `/tcg/fan-art`, une équipe et un tournoi ; images en 200 en direct et
      par l'optimiseur ; mentions légales à jour (fichiers chez Cloudflare R2,
      UE).
-4. **Vers le 2026-11-12** : suppression des buckets Supabase `teams-images`
-   et `match-evidence` (les liens historiques des journaux pointeront alors
-   dans le vide, c'est accepté).
+4. **Avancée par la propriétaire le 2026-10-29** (au lieu du 2026-11-12) :
+   suppression des buckets Supabase `teams-images` et `match-evidence` (les
+   liens historiques des journaux pointeront alors dans le vide, c'est
+   accepté). Ordre retenu : d'abord un **essai d'envoi** depuis l'admin
+   (image d'actualité ou logo) — aucun fichier n'avait encore été envoyé
+   vers R2 depuis la bascule —, vérifié dans la base et sur
+   media.owwomenscup.fr ; ensuite seulement, dans le tableau de bord Supabase
+   › Storage : `teams-images` › Empty bucket puis Delete bucket,
+   `match-evidence` (vide) › Delete bucket. Après ça, plus de retour arrière
+   vers Supabase Storage. Les fichiers n'ont alors qu'une copie, dans R2
+   (comme ils n'en avaient qu'une chez Supabase).
 
 ## Retour arrière (avant l'étape 4)
 

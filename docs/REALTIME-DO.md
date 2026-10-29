@@ -158,7 +158,15 @@ requêtes et 400 000 GB-s de calcul par mois pour les Durable Objects.
    relancer le workflow `cloudflare` (~10 min), ou `?realtime=supabase` sur un
    seul écran. Reste : coupure de workers.dev (`workers_dev: false`) après
    quelques jours sans souci, contrôles sur le seul domaine.
-4. **Après deux semaines** : retrait des tables de la publication
-   `supabase_realtime`.
+4. **Retrait des tables de la publication `supabase_realtime`**, en deux
+   temps (migrations conference-api, appliquées par la propriétaire) :
+   - le 2026-10-29, `realtime_publication_drop_retired.sql` : les 7 tables
+     que plus rien n'écoute (`caster_presence`, `event_*` — application de
+     bureau retirée) ;
+   - **après l'Event Halloween 2026** (premier direct sur les salons),
+     `realtime_publication_drop_migrated.sql` : les 6 tables des écrans
+     (`matches`, `match_drafts`, `match_draft_steps`, `demandes`,
+     `caster_scenes`, `caster_themes`). Elle supprime le retour arrière
+     ci-dessous ; son `_revert` le rétablit.
 
-Retour arrière avant l'étape 4 : l'interrupteur sur `supabase`.
+Retour arrière avant la seconde migration : l'interrupteur sur `supabase`.
