@@ -77,7 +77,8 @@ Les chemins seuls (cartes TCG, photos, fan-arts) n'ont pas à bouger.
 3. **Bascule** : clé R2 sur le serveur de l'API ; `MEDIA_BACKEND=r2` ; copie
    finale (fichiers arrivés depuis l'essai, avec leur `Cache-Control`) ;
    migration SQL des liens ; contrôles (logos, cartes, actualités, alerte
-   de stream, preuve de match).
+   de stream, preuve de match) ; mentions légales : les fichiers passent de
+   Supabase à Cloudflare (`hostingServices`, FR et EN).
 4. **Après deux semaines** : suppression des buckets Supabase.
 
 ## Retour arrière

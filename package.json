@@ -44,7 +44,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",
-    "@netlify/functions": "^6.0.3",
     "@opennextjs/cloudflare": "1.20.13",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.3.3",

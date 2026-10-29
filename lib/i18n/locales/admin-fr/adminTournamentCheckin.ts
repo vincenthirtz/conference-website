@@ -13,7 +13,7 @@ export default adminNs('adminTournamentCheckin', {
   backToTournament: 'Retour au tournoi',
   pageTitle: 'Check-in matchs',
   pageSubtitle:
-    'Suivi des présences et auto-forfaits. Le processeur tourne tout seul (cron Netlify), mais vous pouvez forcer un passage ici.',
+    'Suivi des présences et auto-forfaits. Le processeur tourne tout seul (tâche planifiée du site), mais vous pouvez forcer un passage ici.',
   liveConsole: 'Live console ↗',
   currentGraceTitle: 'Fenêtre de grâce actuelle : {minutes} min',
   configureCheckin: 'Configurer le check-in',
@@ -41,7 +41,7 @@ export default adminNs('adminTournamentCheckin', {
   thAction: 'Action',
   view: 'Voir',
   footerBefore:
-    'Le processeur cron tourne automatiquement toutes les 5 minutes via Netlify Scheduled Functions. Les matchs sans',
+    'Le processeur cron tourne automatiquement toutes les 5 minutes via les tâches planifiées du site (Cloudflare). Les matchs sans',
   footerAfter: 'sont ignorés.',
   settingsTitle: 'Configurer le check-in',
   settingsSubtitle: 'Fenêtre de grâce avant l’auto-forfait pour non check-in.',

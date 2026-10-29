@@ -1,13 +1,13 @@
-// Relais même-origine /api/* → conference-api (Edge Function Netlify).
+// Relais même-origine /api/* → conference-api : logique pure partagée,
+// utilisée par le Worker (cloudflare/worker.mjs).
 //
 // Les invariants qui comptent :
-//   - SANS variables (ou secret absent, ou origine invalide), rien ne change :
-//     la requête poursuit vers la fonction serveur Next (`context.next()`).
+//   - SANS variables (ou secret absent, ou origine invalide), rien n’est
+//     relayé : la requête reste au site.
 //   - Un client ne peut jamais forger les en-têtes X-Owwc-* du relais.
 //   - Plusieurs Set-Cookie amont reviennent séparés, jamais fusionnés.
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import apiProxy from '../../netlify/edge-functions/api-proxy';
+import { describe, expect, it } from 'vitest';
 import {
   buildDownstreamHeaders,
   buildUpstreamHeaders,
@@ -263,177 +263,6 @@ describe('petits prédicats', () => {
     const res = upstreamUnavailableResponse();
     expect(res.status).toBe(502);
     expect(res.headers.get('content-type')).toContain('application/json');
-    expect(await res.json()).toEqual({ error: 'Upstream unavailable' });
-  });
-});
-
-describe('edge function api-proxy', () => {
-  const NEXT = new Response('from-next', { status: 299 });
-
-  function stubEnv(env: Record<string, string | undefined>) {
-    vi.stubGlobal('Netlify', { env: { get: (k: string) => env[k] } });
-  }
-  function ctx() {
-    return { ip: '198.51.100.4', next: vi.fn(async () => NEXT) };
-  }
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
-  });
-
-  it('sans Netlify global (local), rend la main sans fetch', async () => {
-    const fetchSpy = vi.fn();
-    vi.stubGlobal('fetch', fetchSpy);
-    const c = ctx();
-    const res = await apiProxy(
-      new Request('https://owwomenscup.fr/api/onboard/x'),
-      c
-    );
-    expect(res).toBe(NEXT);
-    expect(c.next).toHaveBeenCalledOnce();
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it('secret absent → context.next()', async () => {
-    stubEnv({ API_PROXY_PREFIXES: '/api/onboard/' });
-    const fetchSpy = vi.fn();
-    vi.stubGlobal('fetch', fetchSpy);
-    const c = ctx();
-    await apiProxy(new Request('https://owwomenscup.fr/api/onboard/x'), c);
-    expect(c.next).toHaveBeenCalledOnce();
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it('/api/internal/revalidate → context.next() même avec /api/ relayé', async () => {
-    stubEnv({ API_PROXY_PREFIXES: '/api/', EDGE_PROXY_SECRET: SECRET });
-    const fetchSpy = vi.fn();
-    vi.stubGlobal('fetch', fetchSpy);
-    const c = ctx();
-    const res = await apiProxy(
-      new Request('https://owwomenscup.fr/api/internal/revalidate', {
-        method: 'POST',
-        body: '{"paths":["/"]}',
-      }),
-      c
-    );
-    expect(res).toBe(NEXT);
-    expect(c.next).toHaveBeenCalledOnce();
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it('chemin hors préfixe → context.next()', async () => {
-    stubEnv({ API_PROXY_PREFIXES: '/api/onboard/', EDGE_PROXY_SECRET: SECRET });
-    const fetchSpy = vi.fn();
-    vi.stubGlobal('fetch', fetchSpy);
-    const c = ctx();
-    await apiProxy(new Request('https://owwomenscup.fr/api/admin/teams'), c);
-    expect(c.next).toHaveBeenCalledOnce();
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it('relaie méthode, corps, en-têtes et renvoie la réponse amont', async () => {
-    stubEnv({ API_PROXY_PREFIXES: '/api/onboard/', EDGE_PROXY_SECRET: SECRET });
-    const upstreamHeaders = new Headers({ 'content-type': 'application/json' });
-    upstreamHeaders.append('set-cookie', 'a=1; Path=/');
-    upstreamHeaders.append('set-cookie', 'b=2; Path=/');
-    const fetchSpy = vi.fn(
-      async (_url: string, _init: RequestInit & { duplex?: string }) =>
-        new Response('{"ok":true}', {
-          status: 201,
-          headers: upstreamHeaders,
-        })
-    );
-    vi.stubGlobal('fetch', fetchSpy);
-    const c = ctx();
-    const res = await apiProxy(
-      new Request('https://owwomenscup.fr/api/onboard/step?x=1', {
-        method: 'POST',
-        body: '{"step":2}',
-        headers: {
-          'content-type': 'application/json',
-          cookie: 'sb=1',
-          'x-owwc-edge': 'forged',
-        },
-      }),
-      c
-    );
-
-    expect(c.next).not.toHaveBeenCalled();
-    expect(fetchSpy).toHaveBeenCalledOnce();
-    const [url, init] = fetchSpy.mock.calls[0];
-    expect(url).toBe('https://api.owwomenscup.fr/api/onboard/step?x=1');
-    expect(init.method).toBe('POST');
-    expect(init.redirect).toBe('manual');
-    expect(init.duplex).toBe('half');
-    expect(await new Response(init.body).text()).toBe('{"step":2}');
-    const sent = init.headers as Headers;
-    expect(sent.get('x-owwc-edge')).toBe(SECRET);
-    expect(sent.get('x-owwc-client-ip')).toBe('198.51.100.4');
-    expect(sent.get('x-owwc-host')).toBe('owwomenscup.fr');
-    expect(sent.get('cookie')).toBe('sb=1');
-
-    expect(res.status).toBe(201);
-    expect(res.headers.getSetCookie()).toEqual(['a=1; Path=/', 'b=2; Path=/']);
-    expect(await res.json()).toEqual({ ok: true });
-  });
-
-  it('GET : ni corps ni duplex ; 3xx renvoyé tel quel', async () => {
-    stubEnv({
-      API_PROXY_PREFIXES: '/api/auth/',
-      API_PROXY_ORIGIN: 'https://api.example.fr',
-      EDGE_PROXY_SECRET: SECRET,
-    });
-    const fetchSpy = vi.fn(
-      async (_url: string, _init: RequestInit & { duplex?: string }) =>
-        new Response(null, {
-          status: 302,
-          headers: { location: 'https://discord.com/oauth2/authorize' },
-        })
-    );
-    vi.stubGlobal('fetch', fetchSpy);
-    const res = await apiProxy(
-      new Request('https://owwomenscup.fr/api/auth/discord'),
-      ctx()
-    );
-    const [url, init] = fetchSpy.mock.calls[0];
-    expect(url).toBe('https://api.example.fr/api/auth/discord');
-    expect(init.body).toBeUndefined();
-    expect(init.duplex).toBeUndefined();
-    expect(res.status).toBe(302);
-    expect(res.headers.get('location')).toBe(
-      'https://discord.com/oauth2/authorize'
-    );
-  });
-
-  it('204 amont : réponse sans corps', async () => {
-    stubEnv({ API_PROXY_PREFIXES: '/api/onboard/', EDGE_PROXY_SECRET: SECRET });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => new Response(null, { status: 204 }))
-    );
-    const res = await apiProxy(
-      new Request('https://owwomenscup.fr/api/onboard/x', { method: 'DELETE' }),
-      ctx()
-    );
-    expect(res.status).toBe(204);
-    expect(res.body).toBeNull();
-  });
-
-  it('erreur réseau amont → 502 JSON', async () => {
-    stubEnv({ API_PROXY_PREFIXES: '/api/onboard/', EDGE_PROXY_SECRET: SECRET });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => {
-        throw new TypeError('connection refused');
-      })
-    );
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    const res = await apiProxy(
-      new Request('https://owwomenscup.fr/api/onboard/x'),
-      ctx()
-    );
-    expect(res.status).toBe(502);
     expect(await res.json()).toEqual({ error: 'Upstream unavailable' });
   });
 });

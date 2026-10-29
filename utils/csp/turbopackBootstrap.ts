@@ -34,7 +34,7 @@ export const TURBOPACK_BOOTSTRAP_SRC = '/turbopack-bootstrap.js';
 /**
  * Empreinte du chargeur (8 premiers caractères du SHA-256 de
  * public/turbopack-bootstrap.js) : sert à invalider le cache navigateur, le
- * fichier étant servi en `immutable` (netlify.toml). Le test vérifie qu'elle
+ * fichier étant servi en `immutable` (cloudflare/_headers). Le test vérifie qu'elle
  * suit le fichier.
  */
 export const TURBOPACK_BOOTSTRAP_VERSION = 'd4c4157c';

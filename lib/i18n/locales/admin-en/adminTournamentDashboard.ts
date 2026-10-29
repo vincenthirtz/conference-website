@@ -126,7 +126,7 @@ export default {
   cronDownMsgWithTime:
     'Last run {minutes} min ago. Reminders and auto-forfeits are no longer running.',
   cronDownMsgNever:
-    'The cron has never been able to write a heartbeat. Check the Netlify Scheduled Functions configuration and CRON_SECRET.',
+    'The cron has never been able to write a heartbeat. Check the Cloudflare Worker’s scheduled tasks (“[crons]” logs) and CRON_SECRET.',
   discordMissingTitle_one: '{count} missing Discord channel',
   discordMissingTitle_other: '{count} missing Discord channels',
   discordMissingMsg:

@@ -1,5 +1,11 @@
 # Relais même-origine `/api/*` → conference-api (Edge Function)
 
+> **Depuis le 2026-10-28, le relais est fait par le Worker Cloudflare**
+> ([cloudflare/worker.mjs](../cloudflare/worker.mjs), même logique
+> `utils/edgeApiProxy.ts`, voir [CLOUDFLARE.md](CLOUDFLARE.md)). L’Edge
+> Function Netlify décrite ci-dessous a été retirée le 2026-10-29 ; ce
+> document garde l’historique de la bascule et le contrat du relais.
+
 Les familles d'API qui lisent un cookie du site (session `sb-*`, tenant actif,
 états OAuth) ne peuvent pas passer en cross-origin vers `api.owwomenscup.fr` :
 le navigateur n'y envoie pas les cookies de `owwomenscup.fr`. Le relais garde

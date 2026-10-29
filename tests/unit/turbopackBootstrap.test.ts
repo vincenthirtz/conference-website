@@ -117,11 +117,11 @@ describe('public/turbopack-bootstrap.js', () => {
     );
   });
 
-  it('est servi en immutable (netlify.toml), l’URL changeant avec l’empreinte', () => {
-    const toml = read('netlify.toml');
-    const block = toml.slice(toml.indexOf('for = "/turbopack-bootstrap.js"'));
-    expect(block).toMatch(
-      /Cache-Control = "public, max-age=31536000, immutable"/
+  it('est servi en immutable (cloudflare/_headers), l’URL changeant avec l’empreinte', () => {
+    const headers = read('cloudflare/_headers');
+    const block = headers.slice(headers.indexOf('\n/turbopack-bootstrap.js\n'));
+    expect(block.split('\n\n')[0]).toMatch(
+      /Cache-Control: public, max-age=31536000, immutable/
     );
   });
 });

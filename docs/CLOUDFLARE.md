@@ -2,10 +2,11 @@
 
 Décision du 2026-10-28 : le **site** passe de Netlify à Cloudflare Workers
 (OpenNext) ; **l'API reste sur Lightsail** (conference-api, inchangée).
-Bascule faite le même jour : owwomenscup.fr est servi par le Worker. Netlify
-reste déployé deux semaines pour le retour arrière (plus de tâches
-planifiées chez lui). L'adresse technique *.workers.dev est coupée
-(`workers_dev: false`) : la CI contrôle directement https://owwomenscup.fr.
+Bascule faite le même jour : owwomenscup.fr est servi par le Worker. Le
+2026-10-29, la migration est déclarée finie : Netlify ne construit plus le
+site et son code a quitté le dépôt. L'adresse technique *.workers.dev est
+coupée (`workers_dev: false`) : la CI contrôle directement
+https://owwomenscup.fr.
 
 ## Pièces
 
@@ -111,28 +112,39 @@ Reste à faire :
 - Connexion vérifiée par le propriétaire (mot de passe, MFA, Discord), admin,
   paiement test, régénération d'une page depuis l'API.
 
-## Retour arrière
+## Retour arrière (secours seulement)
 
-Tant que Netlify déploie encore (deux semaines) :
+Il n'est plus prévu. Le site Netlify « owwomenscup » existe encore, figé sur
+sa dernière version (8c6efac72, constructions coupées), comme la zone Netlify
+DNS : en cas de panne grave du Worker, repasser dans le DNS Cloudflare le
+domaine nu et `www` en « DNS only » renvoie le trafic vers
+`owwomenscup.netlify.app` en quelques minutes. Deux réserves : l'équipe
+Netlify est en offre gratuite (300 crédits par mois, puis TOUS les sites
+Netlify en pause) — la repasser en Pro avant ; et les tâches planifiées
+restent dans le Worker (aucune chez Netlify).
 
-1. Dans le DNS Cloudflare, repasser le domaine nu et `www` en « DNS only » :
-   le trafic revient à Netlify en quelques minutes (TTL 5 min). Les routes
-   peuvent rester, elles n'agissent que sur le trafic « proxied ».
-2. Tâches planifiées : d'abord `CRONS_ENABLED` à `0` (wrangler.jsonc),
-   déployé ; ensuite seulement le revert de 0cda6c4b0, qui rend les fonctions
-   planifiées à Netlify — jamais deux exécutions à la fois.
+## Ménage du 2026-10-29
 
-Retour aux serveurs DNS de Netlify : remettre chez OVH
-`dns1…dns4.p07.nsone.net` (la zone Netlify DNS est toujours là, inchangée).
-Inutile en principe.
+Fait :
 
-## Après deux semaines sans souci
-
-- Netlify en offre gratuite (les autres sites y restent) ; variables du site
-  devenues inutiles (dont `CRON_API_BASE_URL`, `API_PROXY_*`).
-- Zone Netlify DNS owwomenscup.fr supprimée (plus consultée).
-- Suppression de l'essai : Worker `owwomenscup-trial`, bucket
+- Constructions Netlify du site coupées ; `netlify/`, `netlify.toml` et
+  `@netlify/functions` retirés ; en-têtes `Netlify-Vary` retirés de
+  `next.config.js` (sans objet hors du CDN Netlify).
+- Essai supprimé : Worker `owwomenscup-trial`, bucket
   `owwomenscup-trial-opennext-cache`, branche `trial/cloudflare-opennext`,
-  environnement GitHub `cloudflare-trial`, jeton CI
-  `ci-github-conference-website-workers-trial` (expire le 2027-01-25).
-- `netlify/`, `netlify.toml` et `@netlify/*` retirés.
+  environnement GitHub `cloudflare-trial`.
+- Mentions légales : hébergeur Cloudflare, Inc.
+
+Gardé volontairement :
+
+- Le jeton CI `ci-github-conference-website-workers-trial` : c'est le secret
+  `CLOUDFLARE_API_TOKEN` du dépôt, utilisé par le déploiement de production.
+  **Il expire le 2027-01-25** : en créer un nouveau (mêmes droits : Workers
+  Scripts Write, R2 Write, Account Settings Read, Workers Tail Read) et
+  remplacer le secret avant cette date.
+- Le site Netlify et la zone Netlify DNS owwomenscup.fr (secours ci-dessus).
+
+À faire par la propriétaire : passer l'équipe Netlify en offre gratuite
+(Team settings › Billing). Variables du site Netlify devenues inutiles
+(`CRON_API_BASE_URL`, `API_PROXY_*`, `EDGE_PROXY_SECRET`…) : sans effet
+tant que les constructions sont coupées.

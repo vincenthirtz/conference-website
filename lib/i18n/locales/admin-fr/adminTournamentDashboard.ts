@@ -126,7 +126,7 @@ export default adminNs('adminTournamentDashboard', {
   cronDownMsgWithTime:
     'Dernier passage il y a {minutes} min. Les rappels et auto-forfaits ne tournent plus.',
   cronDownMsgNever:
-    "Le cron n'a jamais pu écrire de heartbeat. Vérifie la configuration Netlify Scheduled Functions et CRON_SECRET.",
+    "Le cron n'a jamais pu écrire de heartbeat. Vérifie les tâches planifiées du Worker Cloudflare (journaux « [crons] ») et CRON_SECRET.",
   discordMissingTitle_one: '{count} canal Discord manquant',
   discordMissingTitle_other: '{count} canaux Discord manquants',
   discordMissingMsg:

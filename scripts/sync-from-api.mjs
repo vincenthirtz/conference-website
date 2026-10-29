@@ -44,7 +44,13 @@ const API_DIRS = ['utils', 'lib', 'features', 'config', 'types', 'components'];
 // Points d'entrée du site : tout ce qui n'est pas l'API. Pas les tests : ceux
 // qui exercent des routes sont partis avec elles, et ceux du code partagé
 // n'atteignent rien que les pages n'atteignent pas.
-const SITE_ENTRY_DIRS = ['pages', 'components', 'hooks', 'netlify', 'scripts'];
+const SITE_ENTRY_DIRS = [
+  'pages',
+  'components',
+  'hooks',
+  'cloudflare',
+  'scripts',
+];
 const SITE_ENTRY_FILES = ['proxy.ts', 'middleware.ts'];
 const MANIFEST = path.join(site, '.api-sync-manifest.json');
 

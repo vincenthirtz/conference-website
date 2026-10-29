@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Session start
 
-**Production branch is `work`** (every push to `work` deploys the Cloudflare Worker that serves owwomenscup.fr, `.github/workflows/cloudflare.yml`; `master` is stale since July 2026 — never target it). conference-api deploys from its `main`. No deploy previews on Cloudflare; Netlify still builds `work` and PR previews until it is retired (~2026-11-11, rollback only — [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)).
+**Production branch is `work`** (every push to `work` deploys the Cloudflare Worker that serves owwomenscup.fr, `.github/workflows/cloudflare.yml`; `master` is stale since July 2026 — never target it). conference-api deploys from its `main`. No deploy previews. Netlify is retired for this site (builds stopped 2026-10-29, Netlify code removed) — [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md).
 
 When I say « pull les repos » or start a session, `git pull` the repos below, report the branch and status of each, then wait for the next instruction:
 
@@ -55,7 +55,7 @@ For Playwright: never use `--ignore-pattern` (invalid flag), use `--grep-invert`
 
 ## Architecture Overview
 
-**Next.js 16** (Pages Router) + **React 19** + **Supabase** (Postgres + Auth + Realtime) + **Tailwind v4**. Deployed on **Cloudflare Workers** via OpenNext (`@opennextjs/cloudflare`, Worker `owwomenscup`, R2 page cache, routes on the owwomenscup.fr zone) since 2026-10-28, with the scheduled tasks in the same Worker — see [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md). Netlify stays deployed two weeks for rollback only (no scheduled functions left there).
+**Next.js 16** (Pages Router) + **React 19** + **Supabase** (Postgres + Auth + Realtime) + **Tailwind v4**. Deployed on **Cloudflare Workers** via OpenNext (`@opennextjs/cloudflare`, Worker `owwomenscup`, R2 page cache, routes on the owwomenscup.fr zone) since 2026-10-28, with the scheduled tasks in the same Worker — see [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md). Netlify is retired for this site (builds stopped, code removed on 2026-10-29).
 
 The site sits at the center of a small ecosystem:
 
@@ -79,7 +79,6 @@ The site sits at the center of a small ecosystem:
 - **config/** — static config (speakers, teams, social links, past results)
 - **database/** — **moved to conference-api** (migrations, seeds, `schema-snapshot.json`, `scripts/refresh-schema-snapshot.mjs`). A migration is written there; the `new-migration` skill applies there.
 - **cloudflare/** — the Worker: entry point `worker.mjs` (API relay, 404 fix, redirects, cache headers), `crons.ts` (the scheduled tasks), `responses.ts`, `_headers` (static files). Config in `wrangler.jsonc` + `open-next.config.ts`; post-deploy checks in `scripts/cloudflare-check.mjs`.
-- **netlify/** — leftovers kept until Netlify is retired (`api-proxy` edge function, orphan `functions/builds.ts`); no scheduled functions any more.
 - **docs/** — [ONBOARDING.md](docs/ONBOARDING.md), [EDGE-API-PROXY.md](docs/EDGE-API-PROXY.md) (the relay and the cutover). API contracts and the OpenAPI spec (`docs/openapi/`) live in conference-api; `/developpeurs/reference` fetches the public spec from `api.owwomenscup.fr/api/public/openapi` at build (ISR 1 h).
   - Feuilles de route par espace : [PLAN-espace-joueur.md](docs/PLAN-espace-joueur.md) (joueuse / coach / manager / capitaine) et [PLAN-espace-admin.md](docs/PLAN-espace-admin.md) (staff) — lots séquencés autour de la 1re journée Cup 2026 (14/09/2026)
 - **tests/e2e/** — Playwright specs (~95)

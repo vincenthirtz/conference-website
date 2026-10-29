@@ -14,7 +14,7 @@ export default {
   backToTournament: 'Back to tournament',
   pageTitle: 'Match check-in',
   pageSubtitle:
-    'Track attendance and auto-forfeits. The processor runs on its own (Netlify cron), but you can force a pass here.',
+    'Track attendance and auto-forfeits. The processor runs on its own (the site’s scheduled task), but you can force a pass here.',
   liveConsole: 'Live console ↗',
   currentGraceTitle: 'Current grace window: {minutes} min',
   configureCheckin: 'Configure check-in',
@@ -42,7 +42,7 @@ export default {
   thAction: 'Action',
   view: 'View',
   footerBefore:
-    'The cron processor runs automatically every 5 minutes via Netlify Scheduled Functions. Matches without',
+    'The cron processor runs automatically every 5 minutes via the site’s scheduled tasks (Cloudflare). Matches without',
   footerAfter: 'are skipped.',
   settingsTitle: 'Configure check-in',
   settingsSubtitle: 'Grace window before auto-forfeit for no check-in.',

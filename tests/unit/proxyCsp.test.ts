@@ -178,7 +178,7 @@ describe('proxy.ts — X-Frame-Options stripping', () => {
     }
   });
 
-  it('leaves other routes untouched (netlify.toml header survives)', () => {
+  it('leaves other routes untouched (no X-Frame-Options override)', () => {
     // Sur les autres routes le middleware ne touche pas l'en-tête : notre mock
     // de réponse démarre vide, donc on vérifie surtout qu'aucune valeur n'est
     // AJOUTÉE par le middleware (la protection vient de frame-ancestors 'none').
