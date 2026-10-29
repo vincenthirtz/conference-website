@@ -147,10 +147,18 @@ async function notify(request, env) {
   if (!ok) return text('Unauthorized', 401);
   const parsed = parseNotifyBody(body);
   if (!parsed.ok) return text(`Bad request: ${parsed.error}`, 400);
-  return roomStub(env, parsed.room).fetch('https://room/broadcast', {
+  const res = await roomStub(env, parsed.room).fetch('https://room/broadcast', {
     method: 'POST',
     body: changeMessage(parsed.room, parsed.event, Date.now()),
   });
+  // Journal de comparaison (étape 2, docs/REALTIME-DO.md) : délai depuis la
+  // base et écrans touchés. Aucune donnée de ligne.
+  const { delivered } = await res.clone().json();
+  const lag = Date.now() - Number(request.headers.get('x-realtime-timestamp'));
+  console.log(
+    `[notify] ${parsed.event.table} ${parsed.event.op} ${parsed.room} · ${lag} ms · ${delivered} écran(s)`
+  );
+  return res;
 }
 
 async function join(request, env, rawRoom) {

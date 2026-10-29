@@ -116,18 +116,22 @@ const json = (s) => {
     'notification non signée refusée',
     String(unsigned.status)
   );
-  const priv = await fetch(`${base}/rooms/demandes:team:ci`);
-  check(
-    priv.status === 401,
-    'salon privé sans ticket refusé',
-    String(priv.status)
-  );
-  const pub = await fetch(`${base}/rooms/draft:ci`);
-  check(
-    pub.status === 426,
-    'salon public sans WebSocket : 426',
-    String(pub.status)
-  );
+  for (const room of ['demandes:team:ci', 'caster:presence']) {
+    const priv = await fetch(`${base}/rooms/${room}`);
+    check(
+      priv.status === 401,
+      `salon privé sans ticket refusé (${room})`,
+      String(priv.status)
+    );
+  }
+  for (const room of ['draft:ci', 'caster:themes']) {
+    const pub = await fetch(`${base}/rooms/${room}`);
+    check(
+      pub.status === 426,
+      `salon public sans WebSocket : 426 (${room})`,
+      String(pub.status)
+    );
+  }
 }
 
 // 2. Salon public de contrôle

@@ -25,14 +25,19 @@ export function isValidRoom(name: string): boolean {
 }
 
 /**
- * Salons ouverts sans ticket : ce qu'ils diffusent est déjà public (scène
- * d'un overlay OBS, draft regardé par le public) ou sert aux contrôles
+ * Salons ouverts sans ticket : ce qu'ils signalent est déjà lisible par
+ * tout le monde dans la base (scènes et thèmes caster, que l'overlay OBS lit
+ * sans compte ; drafts regardés par le public) ou sert aux contrôles
  * (`test:`). Tout le reste exige un ticket signé par l'API.
  */
+const PUBLIC_ROOMS = ['caster:scenes', 'caster:themes'];
 const PUBLIC_ROOM_PREFIXES = ['caster:scene:', 'draft:', 'test:'];
 
 export function isPublicRoom(name: string): boolean {
-  return PUBLIC_ROOM_PREFIXES.some((p) => name.startsWith(p));
+  return (
+    PUBLIC_ROOMS.includes(name) ||
+    PUBLIC_ROOM_PREFIXES.some((p) => name.startsWith(p))
+  );
 }
 
 /** La présence (qui est connecté) n'est permise que dans ces salons. */

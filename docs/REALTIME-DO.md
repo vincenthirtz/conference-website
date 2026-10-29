@@ -1,7 +1,9 @@
 # Temps réel sur Cloudflare (Durable Objects) à la place de Supabase Realtime
 
-Étape 1 faite le 2026-10-29 (Worker en ligne, aucun écran branché). La base
-et les comptes restent chez Supabase ; seul le « prévenir les écrans » change.
+Étape 1 faite le 2026-10-29 (Worker en ligne, aucun écran branché) ; étape 2
+préparée le même jour (migration et workflow prêts, en attente du domaine et
+de la migration). La base et les comptes restent chez Supabase ; seul le
+« prévenir les écrans » change.
 
 ## Ce qui écoute aujourd'hui
 
@@ -44,15 +46,19 @@ modifications au total sur les tables suivies (`matches` ~900,
    recharge avec ses propres droits, comme aujourd'hui. Aucune donnée ne
    transite par le salon : les règles d'accès restent dans l'API et la base.
    L'overlay OBS passe au même schéma (recharger sa scène, publique).
-4. **Entrée dans un salon privé** (`demandes`, admin) : un ticket court signé
-   par l'API (HMAC, un salon, quelques minutes). Salons publics (overlay,
-   draft en lecture) : sans ticket.
+4. **Entrée dans un salon privé** (`matches:tournament:`, `demandes:team:`,
+   `caster:presence`) : un ticket court signé par l'API (HMAC, un salon,
+   quelques minutes). Salons publics, sans ticket : ce que la base laisse
+   déjà lire à tout le monde — `draft:<id>`, `caster:scene:<id>`,
+   `caster:scenes`, `caster:themes` (l'overlay OBS, sans compte, suit les
+   thèmes).
 5. **Détection des changements dans la base**, comme Supabase aujourd'hui :
    un déclencheur Postgres sur chaque table suivie appelle le Worker via
-   l'extension `pg_net` (disponible, pas encore activée), en asynchrone,
-   signé avec un secret rangé dans Supabase Vault. Toutes les écritures sont
-   vues — API, bot, éditeur SQL — sans toucher au code de l'API.
-   Migration SQL écrite dans conference-api, appliquée par la propriétaire.
+   l'extension `pg_net`, en asynchrone, signé avec un secret rangé dans
+   Supabase Vault. Toutes les écritures sont vues — API, bot, éditeur SQL —
+   sans toucher au code de l'API. Migration
+   `add_realtime_notify_triggers.sql` dans conference-api, appliquée par la
+   propriétaire.
 6. **Un interrupteur côté site**, `NEXT_PUBLIC_REALTIME_BACKEND=supabase|cloudflare`,
    lu par `useRealtimeChannel` (même interface pour les écrans) et la
    présence caster : bascule et retour arrière par un simple déploiement.
@@ -85,15 +91,41 @@ requêtes et 400 000 GB-s de calcul par mois pour les Durable Objects.
    signature ni ticket, ping/pong, présence, changement reçu sans données).
    Secrets `REALTIME_NOTIFY_SECRET` et `REALTIME_TICKET_SECRET` dans
    l'environnement GitHub `cloudflare-production` : à **renouveler** à
-   l'étape 2, en les posant en même temps dans Supabase Vault (déclencheurs)
-   et dans l'API (tickets).
+   l'étape 2 ; le workflow les recopie dans Supabase Vault (déclencheurs de
+   la base, secret des tickets lu par l'API).
 2. **Déclencheurs en double** : la base prévient les salons, mais les écrans
-   écoutent toujours Supabase. On compare les deux pendant quelques jours de
-   matchs. Avec : `realtime.owwomenscup.fr` (domaine du Worker), route de
-   l'API qui émet les tickets, migration SQL (`pg_net`, déclencheurs, secret
-   dans Vault) appliquée par la propriétaire.
+   écoutent toujours Supabase. On compare pendant quelques jours de matchs.
+   Préparé le 2026-10-29 :
+   - migration conference-api `database/migrations/add_realtime_notify_triggers.sql`
+     (+ `_revert`) : `pg_net`, déclencheur `realtime_notify` sur `matches`,
+     `match_drafts`, `match_draft_steps`, `demandes`, `caster_scenes`,
+     `caster_themes` ; réglages dans Vault (`realtime_notify_url`,
+     `realtime_notify_secret`, `realtime_ticket_secret`) ; tant qu'ils sont
+     vides, rien ne part. Signature vérifiée contre le Worker (vecteur Postgres
+     figé dans `tests/unit/realtimeProtocol.test.ts`) ;
+   - `.github/workflows/realtime.yml` : après les secrets du Worker, les mêmes
+     secrets et l'adresse `https://realtime.owwomenscup.fr/notify` sont posés
+     dans Vault (`realtime_set_config`, clé service_role). Une seule source :
+     l'environnement GitHub `cloudflare-production` ;
+   - le Worker journalise chaque notification (`[notify] table op salon ·
+     délai · écrans`).
+
+   Ordre : (1) domaine `realtime.owwomenscup.fr` sur le Worker (tableau de
+   bord Cloudflare → Workers → owwomenscup-realtime → Domaines) ;
+   (2) migration appliquée par la propriétaire ; (3) secrets renouvelés dans
+   GitHub et workflow relancé → la base prévient les salons.
+
+   Comparaison : chaque modification d'une table suivie doit donner une
+   réponse 200 du Worker (`net._http_response`, gardée 6 h) et une ligne
+   `[notify]` dans ses journaux, avec un délai de l'ordre de la seconde.
+   Requête de contrôle (lecture seule) :
+   `select status_code, count(*) from net._http_response group by 1;`
+   Les couper sans rien retirer : supprimer `realtime_notify_url` dans Vault.
 3. **Bascule des écrans** par l'interrupteur, un jour calme ; overlay et draft
-   testés en conditions de match.
+   testés en conditions de match. Avec : la route de l'API qui émet les
+   tickets (elle lit `realtime_ticket_secret` par `realtime_ticket_secret()`,
+   service_role), l'interrupteur `NEXT_PUBLIC_REALTIME_BACKEND` et
+   `NEXT_PUBLIC_REALTIME_URL` côté site, puis la coupure de workers.dev.
 4. **Après deux semaines** : retrait des tables de la publication
    `supabase_realtime`.
 

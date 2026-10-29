@@ -50,7 +50,11 @@ describe('salons', () => {
     expect(isPublicRoom('caster:scene:abc')).toBe(true);
     expect(isPublicRoom('draft:abc')).toBe(true);
     expect(isPublicRoom('test:ci')).toBe(true);
-    expect(isPublicRoom('caster:scenes')).toBe(false);
+    // Lisibles sans compte dans la base : l'overlay OBS suit les thèmes.
+    expect(isPublicRoom('caster:scenes')).toBe(true);
+    expect(isPublicRoom('caster:themes')).toBe(true);
+    expect(isPublicRoom('caster:themes:x')).toBe(false);
+    expect(isPublicRoom('caster:presence')).toBe(false);
     expect(isPublicRoom('demandes:team:t-1')).toBe(false);
     expect(isPublicRoom('matches:tournament:x')).toBe(false);
   });
@@ -82,6 +86,35 @@ describe('notifications signées', () => {
         now: NOW + 1000,
       })
     ).toBe(true);
+  });
+
+  // Vecteur calculé par Postgres (jsonb_build_object(…)::text, pgcrypto
+  // hmac), comme le fait public.realtime_notify — conference-api
+  // database/migrations/add_realtime_notify_triggers.sql. Même littéral des
+  // deux côtés : un changement de format d'un seul côté casse ce test.
+  it('acceptée telle que la base la signe (vecteur Postgres)', async () => {
+    const pgBody =
+      '{"id": "9b1c0d2e-0000-4000-8000-00000000000a", "op": "UPDATE", "room": "matches:tournament:3f2a9c1e-0000-4000-8000-000000000001", "table": "matches"}';
+    const pgTs = '1761739200000';
+    expect(
+      await verifyNotify({
+        secret: SECRET,
+        body: pgBody,
+        timestamp: pgTs,
+        signature:
+          '4135d66329df164ce6c441060e89e1bea21a177b19ffa94d8d93e2fb59b46212',
+        now: Number(pgTs) + 1000,
+      })
+    ).toBe(true);
+    expect(parseNotifyBody(pgBody)).toEqual({
+      ok: true,
+      room: 'matches:tournament:3f2a9c1e-0000-4000-8000-000000000001',
+      event: {
+        table: 'matches',
+        op: 'UPDATE',
+        id: '9b1c0d2e-0000-4000-8000-00000000000a',
+      },
+    });
   });
 
   it('refusée : corps modifié, mauvais secret, trop vieille, en-têtes absents', async () => {

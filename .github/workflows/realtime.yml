@@ -5,7 +5,10 @@
 # salons et coupe les connexions des écrans (ils se reconnectent seuls).
 # Secrets lus dans l'environnement GitHub « cloudflare-production » :
 # REALTIME_NOTIFY_SECRET (notifications de la base), REALTIME_TICKET_SECRET
-# (tickets des salons privés, émis par l'API).
+# (tickets des salons privés, émis par l'API). C'est leur seule source : ce
+# workflow les pose sur le Worker PUIS dans Supabase Vault (déclencheurs de la
+# base, secret des tickets lu par l'API). Les changer = les régénérer ici et
+# relancer ce workflow.
 
 name: realtime
 
@@ -32,6 +35,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       REALTIME_NOTIFY_SECRET: ${{ secrets.REALTIME_NOTIFY_SECRET }}
       REALTIME_TICKET_SECRET: ${{ secrets.REALTIME_TICKET_SECRET }}
+      # Domaine personnalisé du Worker (tableau de bord Cloudflare).
+      REALTIME_URL: https://realtime.owwomenscup.fr
     steps:
       - uses: actions/checkout@v4
 
@@ -62,7 +67,43 @@ jobs:
           npx wrangler secret bulk secrets.json --config realtime/wrangler.jsonc
           rm -f secrets.json
 
+      # Mêmes secrets + adresse des salons dans Supabase Vault, par
+      # public.realtime_set_config (conference-api, migration
+      # add_realtime_notify_triggers.sql) : dès qu'ils y sont, la base prévient
+      # les salons. Migration pas encore appliquée → signalé, sans échec.
+      - name: Réglages de la base
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          node -e "
+            (async () => {
+              const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+              const notifyUrl = process.env.REALTIME_URL + '/notify';
+              const r = await fetch(process.env.NEXT_PUBLIC_SUPABASE_URL + '/rest/v1/rpc/realtime_set_config', {
+                method: 'POST',
+                headers: { apikey: key, authorization: 'Bearer ' + key, 'content-type': 'application/json' },
+                body: JSON.stringify({
+                  p_notify_url: notifyUrl,
+                  p_notify_secret: process.env.REALTIME_NOTIFY_SECRET,
+                  p_ticket_secret: process.env.REALTIME_TICKET_SECRET,
+                }),
+              });
+              let err = {};
+              if (!r.ok) err = await r.json().catch(() => ({}));
+              const missing = r.status === 404 && err.code === 'PGRST202';
+              const line = r.ok
+                ? 'Base : réglages posés (' + notifyUrl + ', 2 secrets).'
+                : missing
+                  ? 'Base : migration add_realtime_notify_triggers pas encore appliquée, rien posé.'
+                  : 'Base : échec ' + r.status + ' ' + (err.code || '') + ' ' + (err.message || '');
+              require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY, '## Réglages de la base\n\n' + line + '\n\n');
+              console.log(line);
+              if (!r.ok && !missing) process.exit(1);
+            })();
+          "
+
       - name: Contrôles
         run: |
           sleep 10
-          node scripts/realtime-check.mjs https://owwomenscup-realtime.owwomenscup.workers.dev
+          node scripts/realtime-check.mjs "$REALTIME_URL"

@@ -6,8 +6,9 @@
   "name": "owwomenscup-realtime",
   "main": "worker.mjs",
   "compatibility_date": "2026-10-27",
-  // Étape 1 (aucun écran branché) : adresse technique pour les contrôles.
-  // realtime.owwomenscup.fr viendra avec l'étape 2.
+  // Adresse publique : realtime.owwomenscup.fr (domaine personnalisé ajouté
+  // dans le tableau de bord, étape 2). L'adresse technique workers.dev reste
+  // ouverte jusqu'à la bascule des écrans (étape 3).
   "workers_dev": true,
   "preview_urls": false,
   "durable_objects": {
