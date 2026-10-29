@@ -47,7 +47,7 @@ export default ns('mentionsLegales', {
   hostingDesc:
     'Le site est hébergé par Cloudflare, Inc. – 101 Townsend St, San Francisco, CA 94107, États-Unis – +1 (650) 319-8930 – www.cloudflare.com.',
   hostingServices:
-    'Autres prestataires techniques : Supabase (authentification, base de données et fichiers, serveurs en Irlande), Amazon Web Services (API du site, serveurs en Suède), Formspree (formulaire de contact) et outils internes pour la gestion des tournois.',
+    'Autres prestataires techniques : Supabase (authentification et base de données, serveurs en Irlande), Cloudflare R2 (fichiers et images, stockés dans l’Union européenne), Amazon Web Services (API du site, serveurs en Suède), Formspree (formulaire de contact) et outils internes pour la gestion des tournois.',
   respEyebrow: 'Responsabilités',
   respTitle: 'Utilisation du site',
   respIntro:

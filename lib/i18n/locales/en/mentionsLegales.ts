@@ -47,7 +47,7 @@ export default {
   hostingDesc:
     'The site is hosted by Cloudflare, Inc. – 101 Townsend St, San Francisco, CA 94107, United States – +1 (650) 319-8930 – www.cloudflare.com.',
   hostingServices:
-    'Other technical providers: Supabase (authentication, database and files, servers in Ireland), Amazon Web Services (the site’s API, servers in Sweden), Formspree (contact form) and in-house tools for tournament management.',
+    'Other technical providers: Supabase (authentication and database, servers in Ireland), Cloudflare R2 (files and images, stored in the European Union), Amazon Web Services (the site’s API, servers in Sweden), Formspree (contact form) and in-house tools for tournament management.',
   respEyebrow: 'Liability',
   respTitle: 'Using the site',
   respIntro:
