@@ -68,7 +68,11 @@ jobs:
           mkdir -p dump
           supabase db dump --db-url "$SUPABASE_DB_URL" -f dump/roles.sql --role-only
           supabase db dump --db-url "$SUPABASE_DB_URL" -f dump/schema.sql
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f dump/data.sql --use-copy --data-only
+          # Tables internes des « vector buckets » de Supabase (inutilisés ici),
+          # interdites d'écriture à la restauration : exclues, comme le
+          # recommande Supabase (Backup and restore using the CLI).
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f dump/data.sql --use-copy --data-only \
+            -x storage.buckets_vectors -x storage.vectors
 
       - name: Contrôle
         run: node scripts/db-backup-check.mjs dump
