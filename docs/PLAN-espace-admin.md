@@ -513,6 +513,11 @@ coupée). Coupée, rien n'est bloqué : le staff ne voit que l'invitation à s'e
    `/etc/conference-api/api.env` sur le serveur de l'API (routes sensibles), puis relance
    bleu/vert (`conference-api-switch`). Un membre du staff sans facteur n'est pas bloqué : il est
    envoyé sur `/admin/mfa` pour s'enrôler à sa prochaine visite.
+   **Dispense par compte** (décision de la propriétaire) : `STAFF_MFA_EXEMPT_USER_IDS`, ids de
+   compte auth séparés par des virgules, posée aux deux mêmes endroits : secret GitHub
+   `cloudflare-production` (recopié dans le Worker au déploiement) et `api.env`. Jamais dans le
+   dépôt : il est public, et ce compte n'a que son mot de passe pour le protéger. Pour la lever :
+   secret à `aucun` + redéploiement du site, variable vidée dans `api.env`.
 4. **Retour arrière** : `false` aux deux endroits. Un staff qui a perdu son
    appareil : supprimer son facteur dans Supabase (Authentication › Users › facteurs), il
    repassera par l'enrôlement.

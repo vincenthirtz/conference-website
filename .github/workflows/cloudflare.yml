@@ -100,9 +100,14 @@ jobs:
           EDGE_PROXY_SECRET: ${{ secrets.EDGE_PROXY_SECRET }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          # Comptes dispensés de double authentification (utils/staffMfa.ts).
+          # Secret pour rester masqué : ce dépôt et ses journaux sont publics.
+          # Pour lever la dispense : mettre le secret à « aucun » et redéployer
+          # (un secret absent de GitHub n'est pas retiré du Worker).
+          STAFF_MFA_EXEMPT_USER_IDS: ${{ secrets.STAFF_MFA_EXEMPT_USER_IDS }}
         run: |
           node -e "
-            const names = ['SUPABASE_SERVICE_ROLE_KEY', 'EDGE_PROXY_SECRET', 'CRON_SECRET', 'REVALIDATE_SECRET'];
+            const names = ['SUPABASE_SERVICE_ROLE_KEY', 'EDGE_PROXY_SECRET', 'CRON_SECRET', 'REVALIDATE_SECRET', 'STAFF_MFA_EXEMPT_USER_IDS'];
             const s = Object.fromEntries(names.filter((n) => process.env[n]).map((n) => [n, process.env[n]]));
             require('fs').writeFileSync('secrets.json', JSON.stringify(s));
             const missing = names.filter((n) => !s[n]);
