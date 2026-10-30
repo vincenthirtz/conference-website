@@ -163,10 +163,20 @@ requêtes et 400 000 GB-s de calcul par mois pour les Durable Objects.
    - le 2026-10-29, `realtime_publication_drop_retired.sql` : les 7 tables
      que plus rien n'écoute (`caster_presence`, `event_*` — application de
      bureau retirée) ;
-   - **après l'Event Halloween 2026** (premier direct sur les salons),
+   - **le 2026-10-30, avant l'Event Halloween 2026** (décision de la
+     propriétaire, prévue d'abord après l'event),
      `realtime_publication_drop_migrated.sql` : les 6 tables des écrans
      (`matches`, `match_drafts`, `match_draft_steps`, `demandes`,
-     `caster_scenes`, `caster_themes`). Elle supprime le retour arrière
-     ci-dessous ; son `_revert` le rétablit.
+     `caster_scenes`, `caster_themes`). Publication vide, déclencheurs actifs.
 
-Retour arrière avant la seconde migration : l'interrupteur sur `supabase`.
+   Constaté ce jour-là dans les journaux du Worker : salons privés avec ticket
+   acceptés (`matches:tournament:`, `caster:presence`), rythme de connexion
+   normal (92 sur 24 h, 7 écrans, pas de boucle). Pas encore observés : une
+   notification de `matches` (aucun match modifié depuis la bascule) et le
+   salon `demandes:team:` d'une vraie équipe.
+
+**Retour arrière, désormais en deux gestes :** appliquer
+`realtime_publication_drop_migrated_revert.sql` (conference-api), PUIS vider
+`NEXT_PUBLIC_REALTIME_BACKEND` et relancer le workflow `cloudflare` (~10 min),
+ou `?realtime=supabase` sur un seul écran. Sans le `_revert`, Supabase ne
+diffuse plus rien : l'interrupteur seul laisserait les écrans sans mises à jour.
