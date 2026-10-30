@@ -20,6 +20,10 @@ export type {
  * Insert log (utilisé dans staff.ts)
  * ---------------------------------------------------------*/
 
+/** `staff_logs.entity_id` est une colonne UUID. */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function logStaffAction(params: StaffLogInsert) {
   const {
     staff_id,
@@ -35,15 +39,25 @@ export async function logStaffAction(params: StaffLogInsert) {
   // La permission rejoint le payload : elle décrit le DROIT invoqué, pas
   // l'objet touché, et n'a donc pas sa place dans une colonne dédiée tant que
   // seules quelques routes la renseignent.
-  const finalPayload = permission
-    ? { ...(payload ?? {}), permission }
-    : payload;
+  //
+  // Un fichier Drive ou un secret n'a pas d'UUID : en colonne, sa référence faisait
+  // échouer TOUTE l'insertion, et le geste n'était jamais tracé. Elle part donc
+  // dans le payload.
+  const entityRef = entity_id && !UUID_RE.test(entity_id) ? entity_id : null;
+  const extras = {
+    ...(permission ? { permission } : {}),
+    ...(entityRef ? { entity_ref: entityRef } : {}),
+  };
+  const finalPayload =
+    Object.keys(extras).length > 0
+      ? { ...(payload ?? {}), ...extras }
+      : payload;
 
   const { error } = await supabaseAdmin.from('staff_logs').insert({
     staff_id,
     action,
     entity_type,
-    entity_id,
+    entity_id: entityRef ? null : entity_id,
     tournament_id,
     payload: finalPayload,
     // TODO(S7): rendre obligatoire une fois le switcher tenant deploye et
