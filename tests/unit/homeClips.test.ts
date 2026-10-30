@@ -113,7 +113,6 @@ describe('HomeSpotlight — le bloc', () => {
     const html = renderToString(
       createElement(HomeSpotlight, {
         tournament,
-        teams,
         matchdays: [matchday],
       })
     );
@@ -122,11 +121,9 @@ describe('HomeSpotlight — le bloc', () => {
     expect(html).not.toContain('player.twitch.tv');
   });
 
-  it('garde la bande des équipes même sans affiche', () => {
-    const html = renderToString(
-      createElement(HomeSpotlight, { tournament, teams })
-    );
-    expect(html).toContain('href="/team/chocomates"');
+  it('ne rend rien sans affiche', () => {
+    const html = renderToString(createElement(HomeSpotlight, { tournament }));
+    expect(html).toBe('');
   });
 });
 

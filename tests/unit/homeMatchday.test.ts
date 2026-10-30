@@ -252,7 +252,7 @@ describe('HomeMatchdayStrip', () => {
   });
 });
 
-describe('HomeSpotlight — affiches ou équipes, jamais un vide', () => {
+describe('HomeSpotlight — les affiches, jamais un vide', () => {
   const tournament: UpcomingTournament = {
     id: 'e8fa740c-d92b-49d8-a654-05a37d0eea3b',
     name: "OW WOMEN's CUP 2026",
@@ -265,21 +265,11 @@ describe('HomeSpotlight — affiches ou équipes, jamais un vide', () => {
     maxTeams: 8,
     teamCount: 8,
   };
-  const teams: HomeTeam[] = [
-    {
-      id: CHOCO,
-      name: 'Chocomates',
-      shortName: 'CHOC',
-      slug: 'chocomates',
-      logoUrl: null,
-    },
-  ];
 
   function render(...days: (HomeMatchday | null)[]): string {
     return renderToString(
       createElement(HomeSpotlight, {
         tournament,
-        teams,
         matchdays: days.filter((d): d is HomeMatchday => d !== null),
       })
     );
@@ -292,22 +282,12 @@ describe('HomeSpotlight — affiches ou équipes, jamais un vide', () => {
     expect(html).toContain('20:30');
   });
 
-  // Les affiches ont d'abord PRIS LA PLACE de la bande des engagées : l'une OU
-  // l'autre dans le pied de carte. Donc les semaines où un calendrier est
-  // publié — celles où le tournoi intéresse — les équipes quittaient la page.
-  // Les deux coexistent maintenant : le pied dit qui joue vendredi, la bande
-  // pleine largeur dit qui court.
-  it('n’évince plus la bande des équipes engagées', () => {
-    const html = render(matchday());
-    expect(html).toContain('20:30');
-    expect(html).toContain('Elles participent');
-    expect(html).toContain('href="/team/chocomates"');
+  it('n’affiche plus la bande des équipes engagées', () => {
+    expect(render(matchday())).not.toContain('Elles participent');
   });
 
-  it('garde les équipes engagées sans calendrier publié', () => {
-    const html = render(null);
-    expect(html).toContain('Elles participent');
-    expect(html).toContain('href="/team/chocomates"');
+  it('n’affiche rien sans calendrier publié', () => {
+    expect(render(null)).toBe('');
   });
 });
 
@@ -642,7 +622,6 @@ describe('HomeSpotlight — soir de finales', () => {
     return renderToString(
       createElement(HomeSpotlight, {
         tournament,
-        teams: [],
         matchdays: [matchday()],
         finalsTonight,
       })

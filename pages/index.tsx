@@ -27,7 +27,6 @@ import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { type HomeNewsItem } from '@/components/News/HomeNewsSection';
 import { type UpcomingTournament } from '@/components/Home/HomeUpcomingTournament';
 import { type HomePartner } from '@/components/Home/HomeSponsors';
-import { type HomeTeam } from '@/utils/home/loadHomeData';
 import { type HomeMatchday } from '@/utils/home/loadNextMatchday';
 import {
   isFinalsDay,
@@ -70,7 +69,6 @@ type HomeProps = {
   socialFeed: SocialFeedItem[];
   upcomingTournament: UpcomingTournament | null;
   partners: HomePartner[];
-  teams: HomeTeam[];
   matchdays: HomeMatchday[];
   standings: HomeStandingRow[];
   countdownTarget: string | null;
@@ -106,7 +104,6 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       socialFeed: data.socialFeed,
       upcomingTournament: data.upcomingTournament,
       partners: data.partners,
-      teams: data.teams,
       matchdays: data.matchdays,
       standings: data.standings,
       countdownTarget: data.countdownTarget,
@@ -149,7 +146,6 @@ function Home({
   socialFeed,
   upcomingTournament,
   partners,
-  teams,
   matchdays,
   standings,
   countdownTarget,
@@ -225,7 +221,6 @@ function Home({
 
       <HomeSpotlight
         tournament={upcomingTournament}
-        teams={teams}
         matchdays={matchdays}
         finalsTonight={finalsTonight}
       />

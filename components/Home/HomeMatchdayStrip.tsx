@@ -17,8 +17,8 @@
 //
 // Le bloc ne s'affiche jamais à moitié : `loadNextMatchday` ne renvoie une
 // journée que si elle contient au moins une affiche complète (deux équipes
-// connues, une heure). Sans journée, HomeSpotlight retombe sur les équipes
-// engagées — pas de squelette vide.
+// connues, une heure). Sans journée, HomeSpotlight n'affiche rien — pas de
+// squelette vide.
 
 import type { JSX } from 'react';
 import Link from 'next/link';
