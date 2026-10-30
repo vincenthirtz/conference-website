@@ -119,22 +119,25 @@ export function resolveTenantId(req: NextApiRequest): string {
  * Tenant actif : seul le négatif « tenant inconnu » est caché ici (60 s), le
  * positif l'est par ./tenants/gateRow.ts.
  *
- * Guild → tenant : le POSITIF est gardé 15 min, le NÉGATIF 60 s.
- *   - Pourquoi 15 min : à 60 s, chaque guild active relisait `discord_guilds`
- *     presque à chaque appel du bot (271 GET/jour mesurés pour 3 guilds),
- *     alors que ce lien ne change qu'au rattachement d'un serveur. Toutes les
- *     écritures de `discord_guilds` passent par ce processus et invalident
- *     aussitôt (`invalidateGuildTenantCache`, appelé via
+ * Guild → tenant : positif et négatif gardés 60 s.
+ *   - Ce lien est une donnée d'AUTORISATION : il décide pour quel espace agit
+ *     une clé plateforme (botAuth.ts, la guilde l'emporte sur `x-tenant-id`).
+ *     Une guild retirée ou déplacée ne doit pas continuer d'ouvrir l'ancien
+ *     espace. Chaque écriture de `discord_guilds` invalide l'exemplaire qui la
+ *     traite (`invalidateGuildTenantCache`, appelé via
  *     `invalidateGuildLinkCaches` de ./tenants/botGuildConfigs.ts : link-guild,
- *     attachGuildToTenant, rattachement d'une guild en attente, purge). Le TTL
- *     ne couvre qu'une écriture faite hors du processus.
- *   - Pourquoi le négatif reste à 60 s : une guild qu'on vient de lier hors du
- *     processus doit être reconnue vite — et c'est le cas rare.
+ *     attachGuildToTenant, rattachement d'une guild en attente, purge) ; le TTL
+ *     couvre les AUTRES exemplaires, et une écriture faite en SQL à la main.
+ *   - Le positif a valu 15 min tant que l'API tenait dans un seul processus
+ *     (conference-website docs/API-WORKER.md, phase 1, lot 3). Le prix : 271
+ *     GET/jour mesurés pour 3 guilds.
+ *   - Une guild qu'on vient de lier ailleurs doit être reconnue vite : le
+ *     négatif a toujours été à 60 s.
  *   - Une erreur de lecture n'est jamais cachée.
  */
 
 const TENANT_LOOKUP_TTL_MS = 60_000;
-export const GUILD_TENANT_POSITIVE_TTL_MS = 15 * 60_000;
+export const GUILD_TENANT_POSITIVE_TTL_MS = TENANT_LOOKUP_TTL_MS;
 export const GUILD_TENANT_NEGATIVE_TTL_MS = TENANT_LOOKUP_TTL_MS;
 const activeTenantCache = new Map<
   string,
@@ -146,7 +149,7 @@ const guildTenantCache = new Map<
 >();
 const guildTenantInFlight = new Map<string, Promise<GuildTenantLookup>>();
 // Une lecture partie avant une invalidation n'entre pas dans le cache : elle
-// pourrait rapporter l'état d'avant l'écriture et le figer 15 min.
+// pourrait rapporter l'état d'avant l'écriture et le figer un TTL de plus.
 let guildTenantGeneration = 0;
 
 /**
@@ -194,7 +197,7 @@ export async function isActiveTenantId(tenantId: string): Promise<boolean> {
 
   const data = lookup.row;
   const active = !!data && data.is_active !== false;
-  // Une ligne présente est déjà cachée par gateRow (30 min) : un second étage
+  // Une ligne présente est déjà cachée par gateRow (60 s) : un second étage
   // ajouterait son TTL au sien. Seul le négatif « tenant inconnu », que gateRow
   // ne garde pas, est mémorisé ici.
   if (!data) {

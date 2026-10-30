@@ -182,7 +182,7 @@ export function serializeTeamRoles(roles: TeamRole[]): string {
  * les rôles configurables par tenant — et ce qui débloque le lot J3 côté
  * joueur.
  *
- * CACHE (utils/siteSettingsCache.ts, 10 min par tenant) : chaque action de
+ * CACHE (utils/siteSettingsCache.ts, 60 s par tenant) : chaque action de
  * gestion d'équipe et chaque notification ciblée relisaient la même ligne —
  * 268 GET/jour mesurés. L'écran des rôles d'équipe et les autres écrivains de
  * `site_settings` invalident aussitôt. Une erreur de lecture rend les rôles par

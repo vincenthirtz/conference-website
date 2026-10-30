@@ -17,26 +17,25 @@
 //     (lifecycle → `active`, plan → `discovery`, actif → refus), et la
 //     tentative suivante relit ;
 //   - une ligne absente : un tenant fraîchement créé doit être vu tout de
-//     suite, pas une demi-heure plus tard.
+//     suite, pas une minute plus tard.
 //
-// FRAÎCHEUR. Toutes les écritures connues de cette ligne passent par ce
-// processus et invalident l'entrée aussitôt (`invalidateTenantGateRow` :
-// cycle de vie dans lifecycle.ts, plan dans botPlanGate.ts,
-// circuitPartnerGrant.ts et tenantPlanBilling.ts, `is_active` dans
-// updateTenantDetail de features/admin/tenants/repository/tenants.ts). Le TTL
-// ne couvre donc que les écritures faites hors du processus (SQL à la main).
-// Il valait 120 s, toujours voisin de la cadence du bot : ~25 lectures
-// `tenants` par heure la nuit pour une ligne qui ne change pas. Puis dix
-// minutes : encore 222 GET/jour mesurés pour trois espaces. Trente minutes —
-// une demi-heure de retard sur une modification faite à la main en SQL reste
-// acceptable. Les clés d'API (`tenant_secrets`) ne passent PAS par ici (cf.
-// botAuth.ts).
+// FRAÎCHEUR. Toutes les écritures connues de cette ligne invalident l'entrée de
+// l'exemplaire qui les traite (`invalidateTenantGateRow` : cycle de vie dans
+// lifecycle.ts, plan dans botPlanGate.ts, circuitPartnerGrant.ts et
+// tenantPlanBilling.ts, `is_active` dans updateTenantDetail de
+// features/admin/tenants/repository/tenants.ts). Le TTL couvre les AUTRES
+// exemplaires, et les écritures faites en SQL à la main : c'est lui qui borne le
+// temps pendant lequel un espace suspendu reste servi ailleurs. Soixante
+// secondes, donc (conference-website docs/API-WORKER.md, phase 1, lot 3) ; il a
+// valu trente minutes tant que l'API tenait dans un seul processus. Le prix : au
+// plus une lecture `tenants` par minute et par espace. Les clés d'API
+// (`tenant_secrets`) ne passent PAS par ici (cf. botAuth.ts).
 
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
 import { registerProcessCache } from '../processCaches';
 
-export const TENANT_GATE_ROW_TTL_MS = 30 * 60_000;
+export const TENANT_GATE_ROW_TTL_MS = 60_000;
 
 export type TenantGateRow = {
   id: string;

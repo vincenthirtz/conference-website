@@ -11,15 +11,19 @@
 //     102 GET/jour ;
 //   - `seasonal_logos` (logo d'événement de la navbar) : 59 GET/jour.
 // Chaque GET coûte une ligne de logs Supabase. Ici : une lecture par réglage
-// et par espace au plus toutes les dix minutes.
+// et par espace au plus chaque minute.
 //
-// FRAÎCHEUR. Les écritures de ces clés passent toutes par ce processus et
-// invalident aussitôt (`invalidateSiteSetting`) :
+// FRAÎCHEUR. Les écritures de ces clés invalident aussitôt l'exemplaire qui les
+// traite (`invalidateSiteSetting`) :
 //   - utils/siteSettings.ts (`setSetting`, `deleteSetting`) ;
 //   - features/admin/site-settings/repository.ts (écran des réglages : clés
 //     libres — dont `bot_maintenance_mode` —, rôles d'équipe) ;
 //   - la purge d'un espace (pages/api/cron/tenant-purge.ts).
-// Le TTL ne couvre qu'une écriture faite hors du processus (SQL à la main).
+// Le TTL couvre les AUTRES exemplaires, et une écriture faite en SQL à la main.
+// Soixante secondes (conference-website docs/API-WORKER.md, phase 1, lot 3) : ces
+// réglages portent des droits (`team_roles`) et un interrupteur d'urgence
+// (`bot_maintenance_mode`). Il a valu dix minutes tant que l'API tenait dans un
+// seul processus.
 //
 // RÈGLE D'USAGE. Ne passer par ce cache QUE pour une clé dont tous les
 // écrivains invalident. Les clés du miroir social (`bluesky_mirror_*`,
@@ -33,14 +37,14 @@
 //
 // COURSE. Une lecture partie avant une invalidation et revenue après n'entre
 // pas dans le cache (compteur de génération) : elle pourrait rapporter la
-// valeur d'avant l'écriture et la figer dix minutes.
+// valeur d'avant l'écriture et la figer une minute de plus.
 //
 // Module PUR (aucune dépendance serveur) : utils/teamRoles.ts, recopié côté
 // site, s'en sert avec le client qu'on lui passe.
 
 import { registerProcessCache } from './processCaches';
 
-export const SITE_SETTING_CACHE_TTL_MS = 10 * 60_000;
+export const SITE_SETTING_CACHE_TTL_MS = 60_000;
 
 export type SiteSettingLookup =
   | { ok: true; value: string | null }

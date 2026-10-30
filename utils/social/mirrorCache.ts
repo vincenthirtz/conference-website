@@ -139,14 +139,18 @@ export function createMirrorCache<V>(ttlMs: number): MirrorCache<V> {
 /**
  * La liste des espaces actifs que le cron parcourt.
  *
- * Même TTL que les réglages. Dix minutes, comme ailleurs, ne servirait à rien
- * ici : le cron repasse toutes les quinze, chaque passage aurait relu. Un espace
- * créé il y a moins de trente minutes qui configure son miroir est rattrapé par
- * `noteMirrorConfigChange` ; un espace désactivé peut, lui, être encore visité
- * pendant au plus un TTL — ses réglages ne permettent rien de plus qu'avant.
+ * Soixante secondes, et non le TTL des réglages (conference-website
+ * docs/API-WORKER.md, phase 1, lot 3) : un espace suspendu ou archivé ne doit
+ * pas continuer de publier. `invalidateLifecycleCache` vide l'exemplaire qui a
+ * traité la suspension ; le TTL couvre les autres. Le cron repassant toutes les
+ * quinze minutes, c'est une lecture par passage, soit 96 par jour.
+ *
+ * Un espace créé depuis le dernier chargement qui configure son miroir est
+ * rattrapé par `noteMirrorConfigChange`.
  */
+export const ACTIVE_MIRROR_TENANTS_TTL_MS = 60_000;
 const ACTIVE_TENANTS_KEY = 'active';
-const activeTenants = createMirrorCache<string[]>(MIRROR_CONFIG_TTL_MS);
+const activeTenants = createMirrorCache<string[]>(ACTIVE_MIRROR_TENANTS_TTL_MS);
 
 export async function loadActiveMirrorTenants(): Promise<CacheLoad<string[]>> {
   return activeTenants.load(ACTIVE_TENANTS_KEY, async () => {

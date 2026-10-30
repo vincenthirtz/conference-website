@@ -31,16 +31,17 @@ import { registerProcessCache } from '@/utils/processCaches';
  * (tenant, clé). Le miroir social relisait `bluesky_handle` pour chaque espace
  * à chaque passage (toutes les quinze minutes), pour une valeur qui ne change
  * qu'à la main dans l'admin — et cette écriture passe par ce module, qui
- * invalide aussitôt. Le TTL ne couvre qu'une écriture faite hors du processus.
+ * invalide l'exemplaire qui l'a traitée. Le TTL couvre les AUTRES exemplaires,
+ * et une écriture faite en SQL à la main.
  * On garde le chiffré, pas le clair : le déchiffrement reste local à l'appel.
  *
- * Trente minutes, et non cinq : à cinq, le miroir (un passage toutes les quinze
- * minutes) relisait la clé à chaque passage — le cache ne servait à rien, et
- * c'étaient ~150 lectures par jour de logs Supabase facturés pour une valeur
- * figée. L'écriture passant par ce module, la durée ne pèse que sur une
- * modification faite à la main en SQL.
+ * Soixante secondes (conference-website docs/API-WORKER.md, phase 1, lot 3) :
+ * un secret remplacé ou retiré après une fuite ne doit pas continuer de servir
+ * ailleurs. Le cache a valu trente minutes tant que l'API tenait dans un seul
+ * processus ; il ne dédouble plus que les lectures rapprochées (un envoi d'e-mails
+ * en série), et le miroir relit à chaque passage, ~150 lectures par jour.
  */
-const SECRET_CACHE_TTL_MS = 30 * 60_000;
+export const SECRET_CACHE_TTL_MS = 60_000;
 const secretCache = new Map<
   string,
   { encrypted: string | null; expiresAt: number }
