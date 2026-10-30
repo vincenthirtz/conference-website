@@ -5,20 +5,26 @@
 // POURQUOI. Le dispatcher Web Push tourne chaque minute et commençait chaque
 // passage par relire l'outbox — 1 440 lectures par jour pour constater, la
 // plupart du temps, qu'aucun événement n'a été émis depuis le passage
-// précédent. Or TOUS les producteurs de l'outbox vivent dans ce processus
+// précédent. Or TOUS les producteurs de l'outbox passent par l'API
 // (`utils/botEvents.ts` est le seul point d'insertion ; les crons et routes
-// qui émettent passent par lui). Un simple horodatage en mémoire suffit donc
-// à savoir si une relecture a une chance de trouver du nouveau.
+// qui émettent passent par lui). Un signal noté à chaque écriture suffit donc à
+// savoir si une relecture a une chance de trouver du nouveau.
 //
-// PORTÉE. Mémoire du processus : une instance froide repart à zéro et relit
-// (c'est le comportement voulu — mieux vaut une lecture de trop qu'un
-// événement en retard). Les consommateurs gardent par ailleurs une relecture
-// de sûreté périodique pour couvrir une écriture faite hors de ce processus
-// (SQL à la main, deux couleurs qui se recouvrent pendant un déploiement).
+// PORTÉE. Le signal passe par `utils/sharedSignals.ts` : mémoire du processus
+// aujourd'hui, partagé entre exemplaires en phase 2. Une instance froide repart à
+// zéro et relit (c'est le comportement voulu — mieux vaut une lecture de trop
+// qu'un événement en retard). Les consommateurs gardent par ailleurs une
+// relecture de sûreté périodique pour couvrir une écriture faite hors de l'API
+// (SQL à la main) ou une note perdue.
 
 import { createDormancyMemo } from './dormancyMemo';
+import {
+  __resetSharedSignalsForTests,
+  noteSharedSignal,
+  readSharedSignal,
+} from './sharedSignals';
 
-let lastWriteMs = 0;
+const OUTBOX_WRITE_SIGNAL = 'outbox.write';
 
 /**
  * Fenêtre de sûreté de `pendingQueueEmptyMemo` : au-delà, le poller du bot
@@ -39,6 +45,7 @@ export const PENDING_EMPTY_SAFETY_MS = 15 * 60_000;
  * est relue à chaque appel jusqu'à ce que le bot l'ait acquittée.
  */
 export const pendingQueueEmptyMemo = createDormancyMemo<true>(
+  OUTBOX_WRITE_SIGNAL,
   PENDING_EMPTY_SAFETY_MS
 );
 
@@ -47,17 +54,15 @@ export const pendingQueueEmptyMemo = createDormancyMemo<true>(
  * dans `bot_event_outbox` : insertion (même incertaine), rejeu.
  */
 export function noteOutboxWrite(nowMs: number = Date.now()): void {
-  if (nowMs > lastWriteMs) lastWriteMs = nowMs;
-  pendingQueueEmptyMemo.invalidate();
+  noteSharedSignal(OUTBOX_WRITE_SIGNAL, nowMs);
 }
 
 /** Vrai si une écriture a été notée à `sinceMs` ou après (bornes incluses). */
 export function outboxWrittenSince(sinceMs: number): boolean {
-  return lastWriteMs >= sinceMs;
+  return readSharedSignal(OUTBOX_WRITE_SIGNAL).lastAtMs >= sinceMs;
 }
 
 /** Oublie l'horodatage. Usage strictement test. */
 export function __resetOutboxActivityForTests(): void {
-  lastWriteMs = 0;
-  pendingQueueEmptyMemo.invalidate();
+  __resetSharedSignalsForTests();
 }

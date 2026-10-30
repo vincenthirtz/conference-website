@@ -1,6 +1,6 @@
 {
-  "apiCommit": "7a341466464e25511d21732391566d4186cefdfa",
-  "syncedAt": "2026-10-30T14:18:45.449Z",
+  "apiCommit": "71632f41b95271099e11e9e4c164d7ed48f1490c",
+  "syncedAt": "2026-10-30T15:02:00.727Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -251,6 +251,7 @@
     "utils/revalidate.ts",
     "utils/scrims/ladder.ts",
     "utils/seasonalLogo.ts",
+    "utils/sharedSignals.ts",
     "utils/siteSettingsCache.ts",
     "utils/siteUrl.ts",
     "utils/social/feedMirror.ts",

@@ -42,9 +42,15 @@ export const PUBLIC_FEED_EMPTY_SAFETY_MS = 2 * 60_000;
 /* ------------------------------------------------------------------ */
 
 /** tenantId → prochain `closes_at` (ms) d'un vote posté non clos, ou `null`. */
-const mvpCloseMemo = createDormancyMemo<number | null>(MVP_POLL_MEMO_SAFETY_MS);
+const mvpCloseMemo = createDormancyMemo<number | null>(
+  'mvp.next-close',
+  MVP_POLL_MEMO_SAFETY_MS
+);
 /** `${tenantId}:${tournamentId}` → nombre de scrutins sans gagnante. */
-const unresolvedCountMemo = createDormancyMemo<number>(MVP_POLL_MEMO_SAFETY_MS);
+const unresolvedCountMemo = createDormancyMemo<number>(
+  'mvp.unresolved-count',
+  MVP_POLL_MEMO_SAFETY_MS
+);
 
 /** Une ligne de `match_mvp_polls` a été créée, modifiée ou close. */
 export function noteMvpPollWrite(): void {
@@ -128,6 +134,7 @@ export async function countUnresolvedMvpPolls(
  * état ne change qu'à une écriture (un scrutin clos ne fait que vieillir).
  */
 export const publicFeedEmptyMemo = createDormancyMemo<true>(
+  'mvp.public-feed-empty',
   PUBLIC_FEED_EMPTY_SAFETY_MS
 );
 
@@ -136,6 +143,7 @@ export const publicFeedEmptyMemo = createDormancyMemo<true>(
  * clos, tous espaces confondus ; `null` s'il n'y en a aucun.
  */
 export const publicCloseMemo = createDormancyMemo<number | null>(
+  'mvp.public-close',
   MVP_POLL_MEMO_SAFETY_MS
 );
 

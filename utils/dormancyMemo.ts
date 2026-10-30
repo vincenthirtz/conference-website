@@ -8,25 +8,26 @@
 // minutes, jour et nuit, pour des événements qui n'ont lieu que quelques soirs
 // par semaine. Chaque appel coûtait une requête Supabase — et les journaux
 // Supabase sont facturés à la requête. Or toutes les écritures des tables
-// concernées passent par ce processus (l'API Lightsail) : chacune invalide le
-// mémo de sa table, et la réponse « rien de neuf » peut être rendue de mémoire.
+// concernées passent par l'API : chacune note le signal du mémo de sa table
+// (`utils/sharedSignals.ts`), et la réponse « rien de neuf » peut être rendue de
+// mémoire.
 //
 // DEUX PROTECTIONS, PAS UNE :
 //   - la GÉNÉRATION : `ticket()` est pris AVANT la lecture ; si une écriture
 //     tombe pendant qu'elle est en vol, `set()` jette le résultat au lieu de
 //     mémoriser un état déjà périmé ;
 //   - la FENÊTRE DE SÛRETÉ : au-delà, on relit quoi qu'il arrive. Elle couvre
-//     une écriture faite hors de ce processus (SQL à la main, suppression en
-//     cascade, deux couleurs qui se recouvrent pendant un déploiement).
+//     une écriture faite hors de l'API (SQL à la main, suppression en cascade)
+//     ou une note qui s'est perdue.
 //
 // Ce que l'appelant ne doit JAMAIS faire : mémoriser une lecture en erreur. Une
 // erreur passe son chemin, et le prochain appel relit.
 //
-// Mémoire du processus : une instance froide repart de zéro et relit, ce qui
-// est le comportement voulu. Remis à zéro avant chaque test
-// (`utils/processCaches.ts`).
+// Les valeurs restent en mémoire de l'exemplaire : une instance froide repart de
+// zéro et relit, ce qui est le comportement voulu. Seul le signal est partagé, et
+// il est remis à zéro avant chaque test (`utils/processCaches.ts`).
 
-import { registerProcessCache } from './processCaches';
+import { noteSharedSignal, readSharedSignal } from './sharedSignals';
 
 /** Pris au DÉBUT d'une lecture, rendu à `set()` à la fin. */
 export type MemoTicket = { readonly generation: number; readonly atMs: number };
@@ -46,33 +47,50 @@ export type DormancyMemo<V> = {
   invalidate(): void;
 };
 
-export function createDormancyMemo<V>(safetyMs: number): DormancyMemo<V> {
-  let generation = 0;
-  const entries = new Map<string, { value: V; atMs: number }>();
-  const invalidate = () => {
-    generation += 1;
-    entries.clear();
-  };
-  registerProcessCache(invalidate);
+/**
+ * `signal` nomme le signal partagé du mémo (`utils/sharedSignals.ts`) : stable,
+ * et propre à ce que le mémo garde. Deux mémos sous le même nom se réveillent
+ * ensemble.
+ */
+export function createDormancyMemo<V>(
+  signal: string,
+  safetyMs: number
+): DormancyMemo<V> {
+  const entries = new Map<
+    string,
+    { value: V; atMs: number; generation: number }
+  >();
+  const currentGeneration = () => readSharedSignal(signal).version;
 
   return {
     get(key, nowMs) {
       const entry = entries.get(key);
       if (!entry) return undefined;
-      // Horloge qui recule, ou fenêtre écoulée : on relit.
-      if (nowMs < entry.atMs || nowMs - entry.atMs >= safetyMs) {
+      // Écriture notée depuis, horloge qui recule, ou fenêtre écoulée : on relit.
+      if (
+        entry.generation !== currentGeneration() ||
+        nowMs < entry.atMs ||
+        nowMs - entry.atMs >= safetyMs
+      ) {
         entries.delete(key);
         return undefined;
       }
       return { value: entry.value };
     },
     ticket(nowMs) {
-      return { generation, atMs: nowMs };
+      return { generation: currentGeneration(), atMs: nowMs };
     },
     set(key, value, ticket) {
-      if (ticket.generation !== generation) return;
-      entries.set(key, { value, atMs: ticket.atMs });
+      if (ticket.generation !== currentGeneration()) return;
+      entries.set(key, {
+        value,
+        atMs: ticket.atMs,
+        generation: ticket.generation,
+      });
     },
-    invalidate,
+    invalidate() {
+      noteSharedSignal(signal);
+      entries.clear();
+    },
   };
 }
