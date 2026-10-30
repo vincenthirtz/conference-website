@@ -33,6 +33,7 @@ import {
   aalFromAccessToken,
   isMfaSensitiveGuard,
   isStaffMfaEnforced,
+  isStaffMfaExempt,
   mfaRequired,
   StaffMfaRequiredError,
   staffMfaRedirect,
@@ -673,6 +674,8 @@ export async function assertStaffMfa(
   if (!enforced) return;
   const sensitive = opts.sensitive === true || isMfaSensitiveGuard(guard);
   if (!sensitive) return;
+  const { user } = await getStaffContextFromRequest(req, res);
+  if (isStaffMfaExempt(user?.id)) return;
   const aal = await getStaffSessionAal(req, res);
   if (mfaRequired({ enforced, sensitive, aal })) {
     throw new StaffMfaRequiredError();
@@ -829,7 +832,8 @@ export function withStaffPage<
       // admin exige une session `aal2` ; sinon direction /admin/mfa
       // (enrôlement ou saisie du code), page demandée conservée. Coupée par
       // défaut (STAFF_MFA_ENFORCED) : rien ne change alors — cf. staffMfa.ts.
-      if (isStaffMfaEnforced()) {
+      // Un compte dispensé (isStaffMfaExempt) n'y est jamais envoyé.
+      if (isStaffMfaEnforced() && !isStaffMfaExempt(staffCtx.user.id)) {
         const aal = await getStaffSessionAal(req, res);
         if (mfaRequired({ enforced: true, sensitive: true, aal })) {
           return {

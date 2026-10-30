@@ -41,6 +41,26 @@ export function isStaffMfaEnforced(
   return raw === 'true' || raw === '1' || raw === 'on';
 }
 
+/**
+ * Comptes dispensés de l'obligation (`STAFF_MFA_EXEMPT_USER_IDS` : ids de
+ * compte auth, séparés par des virgules). Décision de la propriétaire, compte
+ * par compte. Variable d'environnement du serveur et du Worker, JAMAIS dans
+ * le dépôt : le site est public, et une ligne de configuration en clair
+ * désignerait le compte admin protégé par son seul mot de passe. Ni en base :
+ * rien ne doit pouvoir se l'accorder par une route.
+ */
+export function isStaffMfaExempt(
+  userId: string | null | undefined,
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  const id = userId?.trim().toLowerCase();
+  // Un id vide ne doit jamais correspondre à une virgule en trop.
+  if (!id) return false;
+  return (env.STAFF_MFA_EXEMPT_USER_IDS ?? '')
+    .split(',')
+    .some((entry) => entry.trim().toLowerCase() === id);
+}
+
 /** Charge utile d'un JWT, sans vérification de signature (cf. en-tête). */
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   const parts = token.split('.');
