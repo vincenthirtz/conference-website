@@ -71,8 +71,11 @@ const REMOTE_API_SRC = REMOTE_API ? ` ${REMOTE_API.origin}` : '';
 
 // wss://realtime.owwomenscup.fr : salons temps réel du Worker Cloudflare
 // (utils/realtime/cloudflareRealtime.ts, docs/REALTIME-DO.md).
+// https://www.googleapis.com : dépôt direct dans le Drive de l'asso
+// (DriveUploadButton). Partout et pas sur la seule page des documents : la CSP est
+// celle de la page d'arrivée, et le site navigue ensuite sans la recharger.
 const CONNECT_SRC_BASE =
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://realtime.owwomenscup.fr https://api.twitch.tv https://id.twitch.tv https://challenges.cloudflare.com" +
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co wss://realtime.owwomenscup.fr https://api.twitch.tv https://id.twitch.tv https://challenges.cloudflare.com https://www.googleapis.com" +
   ANALYTICS_SRC +
   LOCAL_SUPABASE_SRC +
   REMOTE_API_SRC;

@@ -118,8 +118,8 @@ vérifiés entre chaque). La branche `worker-phase1` n'a plus d'écart avec `mai
 | 4 | Signaux « une écriture a eu lieu » (`outboxActivity`, mémos de sommeil) : un seul point, `utils/sharedSignals.ts`, où la phase 2 branchera une mémoire partagée ; pas de verrou pour un passage à vide | en ligne (71632f4) ; mesuré : 3 verrous en 5 min au repos au lieu de ~18 |
 | 5 | Tâches longues découpées (`broadcast-process`, `email-digest`, `recycle-bin-purge`, `tenant-purge`) | en ligne (fe40963), horaires changés (7fd318311) ; aucun passage réel observé au moment d'écrire |
 | 6 | web-push en WebCrypto ; `node:dns` par HTTPS ; clé `scrypt` gardée en mémoire | en ligne (0931777) ; notification reçue sur un vrai appareil, abonné avant la bascule |
-| 7 | Spécification OpenAPI embarquée au build (plus de lecture disque) | à faire |
-| 8 | Envois de fichiers directs vers R2 / Drive (URL signée) au lieu du base64 | à faire |
+| 7 | Spécification OpenAPI embarquée au build (plus de lecture disque) | en ligne (b0cf10f) ; prouvé sur un build sans le dossier généré, spec publique identique en production. La spec complète (route admin) n'a pas été ouverte avec une vraie session |
+| 8 | Dépôt Drive direct par session d'envoi Google, au lieu du base64 | API en ligne (3db02cb) ; essai réel avec un vrai fichier à faire |
 
 **Lot 5.** Chaque passage s'arrête à son budget de temps et reprend au suivant,
 d'où des passages plus rapprochés (`cloudflare/crons.ts`) : `broadcast-cron` et
@@ -131,6 +131,17 @@ destinataire en échec, sans nouvel essai.
 **Lot 6.** `utils/webhookDelivery.ts` garde un `node:dns/promises` sur Node
 seulement, à retirer quand Lightsail s'éteint : sans lui, le contrôle des adresses
 privées serait moins strict qu'aujourd'hui.
+
+**Lot 8.** Le fichier ne traverse plus l'API : elle ouvre la session, le navigateur
+dépose chez Google, elle relit le résultat. Réduit au Drive, seul envoi qui menaçait
+vraiment les 128 Mo d'un Worker (25 Mo en base64 : près de 110 Mo). Les preuves de
+match (10 Mo) et les vidéos d'alerte (8 Mo) restent en base64, soit 30 à 45 Mo par
+envoi (estimation) : à mesurer en phase 2 plutôt que d'ajouter un envoi direct vers
+R2 et ses règles CORS sans besoin prouvé.
+
+**À vérifier en phase 2, sans lot dédié** : le flux de
+`pages/api/admin/documents/download.ts` (`node:stream`), le point d'entrée principal
+de `cheerio`, `qrcode`, `process.memoryUsage()` dans `/api/health`.
 
 **Piège de la synchro.** `sync:api` copie tout fichier importé par le site qui
 existe aussi dans l'API. Un fichier créé dans l'API sous le nom d'un fichier

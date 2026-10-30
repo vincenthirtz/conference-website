@@ -4,8 +4,10 @@
 // d'écriture (`manage_documents`) — le serveur le re-vérifie de toute façon,
 // mais afficher un bouton qui repart en 403 est une promesse non tenue.
 //
-// Le fichier part en base64 dans un POST JSON, comme `/api/admin/upload.ts` :
-// pas de multipart côté Next, pas de dépendance de parsing.
+// Le fichier part DIRECTEMENT chez Google, sans traverser l'API : elle ouvre une
+// session d'envoi (`start`), le navigateur y dépose le fichier, puis elle relit le
+// résultat et le journalise (`finish`). 25 Mo y coûtaient près de 110 Mo de mémoire
+// (docs/API-WORKER.md, lot 8).
 
 import { useRef, useState } from 'react';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -38,25 +40,34 @@ export default function DriveUploadButton({
 
     setBusy(true);
     try {
-      const buffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      let binary = '';
-      // Par tranches : `String.fromCharCode(...bytes)` dépasse la taille max
-      // d'arguments d'un appel dès quelques mégaoctets, et échoue par un
-      // « Maximum call stack size exceeded » qui ne dit rien du problème.
-      for (let i = 0; i < bytes.length; i += 8192) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-      }
+      const mimeType = file.type || 'application/octet-stream';
+      const { uploadUrl } = await adminFetchJson<{ uploadUrl: string }>(
+        '/api/admin/documents',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'start',
+            name: file.name,
+            mimeType,
+            size: file.size,
+            folderId,
+          }),
+        }
+      );
+
+      const sent = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': mimeType },
+        body: file,
+      });
+      if (!sent.ok) throw new Error(t.uploadError);
+      const { id: fileId } = (await sent.json()) as { id: string };
 
       await adminFetchJson('/api/admin/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: file.name,
-          mimeType: file.type || 'application/octet-stream',
-          contentBase64: btoa(binary),
-          folderId,
-        }),
+        body: JSON.stringify({ action: 'finish', fileId, folderId }),
       });
       addToast(format(t.uploaded, { name: file.name }), 'success');
       onUploaded();
