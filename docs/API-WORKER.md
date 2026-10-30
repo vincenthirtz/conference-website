@@ -113,9 +113,9 @@ chaque lot est fusionné et vérifié seul.
 | Lot | Contenu | État |
 |---|---|---|
 | 1 | `runInBackground` (`utils/background.ts`) à la place des ~140 envois lancés en fond ; garde-fou contre leur retour | fait sur la branche (e819920 : 142 sites, 12 225 tests) — à fusionner après l'event, puis `sync:api` du site |
-| 2 | Verrous des tâches planifiées en base (au lieu de `cronSingleFlight` / `_inFlight` en mémoire) | à faire |
-| 3 | Caches vidés à l'écriture : durées ≤ 60 s (clés du bot, secrets d'intégration, espace, réglages) | à faire |
-| 4 | Signaux « une écriture a eu lieu » (`outboxActivity`, mémos de sommeil) : supprimés ou partagés | à faire |
+| 2 | Verrous des tâches planifiées en base (au lieu de `cronSingleFlight` / `_inFlight` en mémoire) | fait sur la branche (e245f09) — migration `add_cron_locks.sql` à appliquer **avant** de fusionner |
+| 3 | Caches vidés à l'écriture : durées ≤ 60 s (clés du bot, tenant, guilde, secrets d'intégration, réglages, liste du miroir) | fait sur la branche (317988a) — coût estimé : ~3 000 lectures de plus par jour, à mesurer après la fusion |
+| 4 | Signaux « une écriture a eu lieu » (`outboxActivity`, mémos de sommeil) : un seul point, `utils/sharedSignals.ts`, où la phase 2 branchera une mémoire partagée ; pas de verrou pour un passage à vide | fait sur la branche (6bfd87f : 12 280 tests) — verrous : ~2 300 requêtes par jour au repos au lieu de ~10 570 (estimation) |
 | 5 | Tâches longues découpées (`broadcast-process`, `email-digest`, `recycle-bin-purge`, `tenant-purge`) | à faire |
 | 6 | web-push en WebCrypto ; `node:dns` par HTTPS ; clé `scrypt` gardée en mémoire | à faire |
 | 7 | Spécification OpenAPI embarquée au build (plus de lecture disque) | à faire |
