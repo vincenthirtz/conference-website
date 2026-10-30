@@ -116,10 +116,30 @@ chaque lot est fusionné et vérifié seul.
 | 2 | Verrous des tâches planifiées en base (au lieu de `cronSingleFlight` / `_inFlight` en mémoire) | fait sur la branche (e245f09) — migration `add_cron_locks.sql` à appliquer **avant** de fusionner |
 | 3 | Caches vidés à l'écriture : durées ≤ 60 s (clés du bot, tenant, guilde, secrets d'intégration, réglages, liste du miroir) | fait sur la branche (317988a) — coût estimé : ~3 000 lectures de plus par jour, à mesurer après la fusion |
 | 4 | Signaux « une écriture a eu lieu » (`outboxActivity`, mémos de sommeil) : un seul point, `utils/sharedSignals.ts`, où la phase 2 branchera une mémoire partagée ; pas de verrou pour un passage à vide | fait sur la branche (6bfd87f : 12 280 tests) — verrous : ~2 300 requêtes par jour au repos au lieu de ~10 570 (estimation) |
-| 5 | Tâches longues découpées (`broadcast-process`, `email-digest`, `recycle-bin-purge`, `tenant-purge`) | à faire |
+| 5 | Tâches longues découpées (`broadcast-process`, `email-digest`, `recycle-bin-purge`, `tenant-purge`) | fait sur la branche (9e6171c à 093146c : 12 338 tests, sans migration) — **horaires à changer le jour de la fusion, voir ci-dessous** |
 | 6 | web-push en WebCrypto ; `node:dns` par HTTPS ; clé `scrypt` gardée en mémoire | à faire |
 | 7 | Spécification OpenAPI embarquée au build (plus de lecture disque) | à faire |
 | 8 | Envois de fichiers directs vers R2 / Drive (URL signée) au lieu du base64 | à faire |
+
+**Fusion du lot 5 : l'ordre compte.** Chaque passage s'arrête à son budget de
+temps et reprend au suivant : il faut donc plus de passages. Mais avec l'API
+actuelle, chaque passage envoie une vague entière : changer les horaires avant
+elle ferait 12 vagues par jour et épuiserait le quota Brevo. Donc **l'API
+d'abord**, puis `cloudflare/crons.ts` le même jour (sans ça, une vague ne
+dépasse pas 40 à 70 e-mails par jour, estimation) :
+
+| Tâche | Horaire actuel | Nouvel horaire | |
+|---|---|---|---|
+| `broadcast-cron` | `0 10 * * *` | `*/5 10 * * *` | obligatoire |
+| `email-digest-cron` | `0 7,17 * * *` | `*/5 7,17 * * *` | obligatoire |
+| `tenant-purge-cron` | `0 4 * * *` | `*/10 4 * * *` | conseillé |
+
+Choix assumé du lot 5 : un e-mail n'est jamais envoyé deux fois, quitte à ne pas
+partir. Un passage coupé entre la réservation et l'envoi laisse le destinataire
+en échec, sans nouvel essai. Vérifié sur le schéma réel de la base : statuts
+autorisés, index uniques, aucun déclencheur sur `purge_after`. Aucun passage n'a
+tourné en conditions réelles : après la fusion, surveiller les lignes
+`truncated=` des premiers passages de 7 h et 10 h UTC.
 
 Phase 2 (après la phase 1) : Worker OpenNext de l'API, limites de fréquence
 partagées (`cf-connecting-ip`), tâches planifiées dans le Worker de l'API,
