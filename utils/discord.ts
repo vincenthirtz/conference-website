@@ -8,6 +8,7 @@
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
 import type { DiscordChannelType } from './discord/channels';
+import { runInBackground } from '@/utils/background';
 
 // Re-export for downstream consumers that still import from '@/utils/discord'.
 export type { DiscordChannelType } from './discord/channels';
@@ -100,13 +101,16 @@ export async function postToDiscordWebhook(
         res.status,
         text.slice(0, 300)
       );
-      void trackWebhookPost(webhookUrl, 'failed');
+      runInBackground(
+        trackWebhookPost(webhookUrl, 'failed'),
+        'trackWebhookPost'
+      );
     } else {
-      void trackWebhookPost(webhookUrl, 'ok');
+      runInBackground(trackWebhookPost(webhookUrl, 'ok'), 'trackWebhookPost');
     }
   } catch (e) {
     logger.error('[discord] webhook POST error:', e);
-    void trackWebhookPost(webhookUrl, 'failed');
+    runInBackground(trackWebhookPost(webhookUrl, 'failed'), 'trackWebhookPost');
   }
 }
 

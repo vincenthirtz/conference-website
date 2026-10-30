@@ -15,6 +15,7 @@
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { runInBackground } from '@/utils/background';
 
 export type CalendarTokenRow = {
   token: string;
@@ -121,13 +122,16 @@ export async function resolveCalendarToken(
 
   // Trace d'usage — best-effort : un agenda qui se rafraîchit ne doit pas
   // échouer parce qu'on n'a pas su écrire une date.
-  void supabaseAdmin
-    .from('player_calendar_tokens')
-    .update({ last_used_at: new Date().toISOString() })
-    .eq('token', token)
-    .then(undefined, (err: unknown) =>
-      logger.warn('[calendarToken] touch failed: %s', String(err))
-    );
+  runInBackground(
+    supabaseAdmin
+      .from('player_calendar_tokens')
+      .update({ last_used_at: new Date().toISOString() })
+      .eq('token', token)
+      .then(undefined, (err: unknown) =>
+        logger.warn('[calendarToken] touch failed: %s', String(err))
+      ),
+    'calendarToken:player_calendar_tokens.last_used_at'
+  );
 
   return { userId: row.auth_user_id, tenantId: row.tenant_id };
 }

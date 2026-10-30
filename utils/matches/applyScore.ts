@@ -28,6 +28,7 @@ import type {
   ApplyMatchScoreResult,
   MatchStatus,
 } from '../../types/matches';
+import { runInBackground } from '@/utils/background';
 
 /** Statuses that trigger bracket propagation (match has a winner) */
 const PROPAGATION_STATUSES: MatchStatus[] = ['finished', 'walkover'];
@@ -670,77 +671,86 @@ export async function applyMatchScore(
 
   // 12) Discord notifications (fire-and-forget)
   if (PROPAGATION_STATUSES.includes(newStatus)) {
-    void sendMatchResultDiscord({
-      tenantId,
-      matchId,
-      tournamentId: match.tournament_id ?? null,
-      team1Id: match.team1_id ?? null,
-      team2Id: match.team2_id ?? null,
-      team1Score: team1Score,
-      team2Score: team2Score,
-      winnerTeamId: newWinnerTeamId,
-      isForfeit: !!resolvedForfeitTeamId,
-      propagationResult,
-    }).catch((e) => logger.error('[discord] match result/bracket error:', e));
+    runInBackground(
+      sendMatchResultDiscord({
+        tenantId,
+        matchId,
+        tournamentId: match.tournament_id ?? null,
+        team1Id: match.team1_id ?? null,
+        team2Id: match.team2_id ?? null,
+        team1Score: team1Score,
+        team2Score: team2Score,
+        winnerTeamId: newWinnerTeamId,
+        isForfeit: !!resolvedForfeitTeamId,
+        propagationResult,
+      }).catch((e) => logger.error('[discord] match result/bracket error:', e)),
+      'sendMatchResultDiscord'
+    );
 
     // Bot push : "match.finished" — laisse le bot crosspost/reformatter
     // l'annonce (le webhook Discord direct reste, le bot vient en sus).
     // Enrich pour le rafraichissement du thread #matchs-live (couleur verte +
     // score final + archive). Si le fetch echoue, on emit avec enriched=null
     // et le bot saura le gerer (le payload de base contient deja les scores).
-    void (async () => {
-      const enriched = await enrichMatchEvent(matchId);
-      await emitBotEvent(
-        'match.finished',
-        {
-          matchId,
-          tournamentId: match.tournament_id ?? null,
-          stageId: match.stage_id ?? null,
-          team1Id: match.team1_id ?? null,
-          team2Id: match.team2_id ?? null,
-          team1Score,
-          team2Score,
-          winnerTeamId: newWinnerTeamId,
-          isForfeit: !!resolvedForfeitTeamId,
-          forfeitTeamId: resolvedForfeitTeamId,
-          status: newStatus,
-          propagation: propagationResult
-            ? {
-                winnerTeamId: propagationResult.winnerTeamId ?? null,
-                loserTeamId: propagationResult.loserTeamId ?? null,
-                nextWinMatchId: propagationResult.updatedWinMatchId ?? null,
-                nextLoseMatchId: propagationResult.updatedLoseMatchId ?? null,
-              }
-            : null,
-          enriched,
-        },
-        tenantId
-      );
-    })().catch((e) =>
-      logger.error('[botEvents] match.finished emit error:', e)
-    );
-
-    if (resolvedForfeitTeamId) {
-      const forfeitTeamId = resolvedForfeitTeamId;
-      void (async () => {
-        const { data: team } = await supabaseAdmin
-          .from('teams')
-          .select('name')
-          .eq('tenant_id', tenantId)
-          .eq('id', forfeitTeamId)
-          .maybeSingle();
+    runInBackground(
+      (async () => {
+        const enriched = await enrichMatchEvent(matchId);
         await emitBotEvent(
-          'team.forfeit',
+          'match.finished',
           {
-            team_id: forfeitTeamId,
-            team_name: team?.name ?? null,
-            match_id: matchId,
-            tournament_id: match.tournament_id ?? null,
+            matchId,
+            tournamentId: match.tournament_id ?? null,
+            stageId: match.stage_id ?? null,
+            team1Id: match.team1_id ?? null,
+            team2Id: match.team2_id ?? null,
+            team1Score,
+            team2Score,
+            winnerTeamId: newWinnerTeamId,
+            isForfeit: !!resolvedForfeitTeamId,
+            forfeitTeamId: resolvedForfeitTeamId,
+            status: newStatus,
+            propagation: propagationResult
+              ? {
+                  winnerTeamId: propagationResult.winnerTeamId ?? null,
+                  loserTeamId: propagationResult.loserTeamId ?? null,
+                  nextWinMatchId: propagationResult.updatedWinMatchId ?? null,
+                  nextLoseMatchId: propagationResult.updatedLoseMatchId ?? null,
+                }
+              : null,
+            enriched,
           },
           tenantId
         );
       })().catch((e) =>
-        logger.error('[botEvents] team.forfeit emit error:', e)
+        logger.error('[botEvents] match.finished emit error:', e)
+      ),
+      'emitBotEvent:match.finished'
+    );
+
+    if (resolvedForfeitTeamId) {
+      const forfeitTeamId = resolvedForfeitTeamId;
+      runInBackground(
+        (async () => {
+          const { data: team } = await supabaseAdmin
+            .from('teams')
+            .select('name')
+            .eq('tenant_id', tenantId)
+            .eq('id', forfeitTeamId)
+            .maybeSingle();
+          await emitBotEvent(
+            'team.forfeit',
+            {
+              team_id: forfeitTeamId,
+              team_name: team?.name ?? null,
+              match_id: matchId,
+              tournament_id: match.tournament_id ?? null,
+            },
+            tenantId
+          );
+        })().catch((e) =>
+          logger.error('[botEvents] team.forfeit emit error:', e)
+        ),
+        'emitBotEvent:team.forfeit'
       );
     }
 
@@ -749,11 +759,14 @@ export async function applyMatchScore(
     // dans le stage cible. Idempotent (cf. utils/stages/autoAdvance.ts).
     // Fire-and-forget : ne doit pas bloquer la reponse au client.
     if (match.stage_id) {
-      void tryAutoAdvanceFromMatch({
-        tenantId,
-        stageId: match.stage_id,
-        staffId: staffId ?? null,
-      }).catch((e: unknown) => logger.error('[autoAdvance] error:', e));
+      runInBackground(
+        tryAutoAdvanceFromMatch({
+          tenantId,
+          stageId: match.stage_id,
+          staffId: staffId ?? null,
+        }).catch((e: unknown) => logger.error('[autoAdvance] error:', e)),
+        'tryAutoAdvanceFromMatch'
+      );
     }
   }
 

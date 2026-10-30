@@ -1,6 +1,6 @@
 {
-  "apiCommit": "fb33b4551f837ae996b244e677a3109c85266e4c",
-  "syncedAt": "2026-10-30T11:04:56.212Z",
+  "apiCommit": "09777cf96b59fc986bc0f01131e5abe631bece10",
+  "syncedAt": "2026-10-30T13:32:57.828Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -130,6 +130,7 @@
     "utils/associationPoles.ts",
     "utils/auth/safeNext.ts",
     "utils/auth/twitchLinks.ts",
+    "utils/background.ts",
     "utils/battleTag.ts",
     "utils/billing/cgv.ts",
     "utils/billing/planFeatures.ts",

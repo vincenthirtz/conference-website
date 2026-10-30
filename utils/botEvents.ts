@@ -21,6 +21,7 @@ import crypto from 'crypto';
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
 import { noteOutboxWrite } from './outboxActivity';
+import { runInBackground } from './background';
 
 // Liste runtime des events sortants — SOURCE UNIQUE : le type `BotEventName`
 // en derive. Expose aussi le dropdown de filtre du journal Discord
@@ -499,6 +500,10 @@ export async function emitBotEvents(
       worker
     )
   ).then(() => results);
+  // Les appelants attendent la persistance, rarement `delivery` : confiée au
+  // helper pour qu'un Worker ne coupe pas les pushes après la réponse
+  // (utils/background.ts). La promesse rendue reste la même.
+  runInBackground(delivery, 'emitBotEvents:delivery');
 
   return { persisted: outboxIds.size, delivery };
 }
