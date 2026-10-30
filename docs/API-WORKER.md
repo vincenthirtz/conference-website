@@ -118,7 +118,7 @@ vérifiés entre chaque). La branche `worker-phase1` n'a plus d'écart avec `mai
 | 4 | Signaux « une écriture a eu lieu » (`outboxActivity`, mémos de sommeil) : un seul point, `utils/sharedSignals.ts`, où la phase 2 branchera une mémoire partagée ; pas de verrou pour un passage à vide | en ligne (71632f4) ; mesuré : 3 verrous en 5 min au repos au lieu de ~18 |
 | 5 | Tâches longues découpées (`broadcast-process`, `email-digest`, `recycle-bin-purge`, `tenant-purge`) | en ligne (fe40963), horaires changés (7fd318311) ; aucun passage réel observé au moment d'écrire |
 | 6 | web-push en WebCrypto ; `node:dns` par HTTPS ; clé `scrypt` gardée en mémoire | en ligne (0931777) ; notification reçue sur un vrai appareil, abonné avant la bascule |
-| 7 | Spécification OpenAPI embarquée au build (plus de lecture disque) | en ligne (b0cf10f) ; prouvé sur un build sans le dossier généré, spec publique identique en production. La spec complète (route admin) n'a pas été ouverte avec une vraie session |
+| 7 | Spécification OpenAPI embarquée au build (plus de lecture disque) | en ligne (b0cf10f) ; prouvé sur un build sans le dossier généré, spec publique identique en production, spec complète ouverte avec une vraie session admin |
 | 8 | Dépôt Drive direct par session d'envoi Google, au lieu du base64 | API en ligne (3db02cb) ; essai réel avec un vrai fichier à faire |
 
 **Lot 5.** Chaque passage s'arrête à son budget de temps et reprend au suivant,
