@@ -23,7 +23,11 @@ export type CronJob = {
   schedule: string;
   /** Route appelée : `/api/cron/<route>`. */
   route: string;
-  /** Abandon de l'appel (la tâche continue côté API, cronSingleFlight). */
+  /**
+   * Abandon de l'appel. Les tâches longues s'arrêtent d'elles-mêmes avant, à leur
+   * budget de temps, et reprennent au passage suivant (d'où leurs passages
+   * rapprochés ci-dessous, docs/API-WORKER.md, lot 5).
+   */
   timeoutMs: number;
 };
 
@@ -37,7 +41,7 @@ export const CRON_JOBS: readonly CronJob[] = [
   // Pas de délai côté Netlify : borné ici au plafond d'une fonction planifiée Netlify.
   {
     name: 'broadcast-cron',
-    schedule: '0 10 * * *',
+    schedule: '*/5 10 * * *',
     route: 'broadcast-process',
     timeoutMs: 30_000,
   },
@@ -73,7 +77,7 @@ export const CRON_JOBS: readonly CronJob[] = [
   },
   {
     name: 'email-digest-cron',
-    schedule: '0 7,17 * * *',
+    schedule: '*/5 7,17 * * *',
     route: 'email-digest',
     timeoutMs: 20_000,
   },
@@ -181,7 +185,7 @@ export const CRON_JOBS: readonly CronJob[] = [
   },
   {
     name: 'tenant-purge-cron',
-    schedule: '0 4 * * *',
+    schedule: '*/10 4 * * *',
     route: 'tenant-purge',
     timeoutMs: 20_000,
   },

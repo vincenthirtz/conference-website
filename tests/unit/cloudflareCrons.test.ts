@@ -36,6 +36,20 @@ describe('cronMatches', () => {
     expect(cronMatches('0 7,17 * * *', at('2026-10-28T08:00:00Z'))).toBe(false);
   });
 
+  it('passages rapprochés dans une heure donnée (tâches découpées)', () => {
+    expect(cronMatches('*/5 10 * * *', at('2026-10-28T10:00:00Z'))).toBe(true);
+    expect(cronMatches('*/5 10 * * *', at('2026-10-28T10:35:00Z'))).toBe(true);
+    expect(cronMatches('*/5 10 * * *', at('2026-10-28T10:36:00Z'))).toBe(false);
+    expect(cronMatches('*/5 10 * * *', at('2026-10-28T11:00:00Z'))).toBe(false);
+    expect(cronMatches('*/5 7,17 * * *', at('2026-10-28T17:55:00Z'))).toBe(
+      true
+    );
+    expect(cronMatches('*/5 7,17 * * *', at('2026-10-28T08:00:00Z'))).toBe(
+      false
+    );
+    expect(cronMatches('*/10 4 * * *', at('2026-10-28T04:50:00Z'))).toBe(true);
+  });
+
   it('jour de semaine (lundi = 1, dimanche = 0 ou 7)', () => {
     // 2026-10-26 est un lundi, 2026-11-01 un dimanche.
     expect(cronMatches('30 7 * * 1', at('2026-10-26T07:30:00Z'))).toBe(true);
