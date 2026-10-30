@@ -119,7 +119,7 @@ vérifiés entre chaque). La branche `worker-phase1` n'a plus d'écart avec `mai
 | 5 | Tâches longues découpées (`broadcast-process`, `email-digest`, `recycle-bin-purge`, `tenant-purge`) | en ligne (fe40963), horaires changés (7fd318311) ; aucun passage réel observé au moment d'écrire |
 | 6 | web-push en WebCrypto ; `node:dns` par HTTPS ; clé `scrypt` gardée en mémoire | en ligne (0931777) ; notification reçue sur un vrai appareil, abonné avant la bascule |
 | 7 | Spécification OpenAPI embarquée au build (plus de lecture disque) | en ligne (b0cf10f) ; prouvé sur un build sans le dossier généré, spec publique identique en production, spec complète ouverte avec une vraie session admin |
-| 8 | Dépôt Drive direct par session d'envoi Google, au lieu du base64 | API en ligne (3db02cb) ; essai réel avec un vrai fichier à faire |
+| 8 | Dépôt Drive direct par session d'envoi Google, au lieu du base64 | en ligne (API 3db02cb, site 1b9996c8f) ; **dépôt réel pas encore réussi, reporté** : la session s'ouvre, puis Google refuse (droits du compte de service à vérifier : Éditeur, puis Drive partagé ou non) |
 
 **Lot 5.** Chaque passage s'arrête à son budget de temps et reprend au suivant,
 d'où des passages plus rapprochés (`cloudflare/crons.ts`) : `broadcast-cron` et
