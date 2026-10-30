@@ -35,7 +35,7 @@ import {
   getActivePushSubscription,
   getWebPushSupport,
   urlBase64ToUint8Array,
-} from '@/utils/webPush';
+} from '@/utils/webPushClient';
 import nsAdminNotifications from '@/lib/i18n/locales/admin-fr/adminNotifications';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';

@@ -31,7 +31,7 @@ import {
   getActivePushSubscription,
   getWebPushSupport,
   urlBase64ToUint8Array,
-} from '@/utils/webPush';
+} from '@/utils/webPushClient';
 import nsPushOptIn from '@/lib/i18n/locales/fr/pushOptIn';
 
 export type PushAudience = 'admin' | 'caster' | 'player' | 'public';

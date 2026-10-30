@@ -1,4 +1,4 @@
-// utils/webPush.ts
+// utils/webPushClient.ts
 //
 // Helpers Web Push côté navigateur (PWA /admin).
 // Toutes les fonctions ici doivent être appelées dans un contexte CLIENT

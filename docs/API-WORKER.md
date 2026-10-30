@@ -106,40 +106,37 @@ dans les deux cas.
 **2026-10-29 : option C retenue par la propriétaire**, pour pouvoir ensuite
 passer la base sur D1 et finir la sortie de Supabase.
 
-Phase 1 sur la branche `worker-phase1` de conference-api (non déployée).
-Rien n'est mis en ligne avant la fin de l'Event Halloween 2026 ; ensuite,
-chaque lot est fusionné et vérifié seul.
+**2026-10-30 : lots 1 à 6 en production**, à la demande de la propriétaire, avant
+l'Event Halloween 2026 (fusionnés un par un sur `main` de conference-api et
+vérifiés entre chaque). La branche `worker-phase1` n'a plus d'écart avec `main`.
 
 | Lot | Contenu | État |
 |---|---|---|
-| 1 | `runInBackground` (`utils/background.ts`) à la place des ~140 envois lancés en fond ; garde-fou contre leur retour | fait sur la branche (e819920 : 142 sites, 12 225 tests) — à fusionner après l'event, puis `sync:api` du site |
-| 2 | Verrous des tâches planifiées en base (au lieu de `cronSingleFlight` / `_inFlight` en mémoire) | fait sur la branche (e245f09) — migration `add_cron_locks.sql` à appliquer **avant** de fusionner |
-| 3 | Caches vidés à l'écriture : durées ≤ 60 s (clés du bot, tenant, guilde, secrets d'intégration, réglages, liste du miroir) | fait sur la branche (317988a) — coût estimé : ~3 000 lectures de plus par jour, à mesurer après la fusion |
-| 4 | Signaux « une écriture a eu lieu » (`outboxActivity`, mémos de sommeil) : un seul point, `utils/sharedSignals.ts`, où la phase 2 branchera une mémoire partagée ; pas de verrou pour un passage à vide | fait sur la branche (6bfd87f : 12 280 tests) — verrous : ~2 300 requêtes par jour au repos au lieu de ~10 570 (estimation) |
-| 5 | Tâches longues découpées (`broadcast-process`, `email-digest`, `recycle-bin-purge`, `tenant-purge`) | fait sur la branche (9e6171c à 093146c : 12 338 tests, sans migration) — **horaires à changer le jour de la fusion, voir ci-dessous** |
-| 6 | web-push en WebCrypto ; `node:dns` par HTTPS ; clé `scrypt` gardée en mémoire | à faire |
+| 1 | `runInBackground` (`utils/background.ts`) à la place des ~140 envois lancés en fond ; garde-fou contre leur retour | en ligne (09777cf) |
+| 2 | Verrous des tâches planifiées en base (au lieu de `cronSingleFlight` / `_inFlight` en mémoire) | en ligne (db55269), migration `add_cron_locks.sql` appliquée ; prouvé : verrous pris et relâchés sur la vraie table |
+| 3 | Caches vidés à l'écriture : durées ≤ 60 s (clés du bot, tenant, guilde, secrets d'intégration, réglages, liste du miroir) | en ligne (7a34146) ; coût estimé ~3 000 lectures de plus par jour, à mesurer |
+| 4 | Signaux « une écriture a eu lieu » (`outboxActivity`, mémos de sommeil) : un seul point, `utils/sharedSignals.ts`, où la phase 2 branchera une mémoire partagée ; pas de verrou pour un passage à vide | en ligne (71632f4) ; mesuré : 3 verrous en 5 min au repos au lieu de ~18 |
+| 5 | Tâches longues découpées (`broadcast-process`, `email-digest`, `recycle-bin-purge`, `tenant-purge`) | en ligne (fe40963), horaires changés (7fd318311) ; aucun passage réel observé au moment d'écrire |
+| 6 | web-push en WebCrypto ; `node:dns` par HTTPS ; clé `scrypt` gardée en mémoire | en ligne (0931777) ; notification reçue sur un vrai appareil, abonné avant la bascule |
 | 7 | Spécification OpenAPI embarquée au build (plus de lecture disque) | à faire |
 | 8 | Envois de fichiers directs vers R2 / Drive (URL signée) au lieu du base64 | à faire |
 
-**Fusion du lot 5 : l'ordre compte.** Chaque passage s'arrête à son budget de
-temps et reprend au suivant : il faut donc plus de passages. Mais avec l'API
-actuelle, chaque passage envoie une vague entière : changer les horaires avant
-elle ferait 12 vagues par jour et épuiserait le quota Brevo. Donc **l'API
-d'abord**, puis `cloudflare/crons.ts` le même jour (sans ça, une vague ne
-dépasse pas 40 à 70 e-mails par jour, estimation) :
+**Lot 5.** Chaque passage s'arrête à son budget de temps et reprend au suivant,
+d'où des passages plus rapprochés (`cloudflare/crons.ts`) : `broadcast-cron` et
+`email-digest-cron` toutes les 5 min dans leur heure, `tenant-purge-cron` toutes
+les 10 min. Choix assumé : un e-mail n'est jamais envoyé deux fois, quitte à ne
+pas partir. Un passage coupé entre la réservation et l'envoi laisse le
+destinataire en échec, sans nouvel essai.
 
-| Tâche | Horaire actuel | Nouvel horaire | |
-|---|---|---|---|
-| `broadcast-cron` | `0 10 * * *` | `*/5 10 * * *` | obligatoire |
-| `email-digest-cron` | `0 7,17 * * *` | `*/5 7,17 * * *` | obligatoire |
-| `tenant-purge-cron` | `0 4 * * *` | `*/10 4 * * *` | conseillé |
+**Lot 6.** `utils/webhookDelivery.ts` garde un `node:dns/promises` sur Node
+seulement, à retirer quand Lightsail s'éteint : sans lui, le contrôle des adresses
+privées serait moins strict qu'aujourd'hui.
 
-Choix assumé du lot 5 : un e-mail n'est jamais envoyé deux fois, quitte à ne pas
-partir. Un passage coupé entre la réservation et l'envoi laisse le destinataire
-en échec, sans nouvel essai. Vérifié sur le schéma réel de la base : statuts
-autorisés, index uniques, aucun déclencheur sur `purge_after`. Aucun passage n'a
-tourné en conditions réelles : après la fusion, surveiller les lignes
-`truncated=` des premiers passages de 7 h et 10 h UTC.
+**Piège de la synchro.** `sync:api` copie tout fichier importé par le site qui
+existe aussi dans l'API. Un fichier créé dans l'API sous le nom d'un fichier
+propre au site écrase donc ce dernier : `utils/webPush.ts` (navigateur côté site,
+envoi côté API) a bloqué le robot et la CI le 2026-10-30. Le fichier du site
+s'appelle désormais `utils/webPushClient.ts`.
 
 Phase 2 (après la phase 1) : Worker OpenNext de l'API, limites de fréquence
 partagées (`cf-connecting-ip`), tâches planifiées dans le Worker de l'API,

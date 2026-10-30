@@ -16,6 +16,7 @@
 // versionnage `v1.` permet une migration future si besoin.
 
 import crypto from 'crypto';
+import { registerProcessCache } from './processCaches';
 
 const ALGO = 'aes-256-gcm';
 // Sel statique de dérivation de clé. Documenté et fixe : la sécurité repose sur
@@ -43,6 +44,30 @@ function readEncSecret(): string | undefined {
   );
 }
 
+/**
+ * Clés déjà dérivées, une par sel.
+ *
+ * POURQUOI. scrypt est lent EXPRÈS (50 à 100 ms, sur le thread qui sert les
+ * requêtes) : le refaire à chaque chiffrement bloquait l'API autant de fois, et
+ * coûterait autant de calcul facturé dans un Worker. Le secret et le sel ne
+ * changent pas pendant la vie du processus, la clé non plus.
+ *
+ * Le secret reste à côté de la clé pour qu'un secret différent redérive : sinon
+ * une rotation resterait sans effet jusqu'au redémarrage. Rien de plus exposé
+ * qu'avant : le secret est déjà dans `process.env`. Ne jamais journaliser ce cache.
+ */
+const derivedKeys = new Map<string, { secret: string; key: Buffer }>();
+registerProcessCache(() => derivedKeys.clear());
+
+/** `scryptSync(secret, salt, 32)`, calculé une seule fois par processus. */
+export function deriveKeyOnce(secret: string, salt: string): Buffer {
+  const known = derivedKeys.get(salt);
+  if (known?.secret === secret) return known.key;
+  const key = crypto.scryptSync(secret, salt, 32);
+  derivedKeys.set(salt, { secret, key });
+  return key;
+}
+
 function getKey(): Buffer {
   const secret = readEncSecret();
   if (!secret) {
@@ -51,7 +76,7 @@ function getKey(): Buffer {
     );
   }
   // Dérive une clé 32 octets déterministe depuis le secret d'env.
-  return crypto.scryptSync(secret, KEY_SALT, 32);
+  return deriveKeyOnce(secret, KEY_SALT);
 }
 
 /** True si la clé de chiffrement est configurée (feature dormante sinon). */
