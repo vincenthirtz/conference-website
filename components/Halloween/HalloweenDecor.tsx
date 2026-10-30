@@ -87,7 +87,16 @@ function Spider() {
   );
 }
 
-function Web({ side }: { side: 'left' | 'right' }) {
+// Les dessins sont exportés pour la variante des overlays OBS
+// (HalloweenOverlayDecor) : un seul jeu de dessins et de CSS.
+export function Web({
+  side,
+  spider = true,
+}: {
+  side: 'left' | 'right';
+  /** `false` : la toile seule, rien ne bouge (overlays posés sur le jeu). */
+  spider?: boolean;
+}) {
   return (
     <div className={`hw-web hw-web--${side}`}>
       <svg viewBox="0 0 200 200" className="hw-web-threads">
@@ -99,17 +108,19 @@ function Web({ side }: { side: 'left' | 'right' }) {
           vectorEffect="non-scaling-stroke"
         />
       </svg>
-      <div className="hw-spider-clip">
-        <div className="hw-spider">
-          <span className="hw-spider-thread" />
-          <Spider />
+      {spider && (
+        <div className="hw-spider-clip">
+          <div className="hw-spider">
+            <span className="hw-spider-thread" />
+            <Spider />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-function Bat({ variant }: { variant: 1 | 2 | 3 }) {
+export function Bat({ variant }: { variant: 1 | 2 | 3 }) {
   return (
     <div className={`hw-bat hw-bat--${variant}`}>
       {/* Pas de noir : sur le fond du site, une silhouette noire disparaît.
@@ -137,7 +148,7 @@ function Bat({ variant }: { variant: 1 | 2 | 3 }) {
   );
 }
 
-function Witch() {
+export function Witch() {
   return (
     <div className="hw-witch">
       <svg viewBox="0 0 180 100" className="hw-witch-body">
@@ -237,7 +248,7 @@ function Witch() {
   );
 }
 
-function Mummy() {
+export function Mummy() {
   const clipId = useId();
   return (
     <div className="hw-mummy">
@@ -298,7 +309,7 @@ function Mummy() {
   );
 }
 
-function Ghost() {
+export function Ghost() {
   return (
     <div className="hw-ghost">
       <svg viewBox="0 0 60 72">
@@ -316,7 +327,7 @@ function Ghost() {
   );
 }
 
-function Pumpkin({ lit }: { lit: boolean }) {
+export function Pumpkin({ lit }: { lit: boolean }) {
   return (
     <svg viewBox="0 0 64 56" className="hw-pumpkin">
       <path d="M30 11C30 5 33 2 37 1L39 4C36 5 35 8 35 12Z" fill="#4c6b2a" />

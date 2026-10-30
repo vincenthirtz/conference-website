@@ -15,6 +15,7 @@
 //   tenant      slug d'espace, pour les sources d'un autre organisateur
 //   preview     1 = fond sombre, pour tester la source dans un onglet (bouton
 //               « Tester » de l'onglet Outils) ; OBS, lui, veut le transparent
+//   halloween   0 retire la décoration de saison de cette source
 //
 // Rendue sans chrome par `_app.tsx` (préfixe `/overlay`), fond transparent,
 // `noindex`. Mêmes restrictions que les sources par match (cf. l'API).
@@ -28,6 +29,8 @@ import { parseDayLimit } from '@/utils/overlay/dayOverlay';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
 import { useRouterReady } from '@/hooks/useRouterReady';
+import HalloweenOverlayDecorGate from '@/components/Halloween/HalloweenOverlayDecorGate';
+import { listSourceHalloweenLevel } from '@/components/Halloween/halloweenOverlayLevels';
 
 function firstParam(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
@@ -65,6 +68,7 @@ export default function DayOverlayPage() {
   });
 
   const message = configError ?? fatal;
+  const scale = parseScale(firstParam(router.query.scale));
 
   return (
     <>
@@ -89,11 +93,14 @@ export default function DayOverlayPage() {
         ) : (
           <DayScheduleSource
             payload={data}
-            scale={parseScale(firstParam(router.query.scale))}
+            scale={scale}
             limit={parseDayLimit(firstParam(router.query.limit))}
           />
         )}
       </div>
+      <HalloweenOverlayDecorGate
+        level={ready ? listSourceHalloweenLevel(scale) : null}
+      />
     </>
   );
 }

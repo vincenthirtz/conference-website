@@ -27,6 +27,9 @@
 // leurs données sur l'API publique du site, en same-origin), lot 7 pour
 // `camera` (captation d'un opérateur distant intégrée par un lien — WEB-ONLY,
 // l'app desktop n'a pas cet overlay).
+//
+// `?halloween=0` retire la décoration de saison de cette source OBS
+// (components/Halloween/halloweenOverlayLevels).
 
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -53,6 +56,8 @@ import { CasterLeaderboardOverlay } from '@/components/overlay/caster/CasterLead
 import { CasterStandingsOverlay } from '@/components/overlay/caster/CasterStandingsOverlay';
 import { CasterCameraOverlay } from '@/components/overlay/caster/CasterCameraOverlay';
 import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
+import HalloweenOverlayDecorGate from '@/components/Halloween/HalloweenOverlayDecorGate';
+import { casterSceneHalloweenLevel } from '@/components/Halloween/halloweenOverlayLevels';
 
 /** Filet de sécurité si le socket Realtime lâche en cours de show. */
 const POLL_MS = 15_000;
@@ -204,6 +209,12 @@ function CasterOverlayPage() {
       {loaded && themeLoaded && scene ? (
         <div style={themeCssVars(theme) as React.CSSProperties}>
           <SceneOverlay scene={scene} />
+          {/* Décoration de saison (`?halloween=0` la retire de cette source).
+              Après la scène : le calque se glisse entre son fond et son
+              contenu par z-index. */}
+          <HalloweenOverlayDecorGate
+            level={casterSceneHalloweenLevel(scene.type)}
+          />
         </div>
       ) : null}
     </>

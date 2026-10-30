@@ -3413,3 +3413,56 @@ a:focus-visible,
     transition: none;
   }
 }
+
+/* Variante des overlays OBS (components/Halloween/HalloweenOverlayDecor). Rien
+ * ici ne s'applique au site public. Le calque reste sans fond : OBS compose
+ * par-dessus la vidéo.
+ *
+ * z-index 5 : au-dessus du fond des scènes caster (`.mesh`, sans z-index), en
+ * dessous de leur contenu (`.container`, `.footer`, `.hashtag` : z-index 10). Ce
+ * qui vole passe DERRIÈRE les textes, jamais devant. */
+.hw-layer--overlay {
+  z-index: 5;
+}
+/* Pas d'en-tête à contourner : les toiles s'accrochent au bord de l'image. */
+.hw-layer--overlay .hw-web {
+  top: 0;
+}
+/* Pas de lueurs : un `filter` autour d'ailes qui battent se recalcule à chaque
+ * image, et OBS fait tourner plusieurs sources à la fois. */
+.hw-layer--overlay .hw-web-threads,
+.hw-layer--overlay .hw-spider-body,
+.hw-layer--overlay .hw-bat svg,
+.hw-layer--overlay .hw-witch-body,
+.hw-layer--overlay .hw-mummy svg,
+.hw-layer--overlay .hw-ghost svg,
+.hw-layer--overlay .hw-pumpkin-small {
+  filter: none;
+}
+/* Ce qui vole reste dans les 215 premiers pixels : au pire derrière le titre de
+ * la scène, jamais à la hauteur des noms, des scores ou des logos. Ni derrière
+ * une carte en backdrop-filter (résultats, prochain match), qu'il faudrait
+ * re-flouter à chaque image. */
+.hw-layer--overlay .hw-bat--1 {
+  top: 12vh;
+}
+.hw-layer--overlay .hw-bat--2 {
+  top: 17vh;
+}
+.hw-layer--overlay .hw-witch {
+  top: 5vh;
+}
+/* La grande citrouille n'est plus un bouton : même place, même taille. */
+.hw-pumpkin-big {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  width: 54px;
+}
+/* Sur l'image du jeu : plus petites, plus pâles. */
+.hw-layer--corners .hw-web {
+  width: 130px;
+}
+.hw-layer--corners .hw-web-threads {
+  color: rgba(236, 228, 255, 0.32);
+}

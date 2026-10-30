@@ -240,7 +240,10 @@ export function CasterPauseOverlay({
           }
         }
 
+        /* z-index : le bandeau reste au-dessus de la décoration de saison
+           (calque en z-index 5, le fantôme le traverse à gauche). */
         .caster-pause-overlay .marquee {
+          z-index: 10;
           position: absolute;
           bottom: 110px;
           left: 0;

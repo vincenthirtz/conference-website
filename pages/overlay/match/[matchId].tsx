@@ -19,6 +19,7 @@
 //   scale    0.5 → 2, pour caler la source dans une scène sans la redimensionner
 //            à la souris (une source mise à l'échelle dans OBS devient floue)
 //   tenant   slug d'espace, pour les sources d'un autre organisateur
+//   halloween  0 retire la décoration de saison de cette source
 //
 // La page est rendue SANS chrome par `_app.tsx` (comme /embed/* et les autres
 // overlays) et le fond reste transparent : OBS compose par-dessus la vidéo.
@@ -39,6 +40,8 @@ import {
 import { useMatchStatsOverlay } from '@/hooks/useMatchStatsOverlay';
 import nsOverlay from '@/lib/i18n/locales/fr/overlay';
 import { useOverlayHeartbeat } from '@/hooks/useOverlayHeartbeat';
+import HalloweenOverlayDecorGate from '@/components/Halloween/HalloweenOverlayDecorGate';
+import { matchSourceHalloweenLevel } from '@/components/Halloween/halloweenOverlayLevels';
 
 function firstParam(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
@@ -155,6 +158,9 @@ function MatchOverlayPage() {
           />
         )}
       </div>
+      <HalloweenOverlayDecorGate
+        level={router.isReady ? matchSourceHalloweenLevel(source, scale) : null}
+      />
     </>
   );
 }

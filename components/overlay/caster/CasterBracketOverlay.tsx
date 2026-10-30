@@ -136,8 +136,11 @@ export function CasterBracketOverlay({
         }
 
         /* max-width/margin explicites : neutralisent le .container global du
-           site (max-width 1200px + centrage) qui fuirait ici. */
+           site (max-width 1200px + centrage) qui fuirait ici.
+           z-index : le bracket reste au-dessus de la décoration de saison
+           (calque en z-index 5). */
         .caster-bracket-overlay .container {
+          z-index: 10;
           position: absolute;
           inset: 0;
           max-width: none;
