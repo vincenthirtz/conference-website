@@ -16,6 +16,14 @@
 //   jours en la rafraîchissant en douce. Netlify remplace l'en-tête par
 //   `public, max-age=0, must-revalidate` (toujours redemander) : idem ici.
 //
+// - `selfImageRewrite` : une image de NOTRE domaine écrite en adresse complète
+//   (le logo par défaut des équipes, `teams.logo_url`, qui doit être absolu
+//   pour les embeds Discord) passe par `/_next/image`, qui la refuse en 400 :
+//   `owwomenscup.fr` n'est pas dans `images.remotePatterns`. L'y déclarer ferait
+//   chercher l'image par le Worker sur son propre domaine, donc à l'origine
+//   derrière les routes (l'ancien site Netlify). On la ramène à son chemin :
+//   c'est un fichier de `public/`, servi directement.
+//
 // APIs web standard uniquement : ce module tourne dans le Worker et sous
 // vitest.
 
@@ -32,6 +40,30 @@ export function canonicalRedirect(url: URL): string | null {
     return `https://${CANONICAL_HOST}${url.pathname}${url.search}`;
   }
   return null;
+}
+
+/**
+ * Adresse à donner à l'optimiseur quand il reçoit une image de notre domaine
+ * en adresse complète, ou `null` si la requête ne change pas.
+ */
+export function selfImageRewrite(url: URL): string | null {
+  if (url.pathname !== '/_next/image') return null;
+  const raw = url.searchParams.get('url');
+  if (!raw) return null;
+  let src: URL;
+  try {
+    src = new URL(raw);
+  } catch {
+    return null; // déjà un chemin relatif
+  }
+  const host = src.host.toLowerCase();
+  if (src.protocol !== 'https:') return null;
+  if (host !== CANONICAL_HOST && host !== WWW_HOST) return null;
+  // `//ailleurs.example` deviendrait une adresse externe une fois relative.
+  if (src.pathname.startsWith('//')) return null;
+  const next = new URL(url);
+  next.searchParams.set('url', `${src.pathname}${src.search}`);
+  return next.toString();
 }
 
 export const BROWSER_REVALIDATE = 'public, max-age=0, must-revalidate';

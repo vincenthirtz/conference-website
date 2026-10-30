@@ -10,7 +10,8 @@
 //    relayées vers l'API (réponse CloudFront), /api/internal servi sur place.
 // 3. En-têtes des fichiers statiques (cloudflare/_headers) ; Cache-Control
 //    des pages ISR au navigateur ; sur owwomenscup.fr, redirections www et
-//    http:// (cloudflare/responses.ts).
+//    http:// (cloudflare/responses.ts), et le logo par défaut des équipes
+//    (adresse complète de notre domaine) accepté par l'optimiseur d'images.
 // 4. *.workers.dev : X-Robots-Tag noindex.
 //
 // Usage : node scripts/cloudflare-check.mjs <url-du-worker>
@@ -262,6 +263,19 @@ if (new URL(base).hostname === 'owwomenscup.fr') {
       `- ${ok ? '✅' : '❌'} \`${from}\` → ${r.status} \`${r.headers.get('location') ?? ''}\``
     );
   }
+
+  // Le logo par défaut des équipes (utils/teams/defaultTeamLogo.ts) : une
+  // adresse complète de notre domaine, que l'optimiseur refusait en 400.
+  const logo = 'https://owwomenscup.fr/img/logos/2026-logo.png';
+  const logoPath = `/_next/image?url=${encodeURIComponent(logo)}&w=64&q=75`;
+  const logoRes = await fetch(base + logoPath);
+  await logoRes.arrayBuffer();
+  const logoType = logoRes.headers.get('content-type') ?? '';
+  const logoOk = logoRes.status === 200 && logoType.startsWith('image/');
+  check(logoOk, `logo par défaut optimisé → ${logoRes.status}`, logoType);
+  md.push(
+    `- ${logoOk ? '✅' : '❌'} logo par défaut par l'optimiseur → ${logoRes.status} \`${logoType}\``
+  );
 }
 
 // 4. Indexation de l'adresse technique

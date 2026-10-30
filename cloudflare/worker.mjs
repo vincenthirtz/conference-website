@@ -30,6 +30,9 @@
 // 5) CE QUE NETLIFY FAISAIT SEUL (cloudflare/responses.ts) : www et http://
 //    → 301 vers https://owwomenscup.fr ; Cache-Control « toujours
 //    redemander » au navigateur pour les pages ISR et leurs `/_next/data`.
+//
+// 6) IMAGES DE NOTRE DOMAINE en adresse complète : ramenées à leur chemin
+//    avant l'optimiseur, qui les refuserait (cf. selfImageRewrite).
 
 import handler from '../.open-next/worker.js';
 import {
@@ -46,7 +49,11 @@ import {
   upstreamUnavailableResponse,
 } from '../utils/edgeApiProxy.ts';
 import { dueCronJobs, resolveCronApiBaseUrl, runCronJob } from './crons.ts';
-import { browserCacheControl, canonicalRedirect } from './responses.ts';
+import {
+  browserCacheControl,
+  canonicalRedirect,
+  selfImageRewrite,
+} from './responses.ts';
 
 // File de régénération ISR (liée dans wrangler.jsonc).
 export { DOQueueHandler } from '../.open-next/worker.js';
@@ -148,7 +155,12 @@ export default {
       return relay(request, url, config, Boolean(secret));
     }
 
-    let response = await handler.fetch(request, env, ctx);
+    const selfImage = selfImageRewrite(url);
+    let response = await handler.fetch(
+      selfImage ? new Request(selfImage, request) : request,
+      env,
+      ctx
+    );
     if (isBareNotFound(request, url, response)) {
       await response.body?.cancel();
       response = await notFoundPage(request, env, ctx);
