@@ -12,7 +12,7 @@ export default adminNs('adminTournamentPool', {
   headTitle: 'Admin – Répartition des joueuses',
   title: 'Répartition des joueuses',
   subtitle:
-    'Les équipes dont 5 membres se sont inscrites sont inscrites automatiquement. Ici, tu places le reste de la liste d’attente : noyaux d’une même équipe complétés, équipes mixtes formées pour la soirée. Les joueuses gardent toujours leur vraie équipe.',
+    'Les équipes dont 5 membres se sont inscrites sont inscrites automatiquement. Ici, tu places le reste de la liste d’attente : noyaux d’une même équipe complétés, équipes mixtes formées pour la soirée. Une équipe joue à 5 et peut accueillir jusqu’à 3 remplaçantes pour les rotations. Les joueuses gardent toujours leur vraie équipe.',
   notPooled:
     'Ce tournoi n’utilise pas l’inscription individuelle regroupée. Active-la dans Réglages › Général.',
   loadError: 'Répartition indisponible.',
@@ -46,10 +46,11 @@ export default adminNs('adminTournamentPool', {
   squadsEmpty: 'Aucune équipe inscrite pour l’instant.',
   squadMixed: 'mixte',
   squadIncomplete: 'Incomplète : {count} / {size}',
+  squadSubs: '{size} + {subs} remplaçante(s)',
   squadNoPool:
     'Inscrite hors inscription individuelle : ses joueuses n’apparaissent pas ici.',
   unplace: 'Remettre en attente',
-  errTeamFull: 'Cette équipe est déjà complète.',
+  errTeamFull: 'Cette équipe est déjà pleine, remplaçantes comprises.',
   errNotWaiting:
     'Une des joueuses n’est plus en attente : la liste a été actualisée.',
   errGeneric: 'L’opération a échoué.',

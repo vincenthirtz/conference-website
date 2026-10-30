@@ -8,7 +8,7 @@ export default {
   headTitle: 'Admin – Player distribution',
   title: 'Player distribution',
   subtitle:
-    'Teams with 5 signed-up members are entered automatically. Here you place the rest of the waitlist: cores from the same team topped up, mixed teams formed for the night. Players always keep their real team.',
+    'Teams with 5 signed-up members are entered automatically. Here you place the rest of the waitlist: cores from the same team topped up, mixed teams formed for the night. A team plays with 5 and can take up to 3 substitutes for rotations. Players always keep their real team.',
   notPooled:
     'This tournament does not use pooled individual sign-up. Enable it in Settings › General.',
   loadError: 'Distribution unavailable.',
@@ -40,10 +40,11 @@ export default {
   squadsEmpty: 'No team entered yet.',
   squadMixed: 'mixed',
   squadIncomplete: 'Incomplete: {count} / {size}',
+  squadSubs: '{size} + {subs} sub(s)',
   squadNoPool:
     'Entered outside individual sign-up: its players are not listed here.',
   unplace: 'Back to waitlist',
-  errTeamFull: 'This team is already full.',
+  errTeamFull: 'This team is already full, substitutes included.',
   errNotWaiting:
     'One of the players is no longer waiting: the list was refreshed.',
   errGeneric: 'The operation failed.',

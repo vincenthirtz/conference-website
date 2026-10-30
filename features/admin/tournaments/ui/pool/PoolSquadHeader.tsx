@@ -32,6 +32,7 @@ export default function PoolSquadHeader({
   const [renaming, setRenaming] = useState<string | null>(null);
   const incomplete =
     squad.members.length < size && (squad.members.length > 0 || squad.mixed);
+  const subs = squad.members.length - size;
 
   if (renaming !== null) {
     return (
@@ -77,6 +78,11 @@ export default function PoolSquadHeader({
               count: String(squad.members.length),
               size: String(size),
             })}
+          </Chip>
+        )}
+        {subs > 0 && (
+          <Chip tone="ok">
+            {fmt(t.squadSubs, { size: String(size), subs: String(subs) })}
           </Chip>
         )}
       </p>

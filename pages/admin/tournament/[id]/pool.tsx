@@ -227,17 +227,19 @@ function AdminTournamentPoolPage(_: StaffProps) {
   }
 
   const size = view.teamSize;
+  // Plafond d'une équipe : les titulaires, plus les remplaçantes des rotations.
+  const capacity = view.teamCapacity;
   const placedCount = view.squads.reduce((n, s) => n + s.members.length, 0);
   const mixedCount = view.squads.filter((s) => s.mixed).length;
   // Cible possible : une équipe qui a de la place, déjà nourrie par la liste
   // d'attente ou formée par le staff (même vide). Une équipe inscrite
   // directement, sans joueuse de la liste, n'en est pas une.
   const roomy = (s: Squad) =>
-    s.members.length < size && (s.members.length > 0 || s.mixed);
+    s.members.length < capacity && (s.members.length > 0 || s.mixed);
   const openSquads = view.squads.filter(roomy);
   const selection = [...selected];
   const targetSquad = view.squads.find((s) => s.teamId === target);
-  const room = targetSquad ? size - targetSquad.members.length : size;
+  const room = targetSquad ? capacity - targetSquad.members.length : capacity;
   const canPlace =
     !busy &&
     selection.length > 0 &&
@@ -442,7 +444,7 @@ function AdminTournamentPoolPage(_: StaffProps) {
                       <option value={NEW_TEAM}>{t.manualNewTeam}</option>
                       {openSquads.map((s) => (
                         <option key={s.teamId} value={s.teamId}>
-                          {s.teamName} ({s.members.length}/{size})
+                          {s.teamName} ({s.members.length}/{capacity})
                         </option>
                       ))}
                     </select>
@@ -557,7 +559,7 @@ function AdminTournamentPoolPage(_: StaffProps) {
                                       {moveTargets.map((o) => (
                                         <option key={o.teamId} value={o.teamId}>
                                           {o.teamName} ({o.members.length}/
-                                          {size})
+                                          {capacity})
                                         </option>
                                       ))}
                                     </select>

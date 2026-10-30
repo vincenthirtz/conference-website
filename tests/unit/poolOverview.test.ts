@@ -25,6 +25,7 @@ const entry = (
 function view(over: Partial<AdminPoolView> = {}): AdminPoolView {
   return {
     teamSize: 5,
+    teamCapacity: 8,
     squads: [],
     waitlist: [],
     withdrawn: [],

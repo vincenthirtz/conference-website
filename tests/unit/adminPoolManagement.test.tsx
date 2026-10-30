@@ -49,6 +49,38 @@ const squad = (
 });
 
 describe('PoolSquadHeader', () => {
+  const header = (count: number) =>
+    render(
+      <PoolSquadHeader
+        squad={squad({
+          members: Array.from({ length: count }, (_, i) =>
+            entry({ id: `e${i}` })
+          ),
+        })}
+        size={5}
+        busy={false}
+        onRename={async () => true}
+        onDissolve={() => {}}
+      />
+    );
+
+  it('compte les remplaçantes au-delà de 5, sans dire « incomplète »', () => {
+    header(7);
+    expect(screen.getByText('5 + 2 remplaçante(s)')).toBeTruthy();
+    expect(screen.queryByText(/Incomplète/)).toBeNull();
+  });
+
+  it('une équipe de 5 pile : ni incomplète, ni remplaçante', () => {
+    header(5);
+    expect(screen.queryByText(/Incomplète/)).toBeNull();
+    expect(screen.queryByText(/remplaçante/)).toBeNull();
+  });
+
+  it('sous 5, une équipe reste incomplète', () => {
+    header(3);
+    expect(screen.getByText('Incomplète : 3 / 5')).toBeTruthy();
+  });
+
   it('renomme une équipe formée par le staff', async () => {
     const onRename = vi.fn(async () => true);
     render(

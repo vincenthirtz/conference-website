@@ -19,6 +19,14 @@ import { logger } from '@/utils/logger';
 /** 5v5 : la taille d'une équipe d'événement, et le seuil d'inscription auto. */
 export const POOL_TEAM_SIZE = 5;
 
+/**
+ * Remplaçantes acceptées en plus, pour les rotations : le staff peut placer
+ * jusqu'à `POOL_TEAM_CAPACITY` joueuses dans une équipe. La proposition
+ * automatique et le seuil d'inscription restent à `POOL_TEAM_SIZE`.
+ */
+export const POOL_MAX_SUBSTITUTES = 3;
+export const POOL_TEAM_CAPACITY = POOL_TEAM_SIZE + POOL_MAX_SUBSTITUTES;
+
 export type PoolEntryStatus = 'waitlist' | 'placed' | 'withdrawn';
 
 export type PoolTeamRef = { id: string; name: string };

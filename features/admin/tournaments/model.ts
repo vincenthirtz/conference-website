@@ -23,7 +23,10 @@ export type AdminPoolRosterMember = {
 };
 
 export type AdminPoolView = {
+  /** Titulaires d'une équipe (5v5) : une équipe en dessous est incomplète. */
   teamSize: number;
+  /** Plafond de placement, remplaçantes comprises (rotations). */
+  teamCapacity: number;
   squads: Array<{
     teamId: string;
     teamName: string;

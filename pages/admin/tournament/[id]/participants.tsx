@@ -144,10 +144,15 @@ function AdminTournamentParticipantsPage(_: StaffProps) {
                   <p className="flex flex-wrap items-center gap-2 font-medium text-[var(--t1,#f4edf7)]">
                     {team.teamName}
                     <Chip tone={team.starters >= o.teamSize ? 'ok' : 'warn'}>
-                      {fmt(t.overviewTeamCount, {
-                        count: String(team.starters),
-                        size,
-                      })}
+                      {team.starters > o.teamSize
+                        ? fmt(t.squadSubs, {
+                            size,
+                            subs: String(team.starters - o.teamSize),
+                          })
+                        : fmt(t.overviewTeamCount, {
+                            count: String(team.starters),
+                            size,
+                          })}
                     </Chip>
                     {team.mixed && <Chip tone="brand">{t.squadMixed}</Chip>}
                     {team.source === 'roster' && (
