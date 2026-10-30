@@ -25,6 +25,7 @@ import BracketPreview from '@/components/tournament/landing/BracketPreview';
 import PrizeTeaser from '@/components/tournament/landing/PrizeTeaser';
 import PrizePoolCard from '@/components/tournament/landing/PrizePoolCard';
 import StreamingSection from '@/components/tournament/landing/StreamingSection';
+import { isRegularSeason } from '@/components/tournament/landing/types';
 import SponsorsStrip from '@/components/tournament/landing/SponsorsStrip';
 import CommunitySection from '@/components/tournament/landing/CommunitySection';
 import TournamentFaq from '@/components/tournament/landing/TournamentFaq';
@@ -432,7 +433,10 @@ export default function TournamentPage({
             tournamentPath={tournamentPath}
             finished={isCompleted}
           />
-          <StreamingSection phase={phase} />
+          <StreamingSection
+            phase={phase}
+            showCasting={isRegularSeason(tournament.slug)}
+          />
         </>
       )}
 
@@ -484,7 +488,12 @@ export default function TournamentPage({
 
       <PrizePoolCard tournamentId={tournament.id} />
 
-      {!running && <StreamingSection phase={phase} />}
+      {!running && (
+        <StreamingSection
+          phase={phase}
+          showCasting={isRegularSeason(tournament.slug)}
+        />
+      )}
 
       <SponsorsStrip partners={partners} />
 

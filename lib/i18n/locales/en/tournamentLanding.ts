@@ -155,6 +155,7 @@ export default {
   streamEyebrow: 'The broadcast',
   streamHeading: 'Watch live',
   streamSubtitle: "Every match live, called by the Cup's casting crew.",
+  streamSubtitleEvent: 'Every match, live.',
   streamCastersHeading: 'The cast',
   streamCtaTwitch: 'Watch on Twitch',
   streamCtaWatch: 'Follow the stream',

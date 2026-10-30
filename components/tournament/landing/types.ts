@@ -97,6 +97,15 @@ export type LandingLeague = { slug: string; name: string };
 export type TournamentPhase = 'upcoming' | 'live' | 'finished' | 'cancelled';
 
 /**
+ * Saison régulière de la Cup, par opposition à un event ponctuel (Halloween…) :
+ * elle seule a le casting POGTV. Liste blanche par l'identifiant : aucune colonne
+ * ne porte cette distinction, et un nouveau tournoi n'en hérite pas par défaut.
+ */
+export function isRegularSeason(slug: string | null | undefined): boolean {
+  return (slug ?? '').startsWith('ow-womens-cup-');
+}
+
+/**
  * Liens communautaires. DÉRIVÉS de `config/socials.ts` : c'était auparavant une
  * copie, qu'il fallait penser à mettre à jour en même temps que la barre
  * flottante et le pied de page — trois listes à garder en phase, donc trois

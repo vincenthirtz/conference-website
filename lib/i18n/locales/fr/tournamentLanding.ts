@@ -159,6 +159,7 @@ export default ns('tournamentLanding', {
   streamHeading: 'Regarder en direct',
   streamSubtitle:
     'Tous les matchs à suivre en live, commentés par le casting de la Cup.',
+  streamSubtitleEvent: 'Tous les matchs à suivre en live.',
   streamCastersHeading: 'Le casting',
   streamCtaTwitch: 'Regarder sur Twitch',
   streamCtaWatch: 'Suivre le live',

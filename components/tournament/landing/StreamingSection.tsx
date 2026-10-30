@@ -7,6 +7,9 @@
 // les noms sont annoncés au fil de l'eau. Tant qu'aucune annonce n'est faite,
 // afficher d'anciennes fiches induirait en erreur — on montre donc le bandeau
 // POGTV (source du vivier) + une mention « annonces à venir ».
+//
+// Saison régulière seulement (`showCasting`, cf. isRegularSeason) : un event
+// ponctuel n'a pas ce casting, il garde le bandeau Twitch.
 
 import { useT } from '@/lib/i18n/useT';
 import ProductionPartner from '@/components/Production/ProductionPartner';
@@ -17,8 +20,10 @@ import nsTournamentLanding from '@/lib/i18n/locales/fr/tournamentLanding';
 
 export default function StreamingSection({
   phase,
+  showCasting,
 }: {
   phase: TournamentPhase;
+  showCasting: boolean;
 }) {
   const t = useT(nsTournamentLanding);
 
@@ -29,12 +34,14 @@ export default function StreamingSection({
       <SectionHeader
         eyebrow={t.streamEyebrow}
         title={t.streamHeading}
-        subtitle={t.streamSubtitle}
+        subtitle={showCasting ? t.streamSubtitle : t.streamSubtitleEvent}
       />
 
       {/* Bandeau watch-live */}
       <Reveal>
-        <GlassCard className="mb-10 tl-gradient-border">
+        <GlassCard
+          className={`${showCasting ? 'mb-10 ' : ''}tl-gradient-border`}
+        >
           <div className="flex flex-col items-center gap-5 p-7 text-center sm:flex-row sm:justify-between sm:text-left">
             <div className="flex items-center gap-4">
               <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#9146FF]/20 text-[#b388ff]">
@@ -77,19 +84,23 @@ export default function StreamingSection({
       </Reveal>
 
       {/* Casting — vivier POGTV, noms annoncés plus tard */}
-      <p className="mb-5 text-center text-xs font-semibold uppercase tracking-widest text-gray-500">
-        {t.streamCastersHeading}
-      </p>
-      <Reveal>
-        <ProductionPartner variant="compact" />
-        <p className="mt-4 flex flex-wrap items-center justify-center gap-2 text-center text-sm text-gray-400">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-violet-light)]" />
-            {t.streamCastSoonBadge}
-          </span>
-          <span>{t.streamCastSoonBody}</span>
-        </p>
-      </Reveal>
+      {showCasting && (
+        <>
+          <p className="mb-5 text-center text-xs font-semibold uppercase tracking-widest text-gray-500">
+            {t.streamCastersHeading}
+          </p>
+          <Reveal>
+            <ProductionPartner variant="compact" />
+            <p className="mt-4 flex flex-wrap items-center justify-center gap-2 text-center text-sm text-gray-400">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-violet-light)]" />
+                {t.streamCastSoonBadge}
+              </span>
+              <span>{t.streamCastSoonBody}</span>
+            </p>
+          </Reveal>
+        </>
+      )}
     </Section>
   );
 }
