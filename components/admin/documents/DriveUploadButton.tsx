@@ -17,6 +17,24 @@ import nsAdminDocuments from '@/lib/i18n/locales/admin-fr/adminDocuments';
 import { DRIVE_UPLOAD_MAX_BYTES } from '@/utils/documents/driveLimits';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 
+/**
+ * Ce que Google reproche à l'envoi. Sans sa raison, « le dépôt a échoué » ne dit
+ * pas où chercher, et l'API ne la voit pas : l'envoi ne passe plus par elle.
+ */
+async function googleRefusal(
+  res: Response,
+  t: { uploadError: string; uploadNoQuota: string }
+): Promise<string> {
+  const body = (await res.json().catch(() => null)) as {
+    error?: { errors?: { reason?: string }[] };
+  } | null;
+  const reason = body?.error?.errors?.[0]?.reason;
+  // Un compte de service n'a pas d'espace à lui : le fichier doit vivre dans un
+  // Drive partagé, un dossier ordinaire partagé avec lui ne suffit pas.
+  if (reason === 'storageQuotaExceeded') return t.uploadNoQuota;
+  return `${t.uploadError} (${res.status}${reason ? `, ${reason}` : ''})`;
+}
+
 export default function DriveUploadButton({
   folderId,
   onUploaded,
@@ -61,7 +79,7 @@ export default function DriveUploadButton({
         headers: { 'Content-Type': mimeType },
         body: file,
       });
-      if (!sent.ok) throw new Error(t.uploadError);
+      if (!sent.ok) throw new Error(await googleRefusal(sent, t));
       const { id: fileId } = (await sent.json()) as { id: string };
 
       await adminFetchJson('/api/admin/documents', {

@@ -60,6 +60,8 @@ export default adminNs('adminDocuments', {
   uploading: 'Dépôt en cours…',
   uploaded: '« {name} » déposé.',
   uploadError: 'Le dépôt a échoué.',
+  uploadNoQuota:
+    'Google refuse : le compte de service n’a pas d’espace de stockage. Le dossier doit se trouver dans un Drive partagé.',
   uploadTypeError: 'Ce type de fichier n’est pas accepté.',
   uploadSizeError: 'Fichier trop volumineux (25 Mo maximum).',
   uploadHint:

@@ -134,6 +134,46 @@ describe('DriveUploadButton', () => {
     expect(onUploaded).not.toHaveBeenCalled();
   });
 
+  it('donne la raison de Google : espace de stockage du compte de service', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({
+        error: { errors: [{ reason: 'storageQuotaExceeded' }] },
+      }),
+    });
+    const { container } = render(
+      <DriveUploadButton folderId={null} onUploaded={() => {}} />
+    );
+    choose(container, new File(['x'], 'a.pdf', { type: 'application/pdf' }));
+
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith(
+        expect.stringContaining('Drive partagé'),
+        'error'
+      )
+    );
+  });
+
+  it('donne le code et la raison de Google pour tout autre refus', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: { errors: [{ reason: 'badContent' }] } }),
+    });
+    const { container } = render(
+      <DriveUploadButton folderId={null} onUploaded={() => {}} />
+    );
+    choose(container, new File(['x'], 'a.pdf', { type: 'application/pdf' }));
+
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith(
+        expect.stringContaining('400, badContent'),
+        'error'
+      )
+    );
+  });
+
   it('montre le refus lisible du serveur à l’ouverture', async () => {
     adminFetchJson.mockRejectedValue(new Error('Type de fichier non accepté'));
     const { container } = render(

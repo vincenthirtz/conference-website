@@ -59,6 +59,8 @@ export default {
   uploading: 'Uploading…',
   uploaded: '“{name}” uploaded.',
   uploadError: 'The upload failed.',
+  uploadNoQuota:
+    'Google refused: the service account has no storage space. The folder must be in a shared drive.',
   uploadTypeError: 'This file type is not accepted.',
   uploadSizeError: 'File too large (25 MB maximum).',
   uploadHint:
