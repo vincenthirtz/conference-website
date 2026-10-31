@@ -159,7 +159,7 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
         updatedAt: data.updated_at || null,
       }),
       title: data.title || '',
-      contentHtml: renderNewsMarkdown(data.content),
+      contentHtml: await renderNewsMarkdown(data.content),
       slug: data.slug || null,
       tag: data.tag || 'general',
       imageUrl: heroImage.url || '',

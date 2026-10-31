@@ -8,7 +8,7 @@
 // partent donc plus chez le lecteur pour un texte déjà connu à l'ISR. NE PAS
 // importer ce module depuis du code rendu côté client, sinon ils reviennent.
 
-import { renderToStaticMarkup } from 'react-dom/server';
+import { renderToReadableStream } from 'react-dom/server';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -83,15 +83,29 @@ const MARKDOWN_COMPONENTS: Components = {
   ),
 };
 
+/** Ce que React glisse entre deux textes voisins, inutile sans hydratation. */
+const TEXT_SEPARATOR = '<!-- -->';
+
 /**
  * Markdown d'une actualité → HTML statique. Chaîne vide si pas de contenu
  * (la page affiche alors son message « pas de contenu »).
+ *
+ * `renderToReadableStream` et pas `renderToStaticMarkup` : sur le Worker, OpenNext
+ * remplace par un module vide le fichier de React qui contient ce dernier
+ * (`shim-react`). Il existe donc au build et pas en production, où chaque article
+ * répondait 500. Retirer les séparateurs est sûr : le texte de l'article est échappé
+ * par React, il ne peut pas en contenir, et le résultat est celui de l'ancien rendu.
  */
-export function renderNewsMarkdown(content: string | null | undefined): string {
+export async function renderNewsMarkdown(
+  content: string | null | undefined
+): Promise<string> {
   if (!content) return '';
-  return renderToStaticMarkup(
+  const stream = await renderToReadableStream(
     <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
       {content}
     </ReactMarkdown>
   );
+  await stream.allReady;
+  const html = await new Response(stream).text();
+  return html.replaceAll(TEXT_SEPARATOR, '');
 }

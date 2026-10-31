@@ -6,6 +6,7 @@
 //    requête), JS démarré (hydratation), aucun script inline, <title> rendu,
 //    aucune violation CSP ni erreur JS. Inclut la 404 d'un tournoi inexistant
 //    (getStaticProps → notFound), qui doit être LA NÔTRE, pas celle de Next.
+//    Et un vrai article, généré dans le Worker (`fallback: 'blocking'`).
 // 2. Relais /api/* : une route publique et une route admin sans session
 //    relayées vers l'API (réponse CloudFront), /api/internal servi sur place.
 // 3. En-têtes des fichiers statiques (cloudflare/_headers) ; Cache-Control
@@ -86,6 +87,19 @@ async function pageHeaders(path) {
 }
 
 await waitForWorker();
+
+// Un vrai article : aucune page de la liste ne passait par ce chemin, et tous ont
+// répondu 500 pendant trois jours sans que ce contrôle le voie (2026-10-28 → 31).
+const newsResponse = await fetch(`${base}/api/news?limit=1`);
+const newsSlug = newsResponse.ok
+  ? (await newsResponse.json()).items?.[0]?.slug
+  : null;
+check(
+  Boolean(newsSlug),
+  'un article à contrôler',
+  newsSlug ?? `/api/news → ${newsResponse.status}`
+);
+if (newsSlug) PAGES.push(`/news/${newsSlug}`);
 
 // 1. Pages
 md.push(
