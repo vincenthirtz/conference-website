@@ -189,14 +189,35 @@ export function servedByApiWorker(
 }
 
 /**
+ * Cette requête part-elle vers le Worker de l'API SANS retour possible ? Une écriture, ou
+ * un GET qui écrit (`/api/bot/v1/reminders` marque ses rappels comme envoyés). Rejouée
+ * après une panne ou un délai, elle pourrait s'exécuter deux fois, ou perdre ce que le
+ * premier passage a déjà consommé : sa réponse, même une erreur, est la réponse.
+ */
+export function finalAtApiWorker(
+  method: string,
+  pathname: string,
+  writeRoutes: readonly string[],
+  unreplayableReads: readonly string[]
+): boolean {
+  if (isNeverProxiedPath(pathname)) return false;
+  const routes = methodHasBody(method) ? writeRoutes : unreplayableReads;
+  return routes.some((route) => matchesApiWorkerRoute(pathname, route));
+}
+
+/**
  * Un 401 ou un 403 à une requête identifiée : pendant la bascule, seul le serveur tranche.
- * Refusée à tort, une joueuse connectée se croirait déconnectée et un membre du staff
- * perdrait son back-office, et aucun des deux n'est une panne.
+ * Refusée à tort, une joueuse connectée se croirait déconnectée, un membre du staff
+ * perdrait son back-office, le bot perdrait ses lectures, et aucun des trois n'est une panne.
  */
 function refusesIdentifiedCaller(status: number, init: RequestInit): boolean {
   if (status !== 401 && status !== 403) return false;
   const headers = new Headers(init.headers);
-  return headers.has('authorization') || headers.has('cookie');
+  return (
+    headers.has('authorization') ||
+    headers.has('cookie') ||
+    headers.has('x-api-key')
+  );
 }
 
 /**

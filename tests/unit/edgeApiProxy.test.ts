@@ -15,6 +15,7 @@ import {
   buildUpstreamHeaders,
   buildUpstreamUrl,
   DEFAULT_API_PROXY_ORIGIN,
+  finalAtApiWorker,
   isNeverProxiedPath,
   isNullBodyStatus,
   matchesProxyPrefix,
@@ -129,6 +130,47 @@ describe('Worker de l’API : qui y part', () => {
         '/api/internal/revalidate',
         parseProxyPrefixes('/api/internal/*,/api/internal/revalidate')
       )
+    ).toBe(false);
+  });
+});
+
+describe('Worker de l’API : ce qui part sans retour possible', () => {
+  const writes = ['/api/bot/v1/*', '/api/signals/notes'];
+  const reads = ['/api/bot/v1/reminders'];
+  const final = (method: string, path: string) =>
+    finalAtApiWorker(method, path, writes, reads);
+
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE'])(
+    '%s d’une route listée : au Worker, sans repli',
+    (method) => {
+      expect(final(method, `/api/bot/v1/matches/${UUID}`)).toBe(true);
+    }
+  );
+
+  it('une écriture hors liste reste au serveur', () => {
+    expect(final('POST', '/api/news')).toBe(false);
+    expect(final('POST', '/api/bot')).toBe(false);
+    expect(final('POST', '/api/botte/v1/x')).toBe(false);
+  });
+
+  it('un GET qui écrit part sans repli, pas les autres lectures', () => {
+    expect(final('GET', '/api/bot/v1/reminders')).toBe(true);
+    expect(final('HEAD', '/api/bot/v1/reminders')).toBe(true);
+    expect(final('GET', '/api/bot/v1/role-sync/snapshot')).toBe(false);
+  });
+
+  it('une liste de GET vide ne couvre rien, une écriture non plus sans liste', () => {
+    expect(finalAtApiWorker('GET', '/api/bot/v1/reminders', writes, [])).toBe(
+      false
+    );
+    expect(finalAtApiWorker('POST', '/api/signals/notes', [], reads)).toBe(
+      false
+    );
+  });
+
+  it('jamais /api/internal/, quelle que soit la liste', () => {
+    expect(
+      finalAtApiWorker('POST', '/api/internal/revalidate', ['/api/*'], [])
     ).toBe(false);
   });
 });
@@ -251,7 +293,7 @@ describe('Worker de l’API : repli sur le serveur', () => {
   });
 
   describe.each([401, 403])('un %i à une requête identifiée', (status) => {
-    it.each(['authorization', 'cookie'])(
+    it.each(['authorization', 'cookie', 'x-api-key'])(
       'avec %s repart vers le serveur, qui tranche',
       async (name) => {
         const fallbacks: Array<[string, number | undefined]> = [];

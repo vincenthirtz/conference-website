@@ -18,7 +18,9 @@
 //    Cloudflare (limites de débit partagées). Toléré tant que le Worker n'est
 //    servi que sur *.workers.dev.
 //    Les LECTURES des routes d'API_WORKER_ROUTES vont au Worker de l'API par
-//    sa liaison, avec repli sur le serveur (docs/API-WORKER.md, phase 2).
+//    sa liaison, avec repli sur le serveur (docs/API-WORKER.md, phase 2). Les
+//    ÉCRITURES d'API_WORKER_WRITE_ROUTES et les GET qui écrivent
+//    (API_WORKER_UNREPLAYABLE_READS) y vont aussi, sans repli : ils ne se rejouent pas.
 //
 // 2) TÂCHES PLANIFIÉES : un Cron Trigger chaque minute → cloudflare/crons.ts.
 //    Rien ne part sans `CRONS_ENABLED=1` (wrangler.jsonc) ET CRON_SECRET.
@@ -45,6 +47,7 @@ import {
   EDGE_CLIENT_IP_HEADER,
   EDGE_HOST_HEADER,
   EDGE_SECRET_HEADER,
+  finalAtApiWorker,
   isNullBodyStatus,
   matchesProxyPrefix,
   methodHasBody,
@@ -93,6 +96,29 @@ async function relay(request, url, config, trusted, env) {
   if (methodHasBody(request.method) && request.body) init.body = request.body;
 
   const target = buildUpstreamUrl(config.origin, url);
+  const final =
+    env.API_WORKER &&
+    finalAtApiWorker(
+      request.method,
+      url.pathname,
+      parseProxyPrefixes(env.API_WORKER_WRITE_ROUTES),
+      parseProxyPrefixes(env.API_WORKER_UNREPLAYABLE_READS)
+    );
+  if (final) {
+    try {
+      return toDownstream(await env.API_WORKER.fetch(target, init));
+    } catch (err) {
+      console.error(
+        '[relais] Worker de l’API : injoignable, requête non rejouée',
+        {
+          path: url.pathname,
+          error: err instanceof Error ? err.message : String(err),
+        }
+      );
+      return upstreamUnavailableResponse();
+    }
+  }
+
   const viaWorker =
     env.API_WORKER &&
     servedByApiWorker(
@@ -135,6 +161,10 @@ async function relay(request, url, config, trusted, env) {
     );
   }
 
+  return toDownstream(upstream);
+}
+
+function toDownstream(upstream) {
   return new Response(
     isNullBodyStatus(upstream.status) ? null : upstream.body,
     {
