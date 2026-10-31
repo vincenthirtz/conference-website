@@ -42,6 +42,8 @@ const WIDE = {
   '/api/leagues/*': '/api/leagues/controle-inexistant',
   '/api/overlay/tcg/*': '/api/overlay/tcg/controle-inexistant',
   '/api/caster/v1/*': '/api/caster/v1/tournaments',
+  '/api/auth/*': '/api/auth/battlenet/available',
+  '/api/demandes/*': '/api/demandes/join',
 };
 const concrete = (route) =>
   (WIDE[route] ?? route).replaceAll(':id', UUID).replace(/\/\*$/, '/x');
@@ -143,6 +145,7 @@ const fakeBearer = {
 const fakeKey = { 'x-api-key': 'controle-cle-volontairement-fausse' };
 for (const [path, headers] of [
   ['/api/admin/me', fakeBearer],
+  ['/api/admin/users/manage', fakeBearer],
   ['/api/player/tcg/wallet', fakeBearer],
   ['/api/bot/v1/role-sync/snapshot', fakeKey],
 ]) {

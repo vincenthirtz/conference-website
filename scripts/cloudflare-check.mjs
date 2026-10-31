@@ -7,8 +7,8 @@
 //    aucune violation CSP ni erreur JS. Inclut la 404 d'un tournoi inexistant
 //    (getStaticProps → notFound), qui doit être LA NÔTRE, pas celle de Next.
 //    Et un vrai article, généré dans le Worker (`fallback: 'blocking'`).
-// 2. Relais /api/* : une route publique et une route admin sans session
-//    relayées vers l'API (réponse CloudFront), /api/internal servi sur place.
+// 2. /api/internal servi sur place. Le relais lui-même a son contrôle à part
+//    (scripts/worker-routes-check.mjs).
 // 3. En-têtes des fichiers statiques (cloudflare/_headers) ; Cache-Control
 //    des pages ISR au navigateur ; sur owwomenscup.fr, redirections www et
 //    http:// (cloudflare/responses.ts), et le logo par défaut des équipes
@@ -176,11 +176,7 @@ md.push(
   '| Chemin | HTTP | Servi par | Attendu |',
   '|---|---|---|---|'
 );
-for (const c of [
-  { path: '/api/captcha', relayed: true, status: 200 },
-  { path: '/api/admin/alerts-summary', relayed: true, status: 401 },
-  { path: '/api/internal/revalidate', relayed: false },
-]) {
+for (const c of [{ path: '/api/internal/revalidate', relayed: false }]) {
   const r = await fetch(base + c.path, { redirect: 'manual' });
   await r.arrayBuffer();
   const viaApi =

@@ -302,36 +302,40 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     expect(servedByApiWorker('PATCH', '/api/admin/me', routes)).toBe(false);
   });
 
-  // Audit du 2026-10-31 : un GET qui écrit, une route privée, ou du direct à l'écran.
+  // Le relais ne connaît que ces chemins en lecture : pas de route d'écriture, ni /api/internal.
   it.each([
     `/api/player/matches/${UUID}/report-score`,
-    `/api/player/matches/${UUID}/evidence`,
     '/api/player/tcg/booster',
     '/api/player/delete-account',
-    // La Library est fermée, et certains de ses GET écrivent (appartement, duels, paquet).
-    '/api/player/library/me',
-    '/api/player/library/apartment',
-    `/api/player/library/arena/duels/${UUID}`,
-    // Des coordonnées, ou un jeton à deviner : leur limite de fréquence s'affaiblit sur le Worker.
-    '/api/teams/free-players',
-    '/api/teams/invitations/by-token',
-    '/api/teams/invite-links/by-token',
-    '/api/public/newsletter/confirm',
-    '/api/public/free-players/remove',
-    '/api/public/team-openings/remove',
     '/api/teams/leave',
-    // Des coordonnées, protégées par une limite de fréquence : à revoir avec les limites partagées.
-    '/api/team-openings/contact',
-    '/api/twitch/oauth-callback',
     '/api/twitch/exchange',
-    `/api/matches/${UUID}`,
-    `/api/matches/${UUID}/games`,
-    `/api/matches/${UUID}/drafts/1`,
-    '/api/caster/me',
-    '/api/captcha',
     '/api/internal/revalidate',
-  ])('ne couvre jamais %s', (path) => {
+  ])('ne couvre pas %s', (path) => {
     expect(servedByApiWorker('GET', path, routes, '', serverOnly)).toBe(false);
+  });
+
+  // Audit du 2026-10-31 : ces GET consomment quelque chose. Rejoués après une panne, ils
+  // échoueraient (code OAuth déjà utilisé) ou perdraient ce que le premier passage a pris.
+  it.each([
+    '/api/bot/v1/reminders',
+    '/api/auth/battlenet/callback',
+    '/api/auth/twitch/callback',
+    '/api/twitch/broadcaster-callback',
+    '/api/twitch/oauth-callback',
+    '/api/onboard/discord-callback',
+    '/api/onboard/verify-email',
+    '/api/onboard/secrets/un-jeton',
+    '/api/public/newsletter/confirm',
+    '/api/email/unsubscribe',
+    '/api/admin/instagram/callback',
+    '/api/admin/tiktok/callback',
+    '/api/player/library/me',
+    `/api/player/library/arena/duels/${UUID}`,
+  ])('%s part sans repli', (path) => {
+    const unreplayable = parseProxyPrefixes(
+      config.vars.API_WORKER_UNREPLAYABLE_READS
+    );
+    expect(finalAtApiWorker('GET', path, [], unreplayable)).toBe(true);
   });
 });
 
@@ -372,18 +376,19 @@ describe('les lectures admin sur le Worker (wrangler.jsonc)', () => {
     '/api/player/data-export',
     `/api/og/player/${UUID}`,
     '/api/admin/twitch/connection',
+    '/api/admin/documents',
+    // Limites comptées en base, pour tous les exemplaires (applySharedRateLimit).
+    '/api/team-openings/contact',
+    '/api/teams/free-players',
+    '/api/teams/invitations/by-token',
+    '/api/teams/invite-links/by-token',
+    '/api/captcha',
+    '/api/auth/battlenet/available',
+    `/api/matches/${UUID}`,
+    `/api/matches/${UUID}/drafts/1`,
+    '/api/caster/me',
   ])('%s part au Worker', (path) => {
     expect(served(path)).toBe(true);
-  });
-
-  it.each([
-    '/api/admin/documents',
-    '/api/admin/documents/download',
-    '/api/admin/instagram/callback',
-    '/api/admin/tiktok/callback',
-    '/api/admin/twitch/connect',
-  ])('%s reste au serveur', (path) => {
-    expect(served(path)).toBe(false);
   });
 
   it('un identifiant qui n’est pas un UUID ne passe pas à côté du refus', () => {
