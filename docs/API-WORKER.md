@@ -145,8 +145,8 @@ s'appelle désormais `utils/webPushClient.ts`.
 
 ## Phase 2 : le Worker de l'API
 
-Branche `worker-phase2` de conference-api. **Worker déployé le 2026-10-31, aucune
-visiteuse dessus** : l'API de production reste le serveur Lightsail.
+Sur `main` de conference-api depuis le 2026-10-31 (bdcd405). **Le Worker ne sert encore
+qu'une première famille de lectures** : tout le reste de l'API passe par le serveur Lightsail.
 
 **2026-10-31 : mesure, réponse oui.** L'API se construit pour un Worker, et les 718
 routes se chargent dans workerd en local, avec une base factice (ce qui prouve
@@ -194,17 +194,19 @@ prouvent qu'elles tournent, pas ce qu'elles feraient sur de vraies données.
 
 | Travail | Taille | Bloquant ? |
 |---|---|---|
-| Fusionner `worker-phase2` dans `main` et déployer le Worker depuis `main` | 0,5 j | Oui, avant d'élargir : un correctif sur `main` n'atteint pas le Worker |
 | Bascule des familles suivantes derrière le relais, avec observation | 1 à 2 j | Accord de la propriétaire avant chaque famille |
 | Limites de fréquence partagées (132 appels, synchrones) | 0,5 à 1 j | Pas pour une première famille en lecture. À trancher avant les familles sensibles (connexion, captcha, formulaires), avec le nombre d'exemplaires observé |
 
 **Premier déploiement, 2026-10-31.** Le Worker `owwomenscup-api` tourne sans adresse
 publique (`workers.dev` répond 404, aucune route) et sans tâches planifiées
-(`CRONS_ENABLED=0`). `worker.yml` le déploie à chaque push sur `worker-phase2` : 12 622
-tests réussis et 3 ignorés, démarrage mesuré par Cloudflare 49 ms, 25,13 Mio. Les 48
-réglages du serveur y sont posés en secrets, dont `EDGE_PROXY_SECRET` et
-`STAFF_MFA_EXEMPT_USER_IDS`, et survivent à un déploiement. **Aucune vraie requête ne l'a
-encore atteint** : rien n'est prouvé sur la vraie base ni avec les vrais secrets.
+(`CRONS_ENABLED=0`). `worker.yml` le déploie après chaque image réussie sur `main`, sur le
+même commit : ses tests sont ceux d'`image.yml` (12 682 réussis et 3 ignorés à la fusion).
+Le serveur et le Worker servent donc le même code ; `/api/health` donne le commit en ligne,
+sur `api.owwomenscup.fr` pour le serveur et sur `owwomenscup.fr` pour le Worker. Démarrage
+mesuré par Cloudflare : 24 à 52 ms, 25,13 Mio. Les 48 réglages du serveur y sont posés en
+secrets, dont `EDGE_PROXY_SECRET` et `STAFF_MFA_EXEMPT_USER_IDS`, et survivent à un
+déploiement. Retour arrière : `promote.yml` ne concerne que le serveur, pour le Worker c'est
+`wrangler rollback`.
 
 Le jeton de déploiement a le rôle Workers Editor sur tous les Workers du compte : il
 peut déployer aussi le Worker du site, sans pouvoir en créer ni en supprimer. Pour le
