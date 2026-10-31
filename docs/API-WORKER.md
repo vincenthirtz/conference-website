@@ -171,22 +171,48 @@ Le flux de `documents/download`, `cheerio`, `qrcode`, `node:dns`, `node:crypto`
 gravité. `next/og` exige une retouche d'OpenNext avant son build
 (`scripts/cloudflare/patch-opennext.mjs`), à signaler en amont.
 
-**Reste à faire (estimations) :**
+**2026-10-31 : le Worker est écrit, pas déployé** (`worker-phase2` à 0589211, poussée
+sans déclencher de déploiement). Dossier `worker/` et non `cloudflare/` : même piège
+de synchro que `webPush.ts`, un fichier d'API nommé comme l'entrée du Worker du site
+l'aurait écrasée. Vérifié sur le Worker construit, sous workerd, tout le réseau
+sortant intercepté :
 
-| Travail | Taille |
+| Fait | Constaté |
 |---|---|
-| Enveloppe du Worker à la place de Caddy : adresse du client, en-têtes falsifiables retirés, erreurs en JSON, CORS, HSTS, plafond de corps | 1 j |
-| `runInBackground` branché sur `waitUntil` | 1 h |
-| Les 28 tâches dans `scheduled()` du Worker de l'API, coupure incluse | 0,5 j |
-| Mémoire partagée de `sharedSignals` (KV ou Durable Object) | 0,5 j |
-| Limites de fréquence partagées (132 appels, synchrones) ; en mémoire possible à la bascule, plus faible | 0,5 à 1 j |
-| Déploiement et secrets | 0,5 à 1 j |
-| Bascule par familles derrière le relais, avec observation | 1 à 2 j |
+| Enveloppe à la place de Caddy | Adresse falsifiée ou faux relais : la limite de fréquence tient (429). Corps au-delà de 10 Mo : 413 sans lire le corps. 404 en JSON, HSTS, nosniff, CORS, préflight. Aucun secret du relais dans les journaux |
+| `runInBackground` sur `waitUntil` | Écriture ralentie à 1,5 s : réponse en 17 ms, 0 écriture finie à la réponse, 1 après |
+| 28 tâches dans `scheduled()` | `CRONS_ENABLED=0` : aucun appel. `=1` : les 7 tâches dues appelées, toutes en 200. Un appel par tâche vers le Worker lui-même, car un Cron Trigger n'a que 30 s de calcul en tout |
+| Signaux dans un Durable Object | Une vraie route (`POST /api/admin/discord-logs/replay`) écrit sa note dans l'objet. Relecture : ~15 ms toutes les 5 s. Estimé : ≤ 18 000 requêtes/jour, au pire ~330 000 Go-s/mois sur 400 000 inclus, partagés avec le temps réel |
 
-**Sécurité :** sans Caddy, `x-nf-client-connection-ip` se falsifie (la limite de
-fréquence saute en changeant l'en-tête, constaté). L'enveloppe doit le corriger avant
-toute exposition. OpenNext écrase aussi `x-forwarded-host` : le relais doit porter
-l'hôte dans l'URL.
+12 625 tests unitaires et typecheck verts, build Linux et Windows bons (25,13 Mio,
+gzip 5,05 Mio). **Non prouvé ici :** le refus d'une requête sans adresse (le simulateur
+en ajoute toujours une) et le passage d'une note d'un exemplaire à un autre (le banc
+n'en a qu'un) : tests unitaires seulement. La base est factice : les 200 des tâches
+prouvent qu'elles tournent, pas ce qu'elles feraient sur de vraies données.
+
+**Reste à faire :**
+
+| Travail | Taille | Bloquant ? |
+|---|---|---|
+| Déploiement et secrets | 0,5 à 1 j | Accord de la propriétaire : secrets de production, premier déploiement |
+| Bascule par familles derrière le relais, avec observation | 1 à 2 j | Après le déploiement |
+| Limites de fréquence partagées (132 appels, synchrones) | 0,5 à 1 j | Pas pour une première famille en lecture. À trancher avant les familles sensibles (connexion, captcha, formulaires), avec le nombre d'exemplaires observé |
+
+**Premier déploiement.** Le Worker n'aura ni adresse publique (`workers_dev` et
+`preview_urls` coupés, aucune route) ni tâches planifiées (`CRONS_ENABLED=0`) : il
+n'est joignable que par le site, et rien ne change pour les visiteuses tant qu'aucune
+famille n'y est envoyée. Il lui faut un jeton Cloudflare dans les secrets GitHub de
+conference-api, qui n'en a pas, et les secrets du serveur copiés sans les afficher,
+dont `EDGE_PROXY_SECRET` et `STAFF_MFA_EXEMPT_USER_IDS`.
+
+**Appels directs.** Le navigateur pour `/api/public/*` et les tâches planifiées du site
+appellent `api.owwomenscup.fr` sans passer par le relais. Ils ne basculeront pas avec
+lui : il faudra une route Worker sur ce nom, à la fin. À la bascule des tâches,
+`CRONS_ENABLED` passe à 0 sur le site et à 1 sur l'API au même moment.
+
+**Sécurité :** sans Caddy, `x-nf-client-connection-ip` se falsifiait (la limite de
+fréquence sautait en changeant l'en-tête, constaté) ; l'enveloppe le corrige. OpenNext
+écrase aussi `x-forwarded-host` : le relais doit porter l'hôte dans l'URL.
 
 **Ce que seule la production prouvera :** démarrage et mémoire réels, CPU par route,
 latence vers Supabase, blocages sur adresses partagées (Brevo, Discord, Blizzard),
