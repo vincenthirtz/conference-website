@@ -48,7 +48,7 @@
     // Chemins exacts, `:id` = un UUID, `*` en dernier = tout ce qui suit. Avant d'ajouter
     // une route : vérifier que son GET est public et n'écrit rien. Pas tout /api/public/
     // (newsletter/confirm écrit) ni tout /api/teams/ (surtout des routes privées).
-    "API_WORKER_ROUTES": "/api/health,/api/seasonal-logo,/api/leagues,/api/leagues/*,/api/public/tcg/live,/api/public/openapi,/api/public/v1/*,/api/news,/api/news/rss,/api/news/comments,/api/teams,/api/teams/:id,/api/team/:id/stats,/api/team/:id/maps,/api/tournaments,/api/tournaments/:id/prize-pool,/api/tournaments/:id/mvp-leaderboard,/api/tournament/:id/calendar.ics,/api/tournament/:id/qr,/api/players/leaderboard",
+    "API_WORKER_ROUTES": "/api/health,/api/seasonal-logo,/api/leagues,/api/leagues/*,/api/public/tcg/live,/api/public/openapi,/api/public/v1/*,/api/news,/api/news/rss,/api/news/comments,/api/teams,/api/teams/:id,/api/team/:id/stats,/api/team/:id/maps,/api/tournaments,/api/tournaments/:id/prize-pool,/api/tournaments/:id/mvp-leaderboard,/api/tournament/:id/calendar.ics,/api/tournament/:id/qr,/api/players/leaderboard,/api/player/notifications,/api/player/dashboard,/api/player/progression,/api/player/team,/api/player/matches,/api/player/next-match",
     // « 1 » depuis la bascule (2026-10-28) : les tâches planifiées tournent
     // ici, plus chez Netlify. « 0 » coupe tout (retour arrière, docs/CLOUDFLARE.md).
     "CRONS_ENABLED": "1",

@@ -93,6 +93,35 @@ describe('Worker de l’API : qui y part', () => {
     ).toBe(false);
   });
 
+  it('une inspection du staff (`?as=`) reste au serveur : ce GET écrit au journal', () => {
+    const player = ['/api/player/notifications'];
+    expect(
+      servedByApiWorker('GET', '/api/player/notifications', player, '')
+    ).toBe(true);
+    expect(
+      servedByApiWorker(
+        'GET',
+        '/api/player/notifications',
+        player,
+        `?teamId=${UUID}`
+      )
+    ).toBe(true);
+    for (const search of [
+      `?as=${UUID}`,
+      `?teamId=${UUID}&as=${UUID}`,
+      '?as=',
+      '?as',
+    ]) {
+      expect(
+        servedByApiWorker('GET', '/api/player/notifications', player, search)
+      ).toBe(false);
+    }
+    // Un autre paramètre qui contient « as » n'est pas une inspection.
+    expect(
+      servedByApiWorker('GET', '/api/player/notifications', player, '?has=1')
+    ).toBe(true);
+  });
+
   it('jamais /api/internal, même si une route le couvre', () => {
     expect(
       servedByApiWorker(
@@ -121,13 +150,29 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
       `/api/tournaments/${UUID}/prize-pool`,
       `/api/tournament/${UUID}/qr`,
       '/api/players/leaderboard',
+      '/api/player/notifications',
+      '/api/player/dashboard',
+      '/api/player/progression',
+      '/api/player/team',
+      '/api/player/matches',
+      '/api/player/next-match',
     ]) {
       expect(servedByApiWorker('GET', path, routes)).toBe(true);
     }
   });
 
+  it('une écriture des routes joueuses reste au serveur', () => {
+    expect(servedByApiWorker('PATCH', '/api/player/team', routes)).toBe(false);
+  });
+
   // Audit du 2026-10-31 : un GET qui écrit, une route privée, ou du direct à l'écran.
   it.each([
+    `/api/player/matches/${UUID}/report-score`,
+    `/api/player/matches/${UUID}/evidence`,
+    '/api/player/tcg/booster',
+    '/api/player/agenda/subscription',
+    '/api/player/data-export',
+    '/api/player/delete-account',
     '/api/public/newsletter/confirm',
     '/api/public/free-players/remove',
     '/api/public/team-openings/remove',
@@ -176,6 +221,43 @@ describe('Worker de l’API : repli sur le serveur', () => {
     });
     expect(response).toBe(answer);
     expect(reasons).toEqual([]);
+  });
+
+  it('un 401 anonyme est une vraie réponse', async () => {
+    const { response, reasons } = await ask(
+      async () => new Response(null, { status: 401 })
+    );
+    expect(response?.status).toBe(401);
+    expect(reasons).toEqual([]);
+  });
+
+  it.each(['authorization', 'cookie'])(
+    'un 401 avec %s repart vers le serveur, qui tranche',
+    async (name) => {
+      const reasons: string[] = [];
+      const response = await askApiWorker(
+        { fetch: async () => new Response('non', { status: 401 }) },
+        url,
+        { method: 'GET', headers: new Headers({ [name]: 'x' }) },
+        (reason) => reasons.push(reason)
+      );
+      expect(response).toBeNull();
+      expect(reasons).toEqual(['statut 401']);
+    }
+  );
+
+  it('les autres refus d’une requête identifiée sont de vraies réponses', async () => {
+    for (const status of [403, 404, 429]) {
+      const reasons: string[] = [];
+      const response = await askApiWorker(
+        { fetch: async () => new Response('non', { status }) },
+        url,
+        { method: 'GET', headers: new Headers({ authorization: 'x' }) },
+        (reason) => reasons.push(reason)
+      );
+      expect(response?.status).toBe(status);
+      expect(reasons).toEqual([]);
+    }
   });
 
   it('rend aussi ses 4xx et ses redirections : ce sont des réponses', async () => {

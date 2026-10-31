@@ -98,7 +98,8 @@ async function relay(request, url, config, trusted, env) {
     servedByApiWorker(
       request.method,
       url.pathname,
-      parseProxyPrefixes(env.API_WORKER_ROUTES)
+      parseProxyPrefixes(env.API_WORKER_ROUTES),
+      url.search
     );
   let upstream = viaWorker
     ? await askApiWorker(env.API_WORKER, target, init, (reason) => {

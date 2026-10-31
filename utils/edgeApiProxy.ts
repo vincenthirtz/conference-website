@@ -173,20 +173,35 @@ function matchesApiWorkerRoute(pathname: string, route: string): boolean {
  * Cette requête part-elle vers le Worker de l'API ? Lectures seulement, tant que la
  * bascule se fait famille par famille : une écriture reste au serveur, quelle que soit
  * la route, et seule une lecture peut être rejouée sans risque après une panne.
+ *
+ * `?as=` aussi reste au serveur : le staff y inspecte l'écran d'une joueuse (`resolveSubject`,
+ * API), et ce GET-là écrit au journal. Le même chemin sans `?as=` n'écrit rien.
  */
 export function servedByApiWorker(
   method: string,
   pathname: string,
-  routes: readonly string[]
+  routes: readonly string[],
+  search = ''
 ): boolean {
   if (methodHasBody(method) || isNeverProxiedPath(pathname)) return false;
+  if (new URLSearchParams(search).has('as')) return false;
   return routes.some((route) => matchesApiWorkerRoute(pathname, route));
 }
 
 /**
- * La réponse du Worker de l'API, ou `null` s'il lève, répond 5xx ou tarde : l'appelant
- * rejoue alors la lecture sur le serveur, et la visiteuse ne voit rien. `onFallback`
- * laisse une trace, seul signe de la panne.
+ * Un 401 à une requête identifiée : pendant la bascule, seul le serveur tranche. Refusée à
+ * tort, une joueuse connectée se croirait déconnectée, et un 401 n'est pas une panne.
+ */
+function refusesIdentifiedCaller(status: number, init: RequestInit): boolean {
+  if (status !== 401) return false;
+  const headers = new Headers(init.headers);
+  return headers.has('authorization') || headers.has('cookie');
+}
+
+/**
+ * La réponse du Worker de l'API, ou `null` s'il lève, répond 5xx, tarde, ou refuse une
+ * requête identifiée : l'appelant rejoue alors la lecture sur le serveur, et la visiteuse
+ * ne voit rien. `onFallback` laisse une trace, seul signe du problème.
  */
 export async function askApiWorker(
   binding: ApiWorkerBinding,
@@ -204,7 +219,12 @@ export async function askApiWorker(
   });
   try {
     const response = await Promise.race([binding.fetch(url, init), late]);
-    if (response.status < 500) return response;
+    if (
+      response.status < 500 &&
+      !refusesIdentifiedCaller(response.status, init)
+    ) {
+      return response;
+    }
     await response.body?.cancel();
     onFallback(`statut ${response.status}`);
   } catch (err) {
