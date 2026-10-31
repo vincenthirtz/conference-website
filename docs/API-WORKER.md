@@ -408,10 +408,43 @@ Discord, l'envoi d'événements au bot, et la régénération de page après un 
 `global_fetch_strictly_public` doit la faire repasser par l'entrée publique, d'après la documentation. Un échec ne laisse
 qu'un avertissement au journal, et des pages périmées jusqu'à leur renouvellement.
 
+**Sixième famille, 2026-10-31 : le reste des lectures publiques.** Réglages du site, partenaires, casters,
+scrims, cartes, héros, profils, listes publiques, images TCG, chaînes Twitch, actualités Blizzard, patch
+notes, pool d'un tournoi en lecture. 21 corps sur 22 identiques à ceux du serveur ; `/api/docs` ne diffère que par
+son nonce. Les seules écritures sont des `upsert` de cache (`blizzard-*`, `patch-notes`), sans danger en cas de rejeu.
+
+**Septième famille, 2026-10-31 : lectures joueuses et équipes.** 57 routes, anonymes identiques au serveur. Les GET qui
+écrivent se rejouent sans danger : `tcg/sets` crédite sous `ON CONFLICT DO NOTHING … RETURNING`, seul le gagnant paie
+les paquets ; expirations conditionnelles (échanges, recherches de scrim) ; date d'usage de l'agenda.
+`tcg/welcome-gift` en lecture passe par `dryRun`.
+
+**Huitième famille, 2026-10-31 : overlays OBS.** Le plus gros trafic restant. Lectures avec repli, et
+`POST /api/overlay/heartbeat`, un `upsert` répétable, sans repli. Seul `serverTime` diffère du serveur.
+Premier appel à froid vu à ~2,5 s.
+
+**Neuvième famille, 2026-10-31 : lectures admin.** `/api/admin/*` en GET, cockpit caster, `/api/cast/:id`, avec repli : un refus à
+tort est rejoué et comparé. Aucune écriture admin ne bouge. Une liste exacte dépassait la limite de 5 Ko de Cloudflare par
+variable : `API_WORKER_SERVER_ONLY` liste ce qui reste au serveur, et l'emporte. Dans cette liste, `:id` couvre n'importe quel segment
+(`anyId`) : passer à côté enverrait au Worker ce qui doit rester au serveur.
+
+**Reste au serveur, et pourquoi :**
+
+| Quoi | Pourquoi | Ce qui le débloque |
+|---|---|---|
+| Admin à double authentification (31 routes) : `users/*`, `tenants/*`, `api-tokens`, `recycle-bin`… | Un Worker qui ne l'exigerait pas ne se verrait pas : ni erreur, ni repli. Même code, secret présent, mais pas prouvé | Le refus d'une session sans double authentification, vu sur le Worker |
+| `alerts-summary`, `overview-summary`, `pilotage`, `search`, `network-funnel`, `tournament/:id/dashboard`, `stages/:id/{standings,swiss,seeding-preview}`, `overlay/mvp-public`, `overlay/match/:id/stats` | Lisent des mémos à réveil, dont certains à l'antenne | Une vraie note vue sur le pont (`204` sur `/api/signals/notes`) |
+| `admin/twitch/*`, `diffusion/mvp-overlay` | Rotation des jetons Twitch : deux rafraîchissements concurrents peuvent en invalider un | Famille des services externes |
+| `admin/instagram/*`, `admin/tiktok/*`, `documents` | Retours OAuth et Drive | Famille des services externes |
+| Exports lourds (`users/export`, `teams/export`, `tenants/:id/export`, `export-results`, `player/data-export`) | Mémoire : 128 Mo par exemplaire, une saturation couperait les écritures du bot à côté | Une mesure |
+| `/api/og/*` | Même raison : génération d'images | Une mesure |
+| `team-openings/contact`, `teams/free-players`, invitations par jeton | Coordonnées, ou jeton à deviner, protégés par une limite de fréquence qui s'affaiblit sur le Worker | Limites partagées |
+| `player/library/*` | Fermée, et certains GET écrivent (appartement, duels, paquet hebdomadaire) | À son ouverture, ou avec les écritures |
+| `caster/me`, `caster/briefing/:id` | Créent une fiche sur un GET | Avec les écritures |
+| `/api/matches/*` (draft en direct, feuilles) | Lectures et écritures mêlées, en direct | Avec les écritures |
+
 **Piège d'OpenNext.** Il change un `stale-while-revalidate` sans valeur en `=2592000` (30 jours), que
-les navigateurs appliquent aussi. Corrigé sur `/api/news/rss` en retirant la directive, sans effet sur
-le serveur. `/api/twitch-channels`, `/api/patch-notes`, `/api/blizzard-news` et `/api/blizzard-media`
-ont la même écriture : à corriger avant de les envoyer au Worker.
+les navigateurs appliquent aussi. Corrigé sur les cinq routes concernées, sans effet sur le serveur.
+`bareStaleWhileRevalidateGuard.test.ts` refuse le prochain.
 
 **Un seul Worker pour l'API, décidé le 2026-10-31.** Le script tient largement (25 Mio sur 64) ;
 plusieurs Workers voudraient dire plusieurs builds, 48 secrets à tenir à jour sur chacun, et du code
