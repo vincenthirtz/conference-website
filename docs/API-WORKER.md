@@ -437,20 +437,44 @@ Premier passage le 2026-10-31 (site 1add2b537, API 9345dd5) : tout conforme. Dou
 nombre de comptes exemptés, pont branché et `204` dans les deux sens. Le réglage est donc prouvé sur le Worker ; le refus lui-même, sur
 une vraie session, ne l'est pas encore.
 
-**Reste au serveur, et pourquoi :**
+**Tout le reste, le soir du 2026-10-31, à la demande de la propriétaire** (« tout migrer avant les mesures »), sans attendre les
+preuves que cette section réclamait. Le relais n'envoie plus rien au serveur, hors panne d'une lecture :
 
-| Quoi | Pourquoi | Ce qui le débloque |
+| | Variable | Sur panne |
 |---|---|---|
-| Admin à double authentification (31 routes) : `users/*`, `tenants/*`, `api-tokens`, `recycle-bin`… | Un Worker qui ne l'exigerait pas ne se verrait pas : ni erreur, ni repli. Même code, secret présent, mais pas prouvé | Le refus d'une session sans double authentification, vu sur le Worker |
-| `alerts-summary`, `overview-summary`, `pilotage`, `search`, `network-funnel`, `tournament/:id/dashboard`, `stages/:id/{standings,swiss,seeding-preview}`, `overlay/mvp-public`, `overlay/match/:id/stats` | Lisent des mémos à réveil, dont certains à l'antenne | Une vraie note vue sur le pont (`204` sur `/api/signals/notes`) |
-| `admin/twitch/*`, `diffusion/mvp-overlay` | Rotation des jetons Twitch : deux rafraîchissements concurrents peuvent en invalider un | Famille des services externes |
-| `admin/instagram/*`, `admin/tiktok/*`, `documents` | Retours OAuth et Drive | Famille des services externes |
-| Exports lourds (`users/export`, `teams/export`, `tenants/:id/export`, `export-results`, `player/data-export`) | Mémoire : 128 Mo par exemplaire, une saturation couperait les écritures du bot à côté | Une mesure |
-| `/api/og/*` | Même raison : génération d'images | Une mesure |
-| `team-openings/contact`, `teams/free-players`, invitations par jeton | Coordonnées, ou jeton à deviner, protégés par une limite de fréquence qui s'affaiblit sur le Worker | Limites partagées |
-| `player/library/*` | Fermée, et certains GET écrivent (appartement, duels, paquet hebdomadaire) | À son ouverture, ou avec les écritures |
-| `caster/me`, `caster/briefing/:id` | Créent une fiche sur un GET | Avec les écritures |
-| `/api/matches/*` (draft en direct, feuilles) | Lectures et écritures mêlées, en direct | Avec les écritures |
+| Lectures, toutes les routes | `API_WORKER_ROUTES` | Rejouées sur le serveur |
+| GET qui consomment : retours OAuth, jetons à usage unique, désabonnement, rappels, Library | `API_WORKER_UNREPLAYABLE_READS` | Erreur |
+| Écritures, toutes les routes | `API_WORKER_WRITE_ROUTES` (`/api/*`) | Erreur |
+
+Les 28 tâches planifiées tournent sur le Worker de l'API (site à `CRONS_ENABLED=0`, API à `1`, ~3 min sans tâche, aucun chevauchement).
+Le navigateur appelle `/api/public/*` sur le site (variable `NEXT_PUBLIC_API_REMOTE_PREFIXES` retirée, valeur `/api/public/` pour revenir).
+Temps de calcul porté à 120 s par requête (`limits.cpu_ms`) : une écriture ne se rejoue pas.
+
+**Corrigé avant de bouger :**
+
+- **Limites de fréquence partagées** (`applySharedRateLimit`, `shared: true`) : connexion, captcha, formulaires, demandes, coordonnées, toutes les routes
+  à jeton. Comptées aussi en base (`consume_rate_limit`), une requête de plus par appel, et en panne la base laisse passer. L'inscription garde 5 par
+  heure en mémoire et 15 en base : la base ne rend pas une tentative. **Les autres limites restent par exemplaire**, donc plus larges au total.
+- **Quatre tâches lancées sans attendre** (alerte Discord d'une demande de scrim, e-mail d'arrivée dans une équipe) : `runInBackground`.
+
+**Accepté :** dix sites font un DELETE puis un INSERT sur la même table (`final_rankings`, `games`, `match_participants`, `tournament_maps`,
+`league_standings`, `notification_prefs`…) : deux requêtes qui se suivent, une fenêtre de quelques millisecondes, comme sur le serveur. Un Worker
+coupe une requête bien moins vite que ça : 120 s de calcul, et 30 s après la déconnexion du client.
+
+**Pas prouvé, à lire dans les journaux au fil du trafic réel :**
+
+- une vraie session sur les écritures et les routes staff, hors `/api/admin/me` et le bot ;
+- le refus d'une session sans double authentification : le réglage est contrôlé à chaque déploiement, pas le refus ;
+- une vraie note du serveur ou du Worker sur le pont ;
+- e-mails, posts Discord, envoi d'événements au bot, régénération de page, depuis le Worker ;
+- **webhooks signés** (Twitch EventSub, HelloAsso) : la signature se vérifie sur le corps brut, jamais vue sur le Worker. Un Twitch qui reçoit des refus répétés finit par révoquer l'abonnement ;
+- mémoire : une saturation couperait aussi ce qui tourne à côté (exports, images de partage, envois).
+
+**Ce qui passe encore par le serveur :** les appels directs à `api.owwomenscup.fr` (API publique de tiers, webhooks qui visent ce nom, pont), et le repli
+des lectures. Pour éteindre Lightsail : une route Worker sur ce nom, `API_PROXY_ORIGIN` et le pont à revoir (le repli et les notes viseraient le Worker
+lui-même), retirer le pont, puis attendre deux semaines. **Pas fait : changement de DNS, à décider une fois les journaux lus.**
+
+**Découvert :** `/api/graphql` répondait 500 sur le serveur, un défaut qui lui est propre ; il répond sur le Worker.
 
 **Piège d'OpenNext.** Il change un `stale-while-revalidate` sans valeur en `=2592000` (30 jours), que
 les navigateurs appliquent aussi. Corrigé sur les cinq routes concernées, sans effet sur le serveur.
@@ -467,10 +491,7 @@ le demande ; l'envoi direct vers R2 réglerait aussi ce cas.
 secret du relais ; `cf` n'expose pas les statistiques), et le lien entre exemplaires des
 signaux. Les tâches planifiées n'ont pas tourné sur le Worker.
 
-**Appels directs.** Le navigateur pour `/api/public/*` et les tâches planifiées du site
-appellent `api.owwomenscup.fr` sans passer par le relais. Ils ne basculeront pas avec
-lui : il faudra une route Worker sur ce nom, à la fin. À la bascule des tâches,
-`CRONS_ENABLED` passe à 0 sur le site et à 1 sur l'API au même moment.
+**Appels directs.** Voir plus haut : seuls les appels qui visent `api.owwomenscup.fr` restent sur le serveur.
 
 **Sécurité :** sans Caddy, `x-nf-client-connection-ip` se falsifiait (la limite de
 fréquence sautait en changeant l'en-tête, constaté) ; l'enveloppe le corrige. OpenNext
