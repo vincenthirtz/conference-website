@@ -194,7 +194,7 @@ prouvent qu'elles tournent, pas ce qu'elles feraient sur de vraies données.
 
 | Travail | Taille | Bloquant ? |
 |---|---|---|
-| Cache des réponses `s-maxage` dans le Worker, que CloudFront assure aujourd'hui | 0,5 j | Oui, avant d'élargir : sans lui, chaque lecture interroge la base |
+| Fusionner `worker-phase2` dans `main` et déployer le Worker depuis `main` | 0,5 j | Oui, avant d'élargir : un correctif sur `main` n'atteint pas le Worker |
 | Bascule des familles suivantes derrière le relais, avec observation | 1 à 2 j | Accord de la propriétaire avant chaque famille |
 | Limites de fréquence partagées (132 appels, synchrones) | 0,5 à 1 j | Pas pour une première famille en lecture. À trancher avant les familles sensibles (connexion, captcha, formulaires), avec le nombre d'exemplaires observé |
 
@@ -232,10 +232,42 @@ Constaté en production, sur la vraie base et avec les vrais secrets :
 - Aucun repli sur 20 min, aucune erreur dans les journaux du Worker.
 - Sans cache des deux côtés, le Worker n'est pas plus lent : 128 à 301 ms contre 184 à
   347 ms. Démarrage à froid vu jusqu'à ~1 s.
-- **Le cache manque** : CloudFront sert ces routes depuis son cache (~10 ms), le Worker
-  interroge la base à chaque lecture (50 à 450 ms). Sans gravité à ce volume, à corriger
-  avant d'élargir. Clé de cache à reprendre avec soin : ne jamais mettre en cache une
-  requête portant `Authorization` ou un cookie.
+- Le cache de CloudFront manquait : le Worker interrogeait la base à chaque lecture (50 à
+  450 ms). Corrigé le jour même, voir ci-dessous.
+
+**Cache des réponses, 2026-10-31** (`worker/app.ts`, `worker/edgeRules.ts`). Cloudflare a deux
+outils, mesurés tous deux en production, Worker chaud :
+
+| | En cache | À construire | Sans cache |
+|---|---|---|---|
+| Workers Caching | 33 ms | **~1 100 ms** | 82 à 137 ms |
+| API de cache (retenue) | 28 ms | 94 à 137 ms | 82 à 134 ms |
+
+Workers Caching consulte un centre de données supérieur à chaque réponse absente, et sa clé
+ignore les cookies et `Authorization`. Il vise un gros trafic mondial : ici, où une route peut
+être lue toutes les dix minutes avec un cache de cinq, il serait plus lent qu'aujourd'hui.
+
+Règles, testées dans `apiWorkerCache.test.ts` et vérifiées en production :
+
+- **Ce qui entre :** un GET anonyme. Une session, un jeton, une clé ou un espace (`cookie`,
+  `authorization`, `x-api-key`, `x-tenant-id`) ne lisent ni n'écrivent.
+- **Familles jamais en cache :** les mêmes que les comportements `Managed-CachingDisabled` de
+  CloudFront (`/api/bot/`, `/api/admin/`, `/api/auth/`, `/api/twitch/`, `/api/onboard/`,
+  `/api/helloasso/`, `/api/webhooks/`, `/api/cron/`, `/api/invitations/`, `/api/cast/`,
+  `/api/caster/`). Certaines de leurs routes se disent publiques alors que leur réponse dépend
+  de l'appelant : se fier à `Cache-Control` servirait les données d'un espace à un autre.
+- **Ce qui reste :** un 200 avec `s-maxage`, sans `private`, `no-store`, `no-cache` ni cookie.
+- **Clé :** l'hôte de la visiteuse, le chemin et la query, aucun en-tête.
+- **Durée :** `s-maxage`, vérifiée sur une route à 60 s (encore en cache à 43 s, plus à 68 s).
+- **Panne :** cache illisible, la lecture passe sans lui ; écriture refusée, la réponse part quand
+  même. Une trace reste dans les journaux dans les deux cas.
+- `x-owwc-cache: HIT|MISS` dit d'où vient une réponse.
+
+**Différences avec CloudFront, assumées :** une requête avec session n'est jamais servie depuis le
+cache, là où CloudFront lui sert le cache anonyme : plus de lectures en base pour les joueuses
+connectées, à mesurer quand leurs familles basculeront. `stale-while-revalidate` n'est pas repris :
+après expiration, une visiteuse attend ~100 ms au lieu de recevoir l'ancienne réponse. Le cache est
+propre à chaque centre de données, et un déploiement ne le vide pas (comme CloudFront).
 
 **Pas encore mesuré :** temps de calcul et mémoire par requête (`invocation_logs` reste coupé,
 il garderait le secret du relais ; `cf` n'expose pas les statistiques), et le lien entre
