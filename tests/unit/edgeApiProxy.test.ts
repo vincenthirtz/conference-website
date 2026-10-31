@@ -237,9 +237,25 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
       '/api/teams/search-players',
       `/api/teams/matches/${UUID}/lineup`,
       `/api/teams/scrim-plannings/${UUID}/suggest`,
+      '/api/overlay/alerts',
+      '/api/overlay/day',
+      '/api/overlay/donations',
+      '/api/overlay/scrim-result',
+      '/api/overlay/scrims',
+      '/api/overlay/standings',
+      `/api/overlay/match/${UUID}`,
+      '/api/overlay/match/next',
+      '/api/overlay/tcg/un-jeton',
     ]) {
       expect(servedByApiWorker('GET', path, routes)).toBe(true);
     }
+  });
+
+  it('le signal de présence des overlays part sans repli', () => {
+    const writes = parseProxyPrefixes(config.vars.API_WORKER_WRITE_ROUTES);
+    expect(finalAtApiWorker('POST', '/api/overlay/heartbeat', writes, [])).toBe(
+      true
+    );
   });
 
   it('les lectures joueuses ne couvrent pas leurs écritures', () => {
@@ -315,7 +331,10 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     `/api/matches/${UUID}`,
     `/api/matches/${UUID}/games`,
     `/api/matches/${UUID}/drafts/1`,
-    `/api/overlay/match/${UUID}`,
+    // Lisent des mémos à l'antenne : ils attendent la preuve du pont des signaux.
+    '/api/overlay/mvp-public',
+    `/api/overlay/match/${UUID}/stats`,
+    '/api/caster/me',
     '/api/admin/alerts-summary',
     // Exige la double authentification : un Worker qui l'oublierait ne se verrait pas.
     '/api/admin/users/manage',
