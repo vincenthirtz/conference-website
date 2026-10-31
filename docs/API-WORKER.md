@@ -427,6 +427,13 @@ tort est rejoué et comparé. Aucune écriture admin ne bouge. Une liste exacte 
 variable : `API_WORKER_SERVER_ONLY` liste ce qui reste au serveur, et l'emporte. Dans cette liste, `:id` couvre n'importe quel segment
 (`anyId`) : passer à côté enverrait au Worker ce qui doit rester au serveur.
 
+**Contrôle à chaque déploiement** (`scripts/worker-routes-check.mjs`, sans compte ni écriture en base). Il lit
+`wrangler.jsonc` et vérifie sur le vrai site : chaque route au bon endroit et au même statut que le serveur, chaque refus,
+le rejeu d'un faux jeton, les écritures là où elles doivent être, le pont dans les deux sens, et les mêmes réglages des deux côtés
+(`/api/health` avec `CRON_SECRET` : double authentification exigée, comptes exemptés, pont branché ; des états et un nombre,
+jamais une valeur). **Ce qu'il ne prouve pas :** une vraie session (le trafic réel le fait, dans les journaux), et qu'une vraie
+écriture du serveur note bien le pont (un `204` hors contrôle le prouvera). Une note `deploy.check` reste dans l'objet : aucun mémo ne la lit.
+
 **Reste au serveur, et pourquoi :**
 
 | Quoi | Pourquoi | Ce qui le débloque |

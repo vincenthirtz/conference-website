@@ -127,3 +127,10 @@ jobs:
         run: |
           sleep 15
           node scripts/cloudflare-check.mjs https://owwomenscup.fr
+
+      # Chaque route au bon endroit, le pont des signaux dans les deux sens, les mêmes réglages
+      # sur le serveur et le Worker. N'écrit rien en base, n'affiche aucun secret.
+      - name: Contrôle du relais
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: node scripts/worker-routes-check.mjs
