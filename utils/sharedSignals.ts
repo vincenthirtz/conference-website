@@ -14,16 +14,12 @@
 // AUJOURD'HUI (aucun backend) : une table en mémoire du processus, comportement
 // identique aux variables qu'elle remplace.
 //
-// PHASE 2 : `setSharedSignalBackend(backendDurableObjectOuKv)`. L'interface reste
-// SYNCHRONE, alors qu'un Durable Object ou KV ne l'est pas, parce que ses
-// lecteurs le sont (`memo.get`, `memo.ticket`, `memo.set`, une quinzaine de sites,
-// dont des `.invalidate` passés en écouteurs). Un backend partagé garde donc un
-// instantané local :
-//   - `read` répond depuis l'instantané, que le Worker recharge en tête de chaque
-//     requête et de chaque passage planifié ;
-//   - `note` met l'instantané à jour et envoie la note par `runInBackground`,
-//     regroupée par requête (une écriture de match note plusieurs signaux, un par
-//     mémo abonné).
+// SUR LE WORKER DE L'API : un Durable Object (worker/sharedSignals.ts), posé sur
+// `globalThis` parce que le Worker est construit à part du code de Next et n'a pas
+// accès à ce module-ci. L'interface reste SYNCHRONE, alors qu'un Durable Object ne
+// l'est pas, parce que ses lecteurs le sont (`memo.get`, `memo.ticket`, `memo.set`,
+// une quinzaine de sites, dont des `.invalidate` passés en écouteurs). Le backend
+// garde donc un instantané local, rechargé en tête de requête.
 // Le prix : une note peut n'être vue qu'au passage suivant. Une note perdue
 // retombe sur la fenêtre de sûreté, comme une écriture faite en SQL à la main.
 //
@@ -73,6 +69,15 @@ export function setSharedSignalBackend(next: SharedSignalBackend | null): void {
   backend = next ?? memoryBackend;
 }
 
+const GLOBAL_BACKEND = Symbol.for('owwc.sharedSignalBackend');
+
+function currentBackend(): SharedSignalBackend {
+  const installed = (globalThis as Record<symbol, unknown>)[GLOBAL_BACKEND] as
+    | SharedSignalBackend
+    | undefined;
+  return installed ?? backend;
+}
+
 /**
  * Note que l'écriture `name` a eu lieu. Ne lève jamais : l'écriture annoncée est
  * déjà faite, et un lecteur non réveillé retombe sur sa fenêtre de sûreté.
@@ -82,7 +87,7 @@ export function noteSharedSignal(
   atMs: number = Date.now()
 ): void {
   try {
-    backend.note(name, atMs);
+    currentBackend().note(name, atMs);
   } catch (err) {
     logger.error(`[sharedSignals] ${name}`, err);
   }
@@ -90,7 +95,7 @@ export function noteSharedSignal(
 
 /** État du signal `name`, tel que cet exemplaire le connaît. */
 export function readSharedSignal(name: string): SharedSignal {
-  return backend.read(name);
+  return currentBackend().read(name);
 }
 
 /** Oublie tous les signaux et retire le backend. Usage strictement test. */

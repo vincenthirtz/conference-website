@@ -13,10 +13,11 @@
 // différence près — une erreur est TOUJOURS journalisée, au lieu de finir en
 // rejet non géré.
 //
-// PHASE 2 : `setBackgroundRunner((p) => getCloudflareContext().ctx.waitUntil(p))`.
-// Le runner est appelé AU MOMENT de chaque `runInBackground` : c'est ce qui
-// lui fait trouver le contexte de LA requête en cours (OpenNext le range dans
-// un AsyncLocalStorage par requête). Ne jamais capturer un `ctx` au démarrage.
+// SUR UN WORKER : aucun réglage. OpenNext expose le contexte de LA requête en
+// cours sur `globalThis` (un AsyncLocalStorage par requête), lu ici à CHAQUE
+// appel : ne jamais capturer un `ctx` au démarrage. Sur Node, il n'existe pas.
+// Mesuré sur le Worker construit : sans ce `waitUntil`, rien ne tourne après la
+// réponse, pas même le premier `fetch`.
 //
 // Garde-fou : tests/unit/backgroundTasksGuard.test.ts refuse tout nouveau
 // `void appel(…)` ou `appel(…).catch(…)` non attendu.
@@ -26,6 +27,16 @@ import { logger } from './logger';
 type BackgroundRunner = (task: Promise<unknown>) => void;
 
 let runner: BackgroundRunner | null = null;
+
+const CLOUDFLARE_CONTEXT = Symbol.for('__cloudflare-context__');
+
+function workerWaitUntil(): BackgroundRunner | null {
+  const context = (globalThis as Record<symbol, unknown>)[CLOUDFLARE_CONTEXT] as
+    | { ctx?: { waitUntil(task: Promise<unknown>): void } }
+    | undefined;
+  const ctx = context?.ctx;
+  return ctx ? (task) => ctx.waitUntil(task) : null;
+}
 
 /** Branche (ou retire, avec `null`) le prolongateur de vie des tâches. */
 export function setBackgroundRunner(next: BackgroundRunner | null): void {
@@ -52,9 +63,10 @@ export function runInBackground(
   const guarded = Promise.resolve(promise).catch((err: unknown) => {
     logger.error(`[background] ${label}`, err);
   });
-  if (!runner) return;
+  const run = runner ?? workerWaitUntil();
+  if (!run) return;
   try {
-    runner(guarded);
+    run(guarded);
   } catch (err) {
     logger.error(`[background] ${label} (runner)`, err);
   }
