@@ -68,9 +68,9 @@ seulement avec le secret partagé, ou adresse vue par CloudFront —
 `deploy/Caddyfile.tmpl`). Dans un Worker, cette protection devra être refaite
 avec `cf-connecting-ip`.
 
-**À vérifier avant** : que la clé Brevo n'impose pas une liste d'adresses IP
-autorisées (le serveur actuel a une IP fixe, 51.21.73.146 ; un Worker n'en a
-pas).
+**Brevo, vérifié le 2026-10-31** : le blocage des adresses IP non autorisées est
+désactivé pour les clés API et SMTP. Un Worker, qui n'a pas d'IP fixe contrairement
+au serveur actuel (51.21.73.146), peut donc envoyer. À laisser désactivé.
 
 ## Trois options pour le rappel du 2026-11-11
 
