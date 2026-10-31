@@ -58,9 +58,9 @@
     // GET qui consomment : au Worker, sans repli (retour OAuth, jeton à usage unique, rappel marqué).
     // Rejoués, ils échoueraient ou perdraient ce que le premier passage a consommé.
     "API_WORKER_UNREPLAYABLE_READS": "/api/bot/v1/reminders,/api/auth/battlenet/callback,/api/auth/twitch/callback,/api/twitch/broadcaster-callback,/api/twitch/oauth-callback,/api/onboard/discord-callback,/api/onboard/verify-email,/api/onboard/secrets/*,/api/public/newsletter/confirm,/api/email/unsubscribe,/api/admin/instagram/callback,/api/admin/tiktok/callback,/api/player/library/*",
-    // « 1 » depuis la bascule (2026-10-28) : les tâches planifiées tournent
-    // ici, plus chez Netlify. « 0 » coupe tout (retour arrière, docs/CLOUDFLARE.md).
-    "CRONS_ENABLED": "1",
+    // « 0 » depuis le 2026-10-31 : les tâches planifiées tournent sur le Worker de l'API, qui est
+    // passé à « 1 » au même moment. Jamais les deux ensemble (retour arrière : l'inverse).
+    "CRONS_ENABLED": "0",
     // Double authentification du staff (utils/staffMfa.ts) : « true » = toute
     // page admin exige le second facteur. À poser EN MÊME TEMPS que la même
     // variable dans l'API (/etc/conference-api/api.env), qui protège les

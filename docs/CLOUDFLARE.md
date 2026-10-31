@@ -35,8 +35,9 @@ deux jours.
 - **Relais `/api/*`** : même logique que l'Edge Function
   (`utils/edgeApiProxy.ts`), `/api/internal/*` servi par le Worker.
 - **Tâches planifiées** : un seul déclencheur chaque minute, qui appelle
-  l'API pour les tâches dues (`cloudflare/crons.ts`, seule source depuis la
-  bascule). `CRONS_ENABLED` à `0` (wrangler.jsonc) les coupe toutes.
+  l'API pour les tâches dues. Depuis le 2026-10-31, elles tournent sur le Worker de
+  l'API (`worker/crons.ts` de conference-api) : ici, `CRONS_ENABLED` est à `0`, et
+  `cloudflare/crons.ts` ne sert plus qu'au retour arrière (l'inverse des deux réglages).
 - **En-têtes** : ceux de netlify.toml sont repris dans `cloudflare/_headers`,
   sauf `X-Frame-Options: ALLOW-FROM …` (ignoré par les navigateurs ;
   l'encadrement est réglé par la CSP de `proxy.ts`).
