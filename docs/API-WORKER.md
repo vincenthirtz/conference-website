@@ -134,14 +134,8 @@ privées serait moins strict qu'aujourd'hui.
 
 **Lot 8.** Le fichier ne traverse plus l'API : elle ouvre la session, le navigateur
 dépose chez Google, elle relit le résultat. Réduit au Drive, seul envoi qui menaçait
-vraiment les 128 Mo d'un Worker (25 Mo en base64 : près de 110 Mo). Les preuves de
-match (10 Mo) et les vidéos d'alerte (8 Mo) restent en base64, soit 30 à 45 Mo par
-envoi (estimation) : à mesurer en phase 2 plutôt que d'ajouter un envoi direct vers
-R2 et ses règles CORS sans besoin prouvé.
-
-**À vérifier en phase 2, sans lot dédié** : le flux de
-`pages/api/admin/documents/download.ts` (`node:stream`), le point d'entrée principal
-de `cheerio`, `qrcode`, `process.memoryUsage()` dans `/api/health`.
+vraiment les 128 Mo d'un Worker. Les preuves de match et les vidéos d'alerte restent
+en base64 ; le coût mémoire mesuré est plus haut que prévu (voir phase 2).
 
 **Piège de la synchro.** `sync:api` copie tout fichier importé par le site qui
 existe aussi dans l'API. Un fichier créé dans l'API sous le nom d'un fichier
@@ -149,6 +143,53 @@ propre au site écrase donc ce dernier : `utils/webPush.ts` (navigateur côté s
 envoi côté API) a bloqué le robot et la CI le 2026-10-30. Le fichier du site
 s'appelle désormais `utils/webPushClient.ts`.
 
-Phase 2 (après la phase 1) : Worker OpenNext de l'API, limites de fréquence
-partagées (`cf-connecting-ip`), tâches planifiées dans le Worker de l'API,
-bascule par familles de routes derrière le relais du site.
+## Phase 2 : le Worker de l'API
+
+Branche `worker-phase2` de conference-api, **rien de déployé**.
+
+**2026-10-31 : mesure, réponse oui.** L'API se construit pour un Worker, et les 718
+routes se chargent dans workerd en local, avec une base factice (ce qui prouve
+qu'elles démarrent, pas tous leurs chemins).
+
+| | Mesuré (build Linux) | Limite |
+|---|---|---|
+| Script non compressé | 25,13 Mio | 64 Mio |
+| Script gzip | 5,04 Mio | |
+| Démarrage (`wrangler check startup`) | 26 à 51 ms | 1 s |
+| Mémoire en plus, corps de 9,4 Mo | +65 Mo | 128 Mo |
+| Mémoire en plus, corps de 12,6 Mo | +86 Mo | 128 Mo |
+| Mémoire en plus, 3 corps de 12,6 Mo à la fois | +277 à 319 Mo | 128 Mo |
+
+La mémoire est un majorant (pic de workerd au-dessus du repos) : seule la production
+donnera le vrai chiffre. Un envoi en base64 tient, deux à la fois sur un même
+exemplaire peut-être pas. L'envoi direct vers R2 reste la parade si l'essai réel
+échoue. Caddy plafonne déjà tout corps à 10 Mo (`deploy/Caddyfile.tmpl`) : aujourd'hui,
+un fichier au-delà d'environ 7,5 Mo est refusé, même là où la route annonce 8 ou 10 Mo.
+
+Le flux de `documents/download`, `cheerio`, `qrcode`, `node:dns`, `node:crypto`
+(`scrypt` compris) fonctionnent sur workerd. `process.memoryUsage()` y rend 0, sans
+gravité. `next/og` exige une retouche d'OpenNext avant son build
+(`scripts/cloudflare/patch-opennext.mjs`), à signaler en amont.
+
+**Reste à faire (estimations) :**
+
+| Travail | Taille |
+|---|---|
+| Enveloppe du Worker à la place de Caddy : adresse du client, en-têtes falsifiables retirés, erreurs en JSON, CORS, HSTS, plafond de corps | 1 j |
+| `runInBackground` branché sur `waitUntil` | 1 h |
+| Les 28 tâches dans `scheduled()` du Worker de l'API, coupure incluse | 0,5 j |
+| Mémoire partagée de `sharedSignals` (KV ou Durable Object) | 0,5 j |
+| Limites de fréquence partagées (132 appels, synchrones) ; en mémoire possible à la bascule, plus faible | 0,5 à 1 j |
+| Déploiement et secrets | 0,5 à 1 j |
+| Bascule par familles derrière le relais, avec observation | 1 à 2 j |
+
+**Sécurité :** sans Caddy, `x-nf-client-connection-ip` se falsifie (la limite de
+fréquence saute en changeant l'en-tête, constaté). L'enveloppe doit le corriger avant
+toute exposition. OpenNext écrase aussi `x-forwarded-host` : le relais doit porter
+l'hôte dans l'URL.
+
+**Ce que seule la production prouvera :** démarrage et mémoire réels, CPU par route,
+latence vers Supabase, blocages sur adresses partagées (Brevo, Discord, Blizzard),
+coupure des tâches de fond à 30 s, hôte dans OAuth, HelloAsso et CSRF. La dispense de
+double authentification (`STAFF_MFA_EXEMPT_USER_IDS`) reste à reporter dans les
+secrets du Worker.
