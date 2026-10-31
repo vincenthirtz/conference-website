@@ -235,16 +235,47 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     `/api/matches/${UUID}/games`,
     `/api/matches/${UUID}/drafts/1`,
     `/api/overlay/match/${UUID}`,
-    // Lit des mémos que les écritures du serveur ne réveillent pas : 15 min de retard.
     '/api/admin/alerts-summary',
     // Exige la double authentification : un Worker qui l'oublierait ne se verrait pas.
     '/api/admin/users/manage',
     `/api/admin/matches/${UUID}`,
-    '/api/bot/v1/reminders',
     '/api/captcha',
     '/api/internal/revalidate',
   ])('ne couvre jamais %s', (path) => {
     expect(servedByApiWorker('GET', path, routes)).toBe(false);
+  });
+});
+
+describe('le bot sur le Worker de l’API (wrangler.jsonc)', () => {
+  const config = JSON.parse(
+    readFileSync('wrangler.jsonc', 'utf8').replace(/^\s*\/\/.*$/gm, '')
+  );
+  const reads = parseProxyPrefixes(config.vars.API_WORKER_ROUTES);
+  const writes = parseProxyPrefixes(config.vars.API_WORKER_WRITE_ROUTES);
+  const unreplayable = parseProxyPrefixes(
+    config.vars.API_WORKER_UNREPLAYABLE_READS
+  );
+  const final = (method: string, path: string) =>
+    finalAtApiWorker(method, path, writes, unreplayable);
+
+  // Audit du 2026-10-31 : le seul GET du bot qui consomme. Rejoué après une panne, il
+  // rendrait vide ce que le premier passage a marqué « envoyé » : le rappel serait perdu.
+  it('les rappels partent sans repli', () => {
+    expect(final('GET', '/api/bot/v1/reminders')).toBe(true);
+  });
+
+  it.each([
+    '/api/bot/v1/role-sync/snapshot',
+    '/api/bot/v1/tenants/all-configs',
+    `/api/bot/v1/matches/${UUID}`,
+  ])('la lecture %s garde son repli', (path) => {
+    expect(final('GET', path)).toBe(false);
+    expect(servedByApiWorker('GET', path, reads)).toBe(true);
+  });
+
+  it('les routes historiques du bot restent au serveur', () => {
+    expect(final('POST', '/api/news')).toBe(false);
+    expect(final('POST', '/api/support/ticket')).toBe(false);
   });
 });
 
