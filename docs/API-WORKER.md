@@ -433,6 +433,9 @@ le rejeu d'un faux jeton, les écritures là où elles doivent être, le pont da
 (`/api/health` avec `CRON_SECRET` : double authentification exigée, comptes exemptés, pont branché ; des états et un nombre,
 jamais une valeur). **Ce qu'il ne prouve pas :** une vraie session (le trafic réel le fait, dans les journaux), et qu'une vraie
 écriture du serveur note bien le pont (un `204` hors contrôle le prouvera). Une note `deploy.check` reste dans l'objet : aucun mémo ne la lit.
+Premier passage le 2026-10-31 (site 1add2b537, API 9345dd5) : tout conforme. Double authentification exigée des deux côtés, même
+nombre de comptes exemptés, pont branché et `204` dans les deux sens. Le réglage est donc prouvé sur le Worker ; le refus lui-même, sur
+une vraie session, ne l'est pas encore.
 
 **Reste au serveur, et pourquoi :**
 
