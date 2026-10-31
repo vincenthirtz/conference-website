@@ -54,7 +54,7 @@
     "API_WORKER_SERVER_ONLY": "",
     // Écritures servies par le Worker de l'API, sans repli : une écriture ne se rejoue pas.
     // Le chemin du pont des signaux est reçu par le Worker lui-même, avec CRON_SECRET.
-    "API_WORKER_WRITE_ROUTES": "/api/signals/notes,/api/bot/v1/*,/api/overlay/heartbeat",
+    "API_WORKER_WRITE_ROUTES": "/api/signals/notes,/api/bot/v1/*,/api/overlay/heartbeat,/api/player/*,/api/teams,/api/teams/*,/api/demandes/*,/api/tournament/*,/api/admin/news",
     // GET qui consomment : au Worker, sans repli (retour OAuth, jeton à usage unique, rappel marqué).
     // Rejoués, ils échoueraient ou perdraient ce que le premier passage a consommé.
     "API_WORKER_UNREPLAYABLE_READS": "/api/bot/v1/reminders,/api/auth/battlenet/callback,/api/auth/twitch/callback,/api/twitch/broadcaster-callback,/api/twitch/oauth-callback,/api/onboard/discord-callback,/api/onboard/verify-email,/api/onboard/secrets/*,/api/public/newsletter/confirm,/api/email/unsubscribe,/api/admin/instagram/callback,/api/admin/tiktok/callback,/api/player/library/*",

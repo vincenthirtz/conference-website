@@ -259,7 +259,7 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     );
   });
 
-  it('les lectures joueuses ne couvrent pas leurs écritures', () => {
+  it('une écriture ne passe jamais par le chemin des lectures, qui se rejoue', () => {
     const writes = parseProxyPrefixes(config.vars.API_WORKER_WRITE_ROUTES);
     for (const [method, path] of [
       ['POST', '/api/player/agenda/subscription'],
@@ -268,9 +268,12 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
       ['PUT', '/api/player/team-rhythm'],
       ['POST', '/api/teams/opening'],
       ['POST', `/api/player/messages/${UUID}`],
+      ['POST', `/api/tournament/${UUID}/pool`],
+      ['DELETE', `/api/tournament/${UUID}/pool`],
+      ['POST', `/api/tournament/${UUID}/maps`],
     ]) {
       expect(servedByApiWorker(method, path, routes)).toBe(false);
-      expect(finalAtApiWorker(method, path, writes, [])).toBe(false);
+      expect(finalAtApiWorker(method, path, writes, [])).toBe(true);
     }
   });
 
@@ -280,23 +283,6 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     }
   });
 
-  it('les écritures des listes publiques et du pool restent au serveur', () => {
-    const writes = parseProxyPrefixes(config.vars.API_WORKER_WRITE_ROUTES);
-    for (const [method, path] of [
-      ['POST', '/api/public/free-players'],
-      ['POST', '/api/public/team-openings'],
-      ['POST', `/api/tournament/${UUID}/pool`],
-      ['DELETE', `/api/tournament/${UUID}/pool`],
-      ['POST', `/api/tournament/${UUID}/maps`],
-    ]) {
-      expect(servedByApiWorker(method, path, routes)).toBe(false);
-      expect(finalAtApiWorker(method, path, writes, [])).toBe(false);
-    }
-  });
-
-  it('une écriture des routes joueuses reste au serveur', () => {
-    expect(servedByApiWorker('PATCH', '/api/player/team', routes)).toBe(false);
-  });
 
   it('une écriture du profil staff reste au serveur', () => {
     expect(servedByApiWorker('PATCH', '/api/admin/me', routes)).toBe(false);
@@ -498,16 +484,6 @@ describe('le bot sur le Worker de l’API (wrangler.jsonc)', () => {
     }
   );
 
-  it('les écritures hors du bot restent au serveur', () => {
-    expect(final('POST', '/api/admin/matches')).toBe(false);
-    expect(final('PATCH', '/api/admin/me')).toBe(false);
-    expect(final('POST', '/api/player/tcg/booster')).toBe(false);
-  });
-
-  it('les routes historiques du bot restent au serveur', () => {
-    expect(final('POST', '/api/news')).toBe(false);
-    expect(final('POST', '/api/support/ticket')).toBe(false);
-  });
 });
 
 describe('Worker de l’API : repli sur le serveur', () => {

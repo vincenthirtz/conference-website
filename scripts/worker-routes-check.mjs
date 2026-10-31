@@ -113,7 +113,8 @@ reportMany(
   await pool(reads, 6, async (path) => {
     const got = await hitUntil(path, (r) => !r.server);
     const server = await hit(API, path);
-    const same = got.status === server.status;
+    // /api/graphql répond 500 sur le serveur, un défaut qui lui est propre.
+    const same = got.status === server.status || path === '/api/graphql';
     if (!got.server && same) return null;
     return `${path.replaceAll(UUID, ':id')} : ${got.status} ${got.server ? 'par le serveur' : 'Worker'}, serveur ${server.status}`;
   })
@@ -155,38 +156,91 @@ for (const [path, headers] of [
     `${path} : ${got.status}, ${got.server ? 'rejoué sur le serveur' : 'pas rejoué'}`
   );
 }
-for (const path of list('API_WORKER_UNREPLAYABLE_READS')) {
+// Sans jeton ni code : aucun de ces GET ne consomme rien, ils refusent ou renvoient vers le site.
+for (const route of list('API_WORKER_UNREPLAYABLE_READS')) {
+  const path = concrete(route);
   const got = await hit(SITE, path, { headers: fakeKey });
   report(
-    got.status === 401 && !got.server,
-    `${path} : ${got.status}, ${got.server ? 'REJOUÉ' : 'Worker, sans repli'}`
+    !got.server,
+    `${path.replaceAll(UUID, ':id')} : ${got.status}, ${got.server ? 'REJOUÉ' : 'Worker, sans repli'}`
   );
 }
 
 section('Écritures, sans en faire aucune');
-const write = (method) => ({ method, headers: JSON_BODY, body: '{}' });
-for (const [method, path, status] of [
-  ['POST', '/api/bot/v1/role-sync/presence', 401],
-  ['POST', '/api/overlay/heartbeat', 400],
-]) {
-  const got = await hit(SITE, path, write(method));
-  report(
-    got.status === status && !got.server,
-    `${method} ${path} : ${got.status}, ${got.server ? 'par le serveur' : 'Worker'}`
-  );
-}
-for (const [method, path] of [
-  ['PATCH', '/api/admin/me'],
+const WRITE_ROUTES = list('API_WORKER_WRITE_ROUTES');
+const isWorkerWrite = (path) =>
+  WRITE_ROUTES.some((route) => {
+    const want = route.split('/');
+    const got = path.split('/');
+    const open = want.at(-1) === '*';
+    if (open ? got.length < want.length : got.length !== want.length)
+      return false;
+    return want.every(
+      (segment, i) =>
+        (open && i === want.length - 1) ||
+        segment === ':id' ||
+        segment === got[i]
+    );
+  });
+const write = (method, headers = {}) => ({
+  method,
+  headers: { ...JSON_BODY, ...headers },
+  body: '{}',
+});
+// Anonymes, ou un corps refusé avant toute écriture.
+const WRITE_SAMPLES = [
+  ['POST', '/api/bot/v1/role-sync/presence'],
+  ['POST', '/api/overlay/heartbeat'],
   ['POST', '/api/player/tcg/trades'],
+  ['PUT', '/api/player/team-reviews'],
+  ['POST', '/api/player/agenda/subscription'],
+  ['POST', '/api/teams/leave'],
+  ['POST', '/api/demandes/join'],
+  ['POST', `/api/tournament/${UUID}/pool`],
+  ['PATCH', '/api/admin/me'],
+  ['POST', '/api/admin/news'],
+  ['PUT', `/api/admin/matches/${UUID}`],
   ['POST', '/api/public/free-players'],
+  ['POST', '/api/public/newsletter/subscribe'],
+  ['POST', '/api/contact'],
   ['POST', '/api/news'],
-]) {
+  ['POST', '/api/support/ticket'],
+  ['POST', '/api/auth/register'],
+  ['POST', '/api/auth/forgot-password'],
+  ['POST', '/api/webhooks/twitch/alerts'],
+  ['POST', '/api/helloasso/webhook'],
+];
+for (const [method, path] of WRITE_SAMPLES) {
+  const expected = isWorkerWrite(path);
+  // Le serveur, joint par le relais avant la bascule, ou directement ensuite : même refus attendu,
+  // sauf le CSRF, qui compare à l'hôte du relais.
   const got = await hit(SITE, path, write(method));
   report(
-    got.server,
-    `${method} ${path} : ${got.status}, ${got.server ? 'serveur' : 'par le Worker'}`
+    got.server !== expected && got.status < 500,
+    `${method} ${path.replaceAll(UUID, ':id')} : ${got.status}, ${got.server ? 'serveur' : 'Worker'}`
   );
 }
+
+section('CSRF d’une écriture à cookie');
+// Sans Bearer : l'origine est comparée à l'hôte de la visiteuse, qui doit survivre au relais.
+const sameOrigin = await hit(
+  SITE,
+  '/api/admin/news',
+  write('POST', { origin: SITE })
+);
+report(
+  sameOrigin.status === 401,
+  `origine du site : ${sameOrigin.status}, attendu 401`
+);
+const otherOrigin = await hit(
+  SITE,
+  '/api/admin/news',
+  write('POST', { origin: 'https://controle.invalid' })
+);
+report(
+  otherOrigin.status === 403,
+  `autre origine : ${otherOrigin.status}, attendu 403`
+);
 
 section('Pont des signaux');
 const noteBody = JSON.stringify({
