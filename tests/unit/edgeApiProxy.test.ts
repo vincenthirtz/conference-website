@@ -201,8 +201,43 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
       '/api/admin/me',
       '/api/admin/realtime/ticket',
       '/api/admin/diffusion/overlay-presence',
+      '/api/site-settings',
+      '/api/partners',
+      '/api/cast-members',
+      '/api/maps/stats',
+      '/api/games/overwatch/heroes',
+      '/api/scrims',
+      '/api/scrims/ladder',
+      `/api/scrims/${UUID}`,
+      `/api/players/${UUID}/profile`,
+      '/api/public/free-players',
+      '/api/public/team-openings',
+      '/api/public/webhook-events',
+      '/api/docs',
+      '/api/tcg/hero/v1/freja.svg',
+      '/api/twitch-channels',
+      '/api/twitch/live',
+      '/api/blizzard-news',
+      '/api/blizzard-media',
+      '/api/patch-notes',
+      `/api/tournament/${UUID}/maps`,
+      `/api/tournament/${UUID}/pool`,
     ]) {
       expect(servedByApiWorker('GET', path, routes)).toBe(true);
+    }
+  });
+
+  it('les écritures des listes publiques et du pool restent au serveur', () => {
+    const writes = parseProxyPrefixes(config.vars.API_WORKER_WRITE_ROUTES);
+    for (const [method, path] of [
+      ['POST', '/api/public/free-players'],
+      ['POST', '/api/public/team-openings'],
+      ['POST', `/api/tournament/${UUID}/pool`],
+      ['DELETE', `/api/tournament/${UUID}/pool`],
+      ['POST', `/api/tournament/${UUID}/maps`],
+    ]) {
+      expect(servedByApiWorker(method, path, routes)).toBe(false);
+      expect(finalAtApiWorker(method, path, writes, [])).toBe(false);
     }
   });
 
@@ -229,8 +264,13 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     '/api/teams/opening',
     '/api/teams/search-players',
     `/api/teams/matches/${UUID}/lineup`,
-    `/api/tournament/${UUID}/pool`,
-    `/api/tournament/${UUID}/maps`,
+    // Des coordonnées, protégées par une limite de fréquence : à revoir avec les limites partagées.
+    '/api/team-openings/contact',
+    // La génération d'images peut saturer un exemplaire, et couper ce qui tourne à côté.
+    `/api/og/player/${UUID}`,
+    `/api/cast/${UUID}`,
+    '/api/twitch/oauth-callback',
+    '/api/twitch/exchange',
     `/api/matches/${UUID}`,
     `/api/matches/${UUID}/games`,
     `/api/matches/${UUID}/drafts/1`,
