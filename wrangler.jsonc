@@ -45,7 +45,8 @@
     "API_PROXY_PREFIXES": "/api/",
     // Lectures servies par le Worker de l'API, famille par famille, avec repli sur le
     // serveur (docs/API-WORKER.md). Vide = tout au serveur : le retour arrière.
-    "API_WORKER_PREFIXES": "/api/health",
+    // Pas tout /api/public/ : certains de ses GET écrivent (newsletter/confirm).
+    "API_WORKER_PREFIXES": "/api/health,/api/seasonal-logo,/api/leagues,/api/public/tcg/live,/api/public/openapi,/api/public/v1/",
     // « 1 » depuis la bascule (2026-10-28) : les tâches planifiées tournent
     // ici, plus chez Netlify. « 0 » coupe tout (retour arrière, docs/CLOUDFLARE.md).
     "CRONS_ENABLED": "1",
