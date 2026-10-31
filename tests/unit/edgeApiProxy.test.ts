@@ -273,6 +273,19 @@ describe('le bot sur le Worker de l’API (wrangler.jsonc)', () => {
     expect(servedByApiWorker('GET', path, reads)).toBe(true);
   });
 
+  it.each(['POST', 'PATCH', 'PUT', 'DELETE'])(
+    'ses écritures %s partent sans repli : elles ne se rejouent pas',
+    (method) => {
+      expect(final(method, '/api/bot/v1/role-sync/presence')).toBe(true);
+    }
+  );
+
+  it('les écritures hors du bot restent au serveur', () => {
+    expect(final('POST', '/api/admin/matches')).toBe(false);
+    expect(final('PATCH', '/api/admin/me')).toBe(false);
+    expect(final('POST', '/api/player/tcg/booster')).toBe(false);
+  });
+
   it('les routes historiques du bot restent au serveur', () => {
     expect(final('POST', '/api/news')).toBe(false);
     expect(final('POST', '/api/support/ticket')).toBe(false);
