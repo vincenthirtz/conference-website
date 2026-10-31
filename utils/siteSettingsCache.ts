@@ -42,7 +42,7 @@
 // Module PUR (aucune dépendance serveur) : utils/teamRoles.ts, recopié côté
 // site, s'en sert avec le client qu'on lui passe.
 
-import { registerProcessCache } from './processCaches';
+import { canJoinInFlightRead, registerProcessCache } from './processCaches';
 
 export const SITE_SETTING_CACHE_TTL_MS = 60_000;
 
@@ -97,7 +97,7 @@ export async function readSiteSettingCached(
   if (hit && hit.expiresAt > Date.now()) return { ok: true, value: hit.value };
 
   const pending = inFlight.get(tenantId)?.get(key);
-  if (pending) return pending;
+  if (pending && canJoinInFlightRead()) return pending;
 
   const startedAt = generation;
   const p = load()

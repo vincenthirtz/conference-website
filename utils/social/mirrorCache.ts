@@ -26,7 +26,7 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
-import { registerProcessCache } from '@/utils/processCaches';
+import { canJoinInFlightRead, registerProcessCache } from '@/utils/processCaches';
 
 /**
  * TTL des réglages et des comptes connectés du miroir.
@@ -97,7 +97,7 @@ export function createMirrorCache<V>(ttlMs: number): MirrorCache<V> {
       const hit = peek(key);
       if (hit !== undefined) return Promise.resolve({ ok: true, value: hit });
       const pending = inFlight.get(key);
-      if (pending) return pending;
+      if (pending && canJoinInFlightRead()) return pending;
 
       const startedAt = stamp(key);
       const p = fetch()

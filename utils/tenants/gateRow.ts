@@ -33,7 +33,7 @@
 
 import { supabaseAdmin } from '../supabase';
 import { logger } from '../logger';
-import { registerProcessCache } from '../processCaches';
+import { canJoinInFlightRead, registerProcessCache } from '../processCaches';
 
 export const TENANT_GATE_ROW_TTL_MS = 60_000;
 
@@ -105,7 +105,7 @@ export async function loadTenantGateRow(
   if (hit && hit.expiresAt > Date.now()) return { ok: true, row: hit.row };
 
   const pending = inFlight.get(tenantId);
-  if (pending) return pending;
+  if (pending && canJoinInFlightRead()) return pending;
 
   const p = fetchRow(tenantId).finally(() => {
     if (inFlight.get(tenantId) === p) inFlight.delete(tenantId);

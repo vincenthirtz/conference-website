@@ -29,7 +29,8 @@
 
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
-import { registerProcessCache } from './processCaches';
+import { createDormancyMemo } from './dormancyMemo';
+import { canJoinInFlightRead, registerProcessCache } from './processCaches';
 
 export const TENANT_DIRECTORY_TTL_MS = 10 * 60_000;
 
@@ -54,28 +55,25 @@ export type TenantDirectoryLookup =
 type Entry = {
   rows: readonly TenantDirectoryRow[];
   byId: ReadonlyMap<string, TenantDirectoryRow>;
-  expiresAt: number;
 };
 
-let entry: Entry | null = null;
+const DIRECTORY_KEY = 'all';
+const memo = createDormancyMemo<Entry>(
+  'tenant.directory',
+  TENANT_DIRECTORY_TTL_MS
+);
 let inFlight: Promise<TenantDirectoryLookup> | null = null;
-let epoch = 0;
 
-registerProcessCache(() => {
-  epoch += 1;
-  entry = null;
-  inFlight = null;
-});
-
-/** Oublie l'annuaire. Instance courante seulement. */
+/** Oublie l'annuaire, partout (signal partagé). */
 export function invalidateTenantDirectory(): void {
-  epoch += 1;
-  entry = null;
+  memo.invalidate();
   inFlight = null;
 }
 
+registerProcessCache(invalidateTenantDirectory);
+
 async function fetchDirectory(): Promise<TenantDirectoryLookup> {
-  const startedAt = epoch;
+  const ticket = memo.ticket(Date.now());
   if (!supabaseAdmin) return { ok: false, error: 'supabase_admin_unavailable' };
   const { data, error } = await supabaseAdmin
     .from('tenants')
@@ -99,13 +97,7 @@ async function fetchDirectory(): Promise<TenantDirectoryLookup> {
     }));
   const byId = new Map(rows.map((r) => [r.id.toLowerCase(), r]));
 
-  if (rows.length > 0 && startedAt === epoch) {
-    entry = {
-      rows,
-      byId,
-      expiresAt: Date.now() + TENANT_DIRECTORY_TTL_MS,
-    };
-  }
+  if (rows.length > 0) memo.set(DIRECTORY_KEY, { rows, byId }, ticket);
   return { ok: true, rows, byId };
 }
 
@@ -117,16 +109,12 @@ async function fetchDirectory(): Promise<TenantDirectoryLookup> {
 export async function loadTenantDirectory(
   requiredIds: readonly string[] = []
 ): Promise<TenantDirectoryLookup> {
-  const hit = entry;
-  if (
-    hit &&
-    hit.expiresAt > Date.now() &&
-    requiredIds.every((id) => hit.byId.has(id.toLowerCase()))
-  ) {
+  const hit = memo.get(DIRECTORY_KEY, Date.now())?.value;
+  if (hit && requiredIds.every((id) => hit.byId.has(id.toLowerCase()))) {
     return { ok: true, rows: hit.rows, byId: hit.byId };
   }
 
-  if (inFlight) return inFlight;
+  if (inFlight && canJoinInFlightRead()) return inFlight;
   const p = fetchDirectory().finally(() => {
     if (inFlight === p) inFlight = null;
   });

@@ -17,6 +17,19 @@
 
 const resets = new Set<() => void>();
 
+const CLOUDFLARE_CONTEXT = Symbol.for('__cloudflare-context__');
+
+/**
+ * Une requête peut-elle attendre la lecture lancée par une autre plutôt que de faire la
+ * sienne ? Sur Node, oui. Pas sur un Worker : si la requête qui a lancé la lecture se termine
+ * avant elle, Cloudflare abandonne ce qui l'attend, et l'autre requête reste bloquée
+ * (`handle_cross_request_promise_resolution`). Une lecture de trop vaut mieux : la lecture
+ * partagée ne sert qu'en cas d'appels simultanés.
+ */
+export function canJoinInFlightRead(): boolean {
+  return !(globalThis as Record<symbol, unknown>)[CLOUDFLARE_CONTEXT];
+}
+
 /** Inscrit la remise à zéro d'un cache. À appeler au chargement du module. */
 export function registerProcessCache(reset: () => void): void {
   resets.add(reset);

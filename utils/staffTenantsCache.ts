@@ -35,7 +35,7 @@
 
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
-import { registerProcessCache } from './processCaches';
+import { canJoinInFlightRead, registerProcessCache } from './processCaches';
 
 export const STAFF_TENANTS_TTL_MS = 60_000;
 const MAX_ENTRIES = 5_000;
@@ -123,7 +123,7 @@ export async function loadStaffTenants(
   if (hit && hit.expiresAt > Date.now()) return { ok: true, rows: hit.rows };
 
   const pending = inFlight.get(staffId);
-  if (pending) return pending;
+  if (pending && canJoinInFlightRead()) return pending;
 
   const p = fetchStaffTenants(staffId).finally(() => {
     if (inFlight.get(staffId) === p) inFlight.delete(staffId);

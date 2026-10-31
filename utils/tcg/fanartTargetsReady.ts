@@ -28,7 +28,7 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { isMissingColumnError } from '@/utils/moderation/missingColumn';
-import { registerProcessCache } from '@/utils/processCaches';
+import { canJoinInFlightRead, registerProcessCache } from '@/utils/processCaches';
 
 /** La colonne sondée ; `target_slug` arrive dans la même transaction. */
 export const FANART_TARGET_KIND_COLUMN = 'target_kind';
@@ -79,7 +79,7 @@ async function probe(): Promise<boolean> {
 export async function fanartTargetsReady(): Promise<boolean> {
   if (known?.ready) return true;
   if (known && Date.now() - known.at < RETRY_AFTER_MS) return false;
-  if (!inflight) {
+  if (!inflight || !canJoinInFlightRead()) {
     inflight = probe().then((ready) => {
       known = { ready, at: Date.now() };
       inflight = null;

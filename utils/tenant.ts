@@ -41,7 +41,7 @@ import type { NextApiRequest } from 'next';
 import type { IncomingMessage } from 'http';
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
-import { registerProcessCache } from './processCaches';
+import { canJoinInFlightRead, registerProcessCache } from './processCaches';
 import {
   tenantHasCapability,
   type TenantPlan,
@@ -254,7 +254,7 @@ export async function resolveGuildTenant(
   }
 
   const pending = guildTenantInFlight.get(guildId);
-  if (pending) return pending;
+  if (pending && canJoinInFlightRead()) return pending;
 
   const startedAt = guildTenantGeneration;
   const p = fetchGuildTenant(guildId)

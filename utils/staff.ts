@@ -27,7 +27,7 @@ import type {
 import type { TenantKind } from './tenantKind';
 
 import { logger } from './logger';
-import { registerProcessCache } from './processCaches';
+import { canJoinInFlightRead, registerProcessCache } from './processCaches';
 import { invalidateStaffTenants } from './staffTenantsCache';
 import {
   aalFromAccessToken,
@@ -155,7 +155,7 @@ function loadStaffRow(userId: string): Promise<StaffRowLookup> {
     return Promise.resolve({ ok: true, row: hit.row });
   }
   const pending = staffInFlight.get(userId);
-  if (pending) return pending;
+  if (pending && canJoinInFlightRead()) return pending;
 
   const p = fetchStaffRow(userId).finally(() => {
     if (staffInFlight.get(userId) === p) staffInFlight.delete(userId);

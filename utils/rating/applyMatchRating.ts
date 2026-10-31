@@ -626,11 +626,74 @@ async function recomputeTeamRatingsFor(
  * rebuildRatings — replay complet
  * ------------------------------------------------------------------------- */
 
+/** PostgREST plafonne une réponse : l'historique se lit par pages. */
+const RATING_PAGE_SIZE = 1_000;
+/** Une URL tient ~200 UUID en dessous des limites de PostgREST. */
+const RATING_DELETE_BATCH = 200;
+
+type RatingRowKey = { id: string; user_id: string };
+type HistoryRowKey = RatingRowKey & { match_id: string };
+
+async function readRatingRowKeys<T>(
+  table: 'player_ratings' | 'player_rating_history',
+  columns: string,
+  tenantId: string
+): Promise<T[] | null> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += RATING_PAGE_SIZE) {
+    const { data, error } = await supabaseAdmin
+      .from(table)
+      .select(columns)
+      .eq('tenant_id', tenantId)
+      .order('id', { ascending: true })
+      .range(from, from + RATING_PAGE_SIZE - 1);
+    if (error) {
+      logger.error(`[rating] rebuild: lecture de ${table}`, error);
+      return null;
+    }
+    rows.push(...((data ?? []) as unknown as T[]));
+    if ((data?.length ?? 0) < RATING_PAGE_SIZE) return rows;
+  }
+}
+
+/** Les lignes présentes avant le rebuild : celles qu'il ne réécrit pas sont à purger. */
+async function readRatingRowsBeforeRebuild(tenantId: string): Promise<{
+  ratings: RatingRowKey[];
+  history: HistoryRowKey[];
+} | null> {
+  const ratings = await readRatingRowKeys<RatingRowKey>(
+    'player_ratings',
+    'id, user_id',
+    tenantId
+  );
+  if (!ratings) return null;
+  const history = await readRatingRowKeys<HistoryRowKey>(
+    'player_rating_history',
+    'id, match_id, user_id',
+    tenantId
+  );
+  return history ? { ratings, history } : null;
+}
+
+/** Best effort : une ligne restée là part au rebuild suivant. */
+async function deleteRatingRows(
+  table: 'player_ratings' | 'player_rating_history',
+  ids: string[]
+): Promise<void> {
+  for (let start = 0; start < ids.length; start += RATING_DELETE_BATCH) {
+    const { error } = await supabaseAdmin
+      .from(table)
+      .delete()
+      .in('id', ids.slice(start, start + RATING_DELETE_BATCH));
+    if (error) logger.error(`[rating] rebuild: purge de ${table}`, error);
+  }
+}
+
 /**
  * Recalcule TOUT le rating du tenant from scratch :
  *   1. Backfill des snapshots manquants (roster courant).
  *   2. computePlayerRatings (replay chronologique complet).
- *   3. DELETE puis INSERT frais de player_rating_history + player_ratings.
+ *   3. Upsert frais de player_rating_history + player_ratings, puis purge du reste.
  *   4. Recalcul team_ratings pour toutes les équipes.
  *   5. display_name / avatar best-effort via auth.admin.getUserById.
  *
@@ -768,23 +831,13 @@ export async function rebuildRatings(
       }
     }
 
-    // 5) Séquence de réécriture : DELETE history + player_ratings, INSERT frais.
-    const { error: delHistErr } = await supabaseAdmin
-      .from('player_rating_history')
-      .delete()
-      .eq('tenant_id', tenantId);
-    if (delHistErr) {
-      logger.error('[rating] rebuild: delete history error', delHistErr);
-      return { players: 0, matches: 0 };
-    }
-    const { error: delRatErr } = await supabaseAdmin
-      .from('player_ratings')
-      .delete()
-      .eq('tenant_id', tenantId);
-    if (delRatErr) {
-      logger.error('[rating] rebuild: delete ratings error', delRatErr);
-      return { players: 0, matches: 0 };
-    }
+    // 5) Réécriture : les lignes fraîches D'ABORD, la purge des périmées ENSUITE. Dans
+    // l'autre ordre, un rebuild coupé entre les deux (un Worker peut l'être, le calcul
+    // ci-dessus fait une requête par joueuse) ou un INSERT en erreur vidait les classements
+    // de l'espace. Coupé maintenant, il laisse au pire de vieilles lignes en plus, que le
+    // rebuild suivant retire.
+    const stale = await readRatingRowsBeforeRebuild(tenantId);
+    if (!stale) return { players: 0, matches: 0 };
 
     const nowIso = new Date().toISOString();
     const ratingInserts = [...ratings.values()].map((s) => ({
@@ -804,15 +857,18 @@ export async function rebuildRatings(
       avatar_url: avatarByUser.get(s.userId) ?? null,
       updated_at: nowIso,
     }));
+    let ratingsWritten = true;
     if (ratingInserts.length > 0) {
       const { error: insRatErr } = await supabaseAdmin
         .from('player_ratings')
-        .insert(ratingInserts);
+        .upsert(ratingInserts, { onConflict: 'tenant_id,user_id' });
       if (insRatErr) {
-        logger.error('[rating] rebuild: insert ratings error', insRatErr);
+        ratingsWritten = false;
+        logger.error('[rating] rebuild: upsert ratings error', insRatErr);
       }
     }
 
+    let historyWritten = true;
     if (history.length > 0) {
       const historyInsert = history.map((r) => ({
         tenant_id: tenantId,
@@ -831,10 +887,30 @@ export async function rebuildRatings(
       }));
       const { error: insHistErr } = await supabaseAdmin
         .from('player_rating_history')
-        .insert(historyInsert);
+        .upsert(historyInsert, { onConflict: 'match_id,user_id' });
       if (insHistErr) {
-        logger.error('[rating] rebuild: insert history error', insHistErr);
+        historyWritten = false;
+        logger.error('[rating] rebuild: upsert history error', insHistErr);
       }
+    }
+
+    // Purge, seulement si les lignes fraîches sont bien là.
+    if (historyWritten) {
+      const freshKeys = new Set(history.map((r) => `${r.matchId}:${r.userId}`));
+      await deleteRatingRows(
+        'player_rating_history',
+        stale.history
+          .filter((row) => !freshKeys.has(`${row.match_id}:${row.user_id}`))
+          .map((row) => row.id)
+      );
+    }
+    if (ratingsWritten) {
+      await deleteRatingRows(
+        'player_ratings',
+        stale.ratings
+          .filter((row) => !ratings.has(row.user_id))
+          .map((row) => row.id)
+      );
     }
 
     // 6) Recalcul team_ratings pour toutes les équipes du tenant.
