@@ -30,7 +30,7 @@
 import { noteSharedSignal, readSharedSignal } from './sharedSignals';
 
 /** Pris au DÉBUT d'une lecture, rendu à `set()` à la fin. */
-export type MemoTicket = { readonly generation: number; readonly atMs: number };
+export type MemoTicket = { readonly generation: string; readonly atMs: number };
 
 export type DormancyMemo<V> = {
   /**
@@ -50,28 +50,33 @@ export type DormancyMemo<V> = {
 /**
  * `signal` nomme le signal partagé du mémo (`utils/sharedSignals.ts`) : stable,
  * et propre à ce que le mémo garde. Deux mémos sous le même nom se réveillent
- * ensemble.
+ * ensemble. `wakeOn` : les signaux d'écriture qui le périment aussi
+ * (`utils/competitionWrites.ts`).
  */
 export function createDormancyMemo<V>(
   signal: string,
-  safetyMs: number
+  safetyMs: number,
+  wakeOn: readonly string[] = []
 ): DormancyMemo<V> {
   const entries = new Map<
     string,
-    { value: V; atMs: number; generation: number }
+    { value: V; atMs: number; generation: string }
   >();
-  const currentGeneration = () => readSharedSignal(signal).version;
+  const watched = [signal, ...wakeOn];
+  const currentGeneration = () =>
+    watched.map((name) => readSharedSignal(name).version).join(':');
 
   return {
     get(key, nowMs) {
       const entry = entries.get(key);
       if (!entry) return undefined;
-      // Écriture notée depuis, horloge qui recule, ou fenêtre écoulée : on relit.
-      if (
-        entry.generation !== currentGeneration() ||
-        nowMs < entry.atMs ||
-        nowMs - entry.atMs >= safetyMs
-      ) {
+      // Écriture notée depuis : tout est périmé, clés d'hier comprises.
+      if (entry.generation !== currentGeneration()) {
+        entries.clear();
+        return undefined;
+      }
+      // Horloge qui recule, ou fenêtre écoulée : on relit.
+      if (nowMs < entry.atMs || nowMs - entry.atMs >= safetyMs) {
         entries.delete(key);
         return undefined;
       }
