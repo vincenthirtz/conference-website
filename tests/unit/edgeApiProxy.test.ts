@@ -259,6 +259,13 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     );
   });
 
+  it('jamais /api/internal/, même avec /api/* en écriture', () => {
+    const writes = parseProxyPrefixes(config.vars.API_WORKER_WRITE_ROUTES);
+    expect(
+      finalAtApiWorker('POST', '/api/internal/revalidate', writes, [])
+    ).toBe(false);
+  });
+
   it('une écriture ne passe jamais par le chemin des lectures, qui se rejoue', () => {
     const writes = parseProxyPrefixes(config.vars.API_WORKER_WRITE_ROUTES);
     for (const [method, path] of [
@@ -386,13 +393,13 @@ describe('les lectures admin sur le Worker (wrangler.jsonc)', () => {
   });
 
   it.each(['POST', 'PUT', 'PATCH', 'DELETE'])(
-    'aucune écriture %s de l’admin ne bouge',
+    'une écriture %s de l’admin part sans repli',
     (method) => {
       for (const path of ['/api/admin/me', `/api/admin/matches/${UUID}`]) {
         expect(servedByApiWorker(method, path, routes, '', serverOnly)).toBe(
           false
         );
-        expect(finalAtApiWorker(method, path, writes, [])).toBe(false);
+        expect(finalAtApiWorker(method, path, writes, [])).toBe(true);
       }
     }
   );
