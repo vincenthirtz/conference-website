@@ -19,7 +19,9 @@
     "binding": "ASSETS"
   },
   "services": [
-    { "binding": "WORKER_SELF_REFERENCE", "service": "owwomenscup" }
+    { "binding": "WORKER_SELF_REFERENCE", "service": "owwomenscup" },
+    // Le Worker de l'API : il doit exister avant tout déploiement de celui-ci.
+    { "binding": "API_WORKER", "service": "owwomenscup-api" }
   ],
   // Cache des pages (ISR) : bucket créé par la CI s'il manque.
   "r2_buckets": [
@@ -41,6 +43,9 @@
   "vars": {
     // Relais vers https://api.owwomenscup.fr (API_PROXY_ORIGIN par défaut).
     "API_PROXY_PREFIXES": "/api/",
+    // Lectures servies par le Worker de l'API, famille par famille, avec repli sur le
+    // serveur (docs/API-WORKER.md). Vide = tout au serveur : le retour arrière.
+    "API_WORKER_PREFIXES": "/api/health",
     // « 1 » depuis la bascule (2026-10-28) : les tâches planifiées tournent
     // ici, plus chez Netlify. « 0 » coupe tout (retour arrière, docs/CLOUDFLARE.md).
     "CRONS_ENABLED": "1",

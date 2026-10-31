@@ -134,6 +134,63 @@ export function matchesProxyPrefix(
   return prefixes.some((p) => pathname.startsWith(p));
 }
 
+/**
+ * Worker de l'API (phase 2, docs/API-WORKER.md) : la liaison du Worker du site vers
+ * `owwomenscup-api`, à la place du serveur pour les préfixes d'API_WORKER_PREFIXES.
+ * Le serveur reste l'amont de tout le reste, et le repli de ceci.
+ */
+export type ApiWorkerBinding = {
+  fetch(url: string, init: RequestInit): Promise<Response>;
+};
+
+/** Au-delà, sans en-têtes de réponse, la lecture repart vers le serveur. */
+export const API_WORKER_TIMEOUT_MS = 8_000;
+
+/**
+ * Cette requête part-elle vers le Worker de l'API ? Lectures seulement, tant que la
+ * bascule se fait famille par famille : une écriture reste au serveur, quel que soit
+ * le préfixe, et seule une lecture peut être rejouée sans risque après une panne.
+ */
+export function servedByApiWorker(
+  method: string,
+  pathname: string,
+  prefixes: readonly string[]
+): boolean {
+  return !methodHasBody(method) && matchesProxyPrefix(pathname, prefixes);
+}
+
+/**
+ * La réponse du Worker de l'API, ou `null` s'il lève, répond 5xx ou tarde : l'appelant
+ * rejoue alors la lecture sur le serveur, et la visiteuse ne voit rien. `onFallback`
+ * laisse une trace, seul signe de la panne.
+ */
+export async function askApiWorker(
+  binding: ApiWorkerBinding,
+  url: string,
+  init: RequestInit,
+  onFallback: (reason: string) => void,
+  timeoutMs: number = API_WORKER_TIMEOUT_MS
+): Promise<Response | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`délai de ${timeoutMs} ms`)),
+      timeoutMs
+    );
+  });
+  try {
+    const response = await Promise.race([binding.fetch(url, init), late]);
+    if (response.status < 500) return response;
+    await response.body?.cancel();
+    onFallback(`statut ${response.status}`);
+  } catch (err) {
+    onFallback(err instanceof Error ? err.message : String(err));
+  } finally {
+    clearTimeout(timer);
+  }
+  return null;
+}
+
 /** URL amont : origine de l'API + chemin + query, sans le fragment. */
 export function buildUpstreamUrl(origin: string, requestUrl: URL): string {
   return origin + requestUrl.pathname + requestUrl.search;

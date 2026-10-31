@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  askApiWorker,
   buildDownstreamHeaders,
   buildUpstreamHeaders,
   buildUpstreamUrl,
@@ -19,10 +20,121 @@ import {
   methodHasBody,
   parseProxyPrefixes,
   resolveEdgeProxyConfig,
+  servedByApiWorker,
   upstreamUnavailableResponse,
 } from '@/utils/edgeApiProxy';
 
 const SECRET = 's3cr3t-edge-value';
+
+describe('Worker de l’API : qui y part', () => {
+  const prefixes = parseProxyPrefixes('/api/health,/api/public/');
+
+  it('les lectures des préfixes listés', () => {
+    expect(servedByApiWorker('GET', '/api/health', prefixes)).toBe(true);
+    expect(servedByApiWorker('HEAD', '/api/public/tcg/live', prefixes)).toBe(
+      true
+    );
+  });
+
+  it('jamais une écriture, même sur un préfixe listé', () => {
+    for (const method of ['POST', 'PUT', 'PATCH', 'DELETE', 'post']) {
+      expect(
+        servedByApiWorker(method, '/api/public/newsletter', prefixes)
+      ).toBe(false);
+    }
+  });
+
+  it('rien hors des préfixes, ni avec une liste vide', () => {
+    expect(servedByApiWorker('GET', '/api/admin/me', prefixes)).toBe(false);
+    expect(
+      servedByApiWorker('GET', '/api/health', parseProxyPrefixes(undefined))
+    ).toBe(false);
+    expect(
+      servedByApiWorker('GET', '/api/health', parseProxyPrefixes(''))
+    ).toBe(false);
+  });
+
+  it('jamais /api/internal, même si un préfixe le couvre', () => {
+    expect(
+      servedByApiWorker(
+        'GET',
+        '/api/internal/revalidate',
+        parseProxyPrefixes('/api/')
+      )
+    ).toBe(false);
+  });
+});
+
+describe('Worker de l’API : repli sur le serveur', () => {
+  const url = 'https://api.owwomenscup.fr/api/health';
+  const init = { method: 'GET' };
+  const ask = (
+    fetch: (url: string, init: RequestInit) => Promise<Response>,
+    timeoutMs?: number
+  ) => {
+    const reasons: string[] = [];
+    return askApiWorker(
+      { fetch },
+      url,
+      init,
+      (reason) => reasons.push(reason),
+      timeoutMs
+    ).then((response) => ({ response, reasons }));
+  };
+
+  it('rend sa réponse telle quelle, sans trace', async () => {
+    const answer = new Response('ok', { status: 200 });
+    const { response, reasons } = await ask(async (calledUrl, calledInit) => {
+      expect(calledUrl).toBe(url);
+      expect(calledInit).toBe(init);
+      return answer;
+    });
+    expect(response).toBe(answer);
+    expect(reasons).toEqual([]);
+  });
+
+  it('rend aussi ses 4xx et ses redirections : ce sont des réponses', async () => {
+    for (const status of [301, 304, 400, 404, 429]) {
+      const { response, reasons } = await ask(
+        async () => new Response(null, { status })
+      );
+      expect(response?.status).toBe(status);
+      expect(reasons).toEqual([]);
+    }
+  });
+
+  it('une 5xx : repli, corps refermé, trace', async () => {
+    let cancelled = false;
+    const body = new ReadableStream({
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const { response, reasons } = await ask(
+      async () => new Response(body, { status: 503 })
+    );
+    expect(response).toBeNull();
+    expect(cancelled).toBe(true);
+    expect(reasons).toEqual(['statut 503']);
+  });
+
+  it('une exception : repli et trace', async () => {
+    const { response, reasons } = await ask(async () => {
+      throw new Error('liaison coupée');
+    });
+    expect(response).toBeNull();
+    expect(reasons).toEqual(['liaison coupée']);
+  });
+
+  it('aucune réponse à temps : repli et trace', async () => {
+    const { response, reasons } = await ask(
+      () => new Promise<Response>(() => {}),
+      5
+    );
+    expect(response).toBeNull();
+    expect(reasons).toEqual(['délai de 5 ms']);
+  });
+});
 
 describe('parseProxyPrefixes', () => {
   it('garde les préfixes /api/ valides, ignore le reste', () => {

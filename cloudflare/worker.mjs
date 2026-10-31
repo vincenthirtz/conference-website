@@ -17,6 +17,8 @@
 //    retour OAuth/HelloAsso, csrfCheck des requêtes à cookie), IP = sortie
 //    Cloudflare (limites de débit partagées). Toléré tant que le Worker n'est
 //    servi que sur *.workers.dev.
+//    Les LECTURES des préfixes d'API_WORKER_PREFIXES vont au Worker de l'API par
+//    sa liaison, avec repli sur le serveur (docs/API-WORKER.md, phase 2).
 //
 // 2) TÂCHES PLANIFIÉES : un Cron Trigger chaque minute → cloudflare/crons.ts.
 //    Rien ne part sans `CRONS_ENABLED=1` (wrangler.jsonc) ET CRON_SECRET.
@@ -36,6 +38,7 @@
 
 import handler from '../.open-next/worker.js';
 import {
+  askApiWorker,
   buildDownstreamHeaders,
   buildUpstreamHeaders,
   buildUpstreamUrl,
@@ -45,7 +48,9 @@ import {
   isNullBodyStatus,
   matchesProxyPrefix,
   methodHasBody,
+  parseProxyPrefixes,
   resolveEdgeProxyConfig,
+  servedByApiWorker,
   upstreamUnavailableResponse,
 } from '../utils/edgeApiProxy.ts';
 import { dueCronJobs, resolveCronApiBaseUrl, runCronJob } from './crons.ts';
@@ -64,7 +69,7 @@ const NO_SECRET_PLACEHOLDER = 'sans-secret';
 
 let warnedNoSecret = false;
 
-async function relay(request, url, config, trusted) {
+async function relay(request, url, config, trusted, env) {
   const headers = buildUpstreamHeaders(request.headers, {
     secret: config.secret,
     clientIp: request.headers.get('cf-connecting-ip') ?? undefined,
@@ -87,15 +92,32 @@ async function relay(request, url, config, trusted) {
   const init = { method: request.method, headers, redirect: 'manual' };
   if (methodHasBody(request.method) && request.body) init.body = request.body;
 
-  let upstream;
-  try {
-    upstream = await fetch(buildUpstreamUrl(config.origin, url), init);
-  } catch (err) {
-    console.error('[relais] amont injoignable', {
-      path: url.pathname,
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return upstreamUnavailableResponse();
+  const target = buildUpstreamUrl(config.origin, url);
+  const viaWorker =
+    env.API_WORKER &&
+    servedByApiWorker(
+      request.method,
+      url.pathname,
+      parseProxyPrefixes(env.API_WORKER_PREFIXES)
+    );
+  let upstream = viaWorker
+    ? await askApiWorker(env.API_WORKER, target, init, (reason) => {
+        console.error('[relais] Worker de l’API : repli sur le serveur', {
+          path: url.pathname,
+          reason,
+        });
+      })
+    : null;
+  if (!upstream) {
+    try {
+      upstream = await fetch(target, init);
+    } catch (err) {
+      console.error('[relais] amont injoignable', {
+        path: url.pathname,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return upstreamUnavailableResponse();
+    }
   }
 
   return new Response(
@@ -152,7 +174,7 @@ export default {
       secret: secret || NO_SECRET_PLACEHOLDER,
     });
     if (config && matchesProxyPrefix(url.pathname, config.prefixes)) {
-      return relay(request, url, config, Boolean(secret));
+      return relay(request, url, config, Boolean(secret), env);
     }
 
     const selfImage = selfImageRewrite(url);
