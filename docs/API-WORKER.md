@@ -194,9 +194,8 @@ prouvent qu'elles tournent, pas ce qu'elles feraient sur de vraies données.
 
 | Travail | Taille | Bloquant ? |
 |---|---|---|
-| Bascule des familles suivantes derrière le relais, avec observation | 1 à 2 j | Accord de la propriétaire avant chaque famille |
+| Bascule des familles suivantes derrière le relais, avec observation | À réévaluer famille par famille : le bot a demandé un audit et des corrections, l'ancienne estimation de 1 à 2 j était trop optimiste | Accord de la propriétaire avant chaque famille |
 | Limites de fréquence partagées (132 appels, synchrones) | 0,5 à 1 j | Pas pour une première famille en lecture. À trancher avant les familles sensibles (connexion, captcha, formulaires), avec le nombre d'exemplaires observé |
-| Signaux d'écriture entre le serveur et le Worker (mémos de sommeil, voir la quatrième famille) | à chiffrer | **Oui, avant la première écriture sur le Worker** et pour `/api/admin/alerts-summary` |
 
 **Premier déploiement, 2026-10-31.** Le Worker `owwomenscup-api` tourne sans adresse
 publique (`workers.dev` répond 404, aucune route) et sans tâches planifiées
@@ -303,7 +302,7 @@ Comparé à une photo prise juste avant la bascule, par le même relais :
 **Troisième famille, 2026-10-31 : lectures joueuses.** `/api/player/notifications`, `dashboard`,
 `progression`, `team`, `matches` et `next-match`, lancée sans attendre la mesure, à la demande de la
 propriétaire. Authentification par jeton `Bearer`, pas par cookie : **les cookies, le CSRF et la double
-authentification restent à prouver, avec l'admin.** Sans `?as=`, ces GET n'écrivent rien, utilitaires
+authentification restent à prouver.** Sans `?as=`, ces GET n'écrivent rien, utilitaires
 compris ; une requête avec `?as=` (inspection du staff, qui écrit au journal) reste au serveur.
 
 Un 401 à une requête identifiée (`authorization` ou `cookie`) repart aussi vers le serveur, qui tranche,
@@ -325,21 +324,10 @@ Un 403 sur `me` est normal (64 par jour, joueuses connectées) : le relais ne la
 `refus non confirmé par le serveur`, que si le serveur répond autre chose. Ces refus coûtent une lecture
 de plus, le temps de la bascule.
 
-**Mémos de sommeil : à régler avant toute écriture sur le Worker.** Un mémo (`createDormancyMemo`) garde
-une lecture jusqu'à ce qu'une écriture note son signal, ou 15 min au plus. Le serveur note ces signaux dans
-sa mémoire, le Worker dans son Durable Object : **aucun ne voit les notes de l'autre.** Tant que lectures et
-écritures vivent de deux côtés, un mémo peut donc retarder de 15 min :
-
-- dans ce sens-ci (lecture sur le Worker, écriture sur le serveur), `/api/admin/alerts-summary` : quatre
-  mémos (tournoi en cours, lignes du badge, scrutins MVP, soirs sans staff). Un litige ouvert un soir de
-  match apparaîtrait au badge jusqu'à 15 min plus tard. **Il reste au serveur.** Le relire à chaque fois
-  coûterait ~2 900 requêtes Supabase de plus par jour, soit ~23 % du trafic mesuré.
-- dans l'autre sens, dès la première écriture sur le Worker : `/api/bot/v1/events/pending` et l'envoi des
-  notifications dorment sur le serveur et ne verraient pas un événement écrit par le Worker. Les rappels
-  de match et la détection des litiges en retard dorment de la même façon.
-
-Aucune route des quatre familles en ligne ne lit un tel mémo (vérifié le 31). Il faudra un pont, ou basculer
-d'un bloc écrivains et lecteurs d'un même signal. À décider avant la première écriture.
+**`/api/admin/alerts-summary` reste au serveur** (346 par jour). Ses quatre mémos (tournoi en cours, lignes du
+badge, scrutins MVP, soirs sans staff) attendaient qu'une écriture les réveille, et le serveur ne prévenait pas
+le Worker : un litige ouvert un soir de match serait apparu au badge jusqu'à 15 min plus tard. Le pont (voir
+ci-dessous) lève l'obstacle ; il pourra partir une fois le pont vu sur de vraies écritures.
 
 **`/api/admin/users/manage` reste au serveur** (30 par jour), et avec lui toute route à double
 authentification obligatoire. Un Worker qui ne l'exigerait pas ne se verrait pas : ni erreur, ni repli, et
@@ -355,6 +343,70 @@ aucune erreur nouvelle.
 
 **Toujours pas prouvé :** ces routes lisent le jeton `Bearer` et, pour `me`, le seul cookie de l'espace
 actif. **Le cookie de session, le CSRF et la double authentification ne sont pas exercés par cette famille.**
+Vu le 31 : une vraie session staff sur `me` (200), 15 refus de joueuses connectées tous confirmés par le serveur.
+`realtime/ticket` et `overlay-presence` n'ont encore reçu aucune vraie session.
+
+**Le pont des signaux, 2026-10-31.** Un mémo (`createDormancyMemo`) garde une lecture jusqu'à ce qu'une écriture
+note son signal, ou 5 à 15 min au plus. Le serveur notait dans sa mémoire, le Worker dans son Durable Object :
+aucun ne voyait les notes de l'autre. Le pont les fait passer dans les deux sens, avec `CRON_SECRET`, le temps
+de la bascule :
+
+- serveur → Worker : `SHARED_SIGNALS_BRIDGE_URL` (posée par le Dockerfile, donc sur le serveur seulement) envoie
+  les notes à `POST /api/signals/notes`, que le Worker reçoit lui-même, sans passer par l'application ;
+- Worker → serveur : `SHARED_SIGNALS_SERVER_URL` (wrangler.jsonc de l'API) les envoie à
+  `POST /api/internal/signal-notes`.
+
+Une note reçue ne repart pas. Une note perdue retombe sur la fenêtre de sûreté, comme une écriture faite en SQL à
+la main : du retard, pas une panne. Les journaux du Worker du site masquent `Authorization` (`********`), vérifié.
+**À retirer avec le serveur.** Écrit, déployé, testé ; **aucune vraie note n'a encore été vue** au moment d'écrire,
+faute d'écriture sur le serveur : un `204` sur `/api/signals/notes` le prouvera (`bridge-proof`).
+
+Défaut corrigé au passage : `noteMatchWrite` appelait des mémos abonnés au chargement de leur module, or un module
+n'existe qu'une fois sa route servie. Un exemplaire qui n'avait jamais servi le badge n'avait personne à prévenir,
+et les autres dormaient. Les mémos déclarent maintenant les signaux qui les périment (`wakeOn`).
+
+**Cinquième famille, 2026-10-31 : le bot, d'un bloc, à la demande de la propriétaire.** Tout `/api/bot/v1/*`, lectures
+et écritures : 104 routes, dont 3 seulement tournent en continu (`reminders`, `role-sync/snapshot`, `role-sync/presence`,
+485 requêtes par jour). `/api/news` et `/api/support/ticket`, hors de `/v1`, restent au serveur.
+
+Le relais a trois chemins :
+
+| | Variable | Délai | Repli sur le serveur |
+|---|---|---|---|
+| Lecture | `API_WORKER_ROUTES` | 8 s | Oui, sur panne, délai, ou refus d'une requête identifiée |
+| GET qui écrit | `API_WORKER_UNREPLAYABLE_READS` | aucun | **Non** |
+| Écriture | `API_WORKER_WRITE_ROUTES` | aucun | **Non** |
+
+Une écriture rejouée s'exécuterait deux fois. `reminders` marque ses rappels comme envoyés : rejoué, il rendrait vide
+ce que le premier passage a consommé, et le rappel serait perdu. Une panne donne donc une erreur au bot, qu'il traite
+comme aujourd'hui. Retour arrière : retirer `/api/bot/v1/*` des variables et redéployer le site.
+
+Corrigé avant de bouger, à la suite d'un audit des 104 routes (un Worker peut couper une requête, et ses exemplaires
+ne partagent rien) :
+
+- **`free-players/sync`** : un DELETE puis un INSERT, coupés entre les deux, effaçaient les fiches et leur profil. Elle
+  compare maintenant, et supprime les absentes en dernier. Pas d'`upsert` : l'unicité est un index partiel
+  (`WHERE source = 'discord'`), que PostgREST ne sait pas viser, et le double des tests ne l'aurait pas vu.
+- **`rebuildRatings` et `role-sync/presence`** : même défaut, et un INSERT refusé vidait les classements. Les lignes
+  fraîches d'abord, la purge ensuite.
+- **`reminders`** : un collecteur qui levait après une marque jetait ce qu'il avait marqué. Ils rangent au fil de l'eau.
+- **Lectures partagées entre requêtes** (dix sites `inFlight`, le cache de réponses) : sur un Worker, attendre celle d'une
+  requête terminée bloque (`handle_cross_request_promise_resolution`). `canJoinInFlightRead` : chacun fait la sienne.
+- **Table de routage du bot (15 min), classements suisses (5 min), annuaire (10 min), chaînes Twitch (5 min)** :
+  invalidés dans leur seul exemplaire. Ils passent par les signaux partagés.
+
+Constaté, sur le vrai bot : `reminders` et `role-sync/snapshot` en 200 avec sa clé, sans repli ; `POST role-sync/presence`
+en 200, première vraie écriture servie par le Worker. Relu en base : 74 lignes par espace, toutes du même passage, aucune
+périmée. Refus sans clé identiques à ceux du serveur. 76 tâches planifiées réussies sur 20 min, aucun échec.
+
+**Accepté :** les limites de fréquence valent par exemplaire, donc plus larges au total (forfait 5/min, `teams/messages`
+3/min…) ; le travail lancé en fond a 30 s après la réponse (post Discord de résultat, e-mail de bienvenue,
+auto-avancement d'une phase). Un rebuild coupé laisse de vieilles lignes en plus, jamais une table vide.
+
+**Pas encore vu sur le Worker :** les autres écritures du bot (score, litige, forfait, tâches), ses e-mails, ses posts
+Discord, l'envoi d'événements au bot, et la régénération de page après un rapport de score (`report.ts`) : le drapeau
+`global_fetch_strictly_public` doit la faire repasser par l'entrée publique, d'après la documentation. Un échec ne laisse
+qu'un avertissement au journal, et des pages périmées jusqu'à leur renouvellement.
 
 **Piège d'OpenNext.** Il change un `stale-while-revalidate` sans valeur en `=2592000` (30 jours), que
 les navigateurs appliquent aussi. Corrigé sur `/api/news/rss` en retirant la directive, sans effet sur
@@ -368,9 +420,9 @@ partagés entre les requêtes en cours, alors que trois envois de 12,6 Mo à la 
 319 Mo en local. Les envois de fichiers sont donc le seul candidat à un Worker à part, si la production
 le demande ; l'envoi direct vers R2 réglerait aussi ce cas.
 
-**Pas encore mesuré :** temps de calcul et mémoire par requête (`invocation_logs` reste coupé,
-il garderait le secret du relais ; `cf` n'expose pas les statistiques), et le lien entre
-exemplaires des signaux. Écritures, e-mails, Discord et tâches planifiées n'ont pas tourné.
+**Pas encore mesuré :** mémoire par requête (`invocation_logs` reste coupé, il garderait le
+secret du relais ; `cf` n'expose pas les statistiques), et le lien entre exemplaires des
+signaux. Les tâches planifiées n'ont pas tourné sur le Worker.
 
 **Appels directs.** Le navigateur pour `/api/public/*` et les tâches planifiées du site
 appellent `api.owwomenscup.fr` sans passer par le relais. Ils ne basculeront pas avec
