@@ -145,7 +145,8 @@ s'appelle désormais `utils/webPushClient.ts`.
 
 ## Phase 2 : le Worker de l'API
 
-Branche `worker-phase2` de conference-api, **rien de déployé**.
+Branche `worker-phase2` de conference-api. **Worker déployé le 2026-10-31, aucune
+visiteuse dessus** : l'API de production reste le serveur Lightsail.
 
 **2026-10-31 : mesure, réponse oui.** L'API se construit pour un Worker, et les 718
 routes se chargent dans workerd en local, avec une base factice (ce qui prouve
@@ -171,8 +172,7 @@ Le flux de `documents/download`, `cheerio`, `qrcode`, `node:dns`, `node:crypto`
 gravité. `next/og` exige une retouche d'OpenNext avant son build
 (`scripts/cloudflare/patch-opennext.mjs`), à signaler en amont.
 
-**2026-10-31 : le Worker est écrit, pas déployé** (`worker-phase2` à 0589211, poussée
-sans déclencher de déploiement). Dossier `worker/` et non `cloudflare/` : même piège
+**2026-10-31 : le Worker est écrit** (`worker-phase2` à 0589211). Dossier `worker/` et non `cloudflare/` : même piège
 de synchro que `webPush.ts`, un fichier d'API nommé comme l'entrée du Worker du site
 l'aurait écrasée. Vérifié sur le Worker construit, sous workerd, tout le réseau
 sortant intercepté :
@@ -194,16 +194,27 @@ prouvent qu'elles tournent, pas ce qu'elles feraient sur de vraies données.
 
 | Travail | Taille | Bloquant ? |
 |---|---|---|
-| Déploiement et secrets | 0,5 à 1 j | Accord de la propriétaire : secrets de production, premier déploiement |
-| Bascule par familles derrière le relais, avec observation | 1 à 2 j | Après le déploiement |
+| Bascule par familles derrière le relais, avec observation | 1 à 2 j | Accord de la propriétaire avant chaque famille |
 | Limites de fréquence partagées (132 appels, synchrones) | 0,5 à 1 j | Pas pour une première famille en lecture. À trancher avant les familles sensibles (connexion, captcha, formulaires), avec le nombre d'exemplaires observé |
 
-**Premier déploiement.** Le Worker n'aura ni adresse publique (`workers_dev` et
-`preview_urls` coupés, aucune route) ni tâches planifiées (`CRONS_ENABLED=0`) : il
-n'est joignable que par le site, et rien ne change pour les visiteuses tant qu'aucune
-famille n'y est envoyée. Il lui faut un jeton Cloudflare dans les secrets GitHub de
-conference-api, qui n'en a pas, et les secrets du serveur copiés sans les afficher,
-dont `EDGE_PROXY_SECRET` et `STAFF_MFA_EXEMPT_USER_IDS`.
+**Premier déploiement, 2026-10-31.** Le Worker `owwomenscup-api` tourne sans adresse
+publique (`workers.dev` répond 404, aucune route) et sans tâches planifiées
+(`CRONS_ENABLED=0`). `worker.yml` le déploie à chaque push sur `worker-phase2` : 12 622
+tests réussis et 3 ignorés, démarrage mesuré par Cloudflare 49 ms, 25,13 Mio. Les 48
+réglages du serveur y sont posés en secrets, dont `EDGE_PROXY_SECRET` et
+`STAFF_MFA_EXEMPT_USER_IDS`, et survivent à un déploiement. **Aucune vraie requête ne l'a
+encore atteint** : rien n'est prouvé sur la vraie base ni avec les vrais secrets.
+
+Le jeton de déploiement a le rôle Workers Editor sur tous les Workers du compte : il
+peut déployer aussi le Worker du site, sans pouvoir en créer ni en supprimer. Pour le
+limiter à ce seul Worker, il faut un jeton de compte créé dans le tableau de bord (rôle
+Editor sur `owwomenscup-api`) : `cf` ne crée que des jetons d'utilisateur, et ceux-là
+refusent cette limite (erreur 1001).
+
+**Pièges de `cf` (bêta).** `workers secrets bulk` répond `{}` et code 0 sans rien écrire :
+poser les secrets un par un (`workers secrets update NOM --type secret_text --body @fichier`)
+et relire la liste. Le profil `cf` par défaut de ce PC est un autre compte : toujours
+passer `--profile owwomenscup`.
 
 **Appels directs.** Le navigateur pour `/api/public/*` et les tâches planifiées du site
 appellent `api.owwomenscup.fr` sans passer par le relais. Ils ne basculeront pas avec
