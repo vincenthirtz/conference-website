@@ -219,12 +219,12 @@ poser les secrets un par un (`workers secrets update NOM --type secret_text --bo
 et relire la liste. Le profil `cf` par défaut de ce PC est un autre compte : toujours
 passer `--profile owwomenscup`.
 
-**Première famille, 2026-10-31.** Le relais du site (`API_WORKER_PREFIXES`,
-wrangler.jsonc) envoie au Worker les lectures de `/api/health`, `/api/seasonal-logo`,
-`/api/leagues`, `/api/public/tcg/live`, `/api/public/openapi` et `/api/public/v1/`. GET et
-HEAD seulement ; si le Worker lève, répond 5xx ou tarde plus de 8 s, la lecture repart vers
-le serveur. Retour arrière : vider la variable et redéployer le site. Pas tout
-`/api/public/` : certains de ses GET écrivent (`newsletter/confirm`).
+**Première famille, 2026-10-31.** Le relais du site (`API_WORKER_ROUTES`, wrangler.jsonc)
+envoie au Worker les lectures de `/api/health`, `/api/seasonal-logo`, `/api/leagues`,
+`/api/public/tcg/live`, `/api/public/openapi` et `/api/public/v1/`. GET et HEAD seulement ; si
+le Worker lève, répond 5xx ou tarde plus de 8 s, la lecture repart vers le serveur. Retour
+arrière : vider la variable et redéployer le site. Pas tout `/api/public/` : certains de ses GET
+écrivent (`newsletter/confirm`).
 
 Constaté en production, sur la vraie base et avec les vrais secrets :
 
@@ -270,6 +270,46 @@ cache, là où CloudFront lui sert le cache anonyme : plus de lectures en base p
 connectées, à mesurer quand leurs familles basculeront. `stale-while-revalidate` n'est pas repris :
 après expiration, une visiteuse attend ~100 ms au lieu de recevoir l'ancienne réponse. Le cache est
 propre à chaque centre de données, et un déploiement ne le vide pas (comme CloudFront).
+
+**Deuxième famille, 2026-10-31 : actualités, équipes, tournois, classements.** Les lectures
+de `/api/news`, `/api/news/rss`, `/api/news/comments`, `/api/teams`, `/api/teams/:id`,
+`/api/team/:id/stats`, `/api/team/:id/maps`, `/api/tournaments`,
+`/api/tournaments/:id/prize-pool`, `/api/tournaments/:id/mvp-leaderboard`,
+`/api/tournament/:id/calendar.ics`, `/api/tournament/:id/qr` et `/api/players/leaderboard`.
+Rien de plus pour les matchs : leurs lectures publiques passaient déjà par `/api/public/v1/*`, et
+le reste est réservé au staff, ou sert au draft en direct.
+
+La comparaison par début de chemin a disparu : `/api/teams` aurait couvert les routes privées de
+`/api/teams/*`, dont certaines agissent sur un GET. `API_WORKER_ROUTES` compare segment par
+segment, `:id` n'accepte qu'un UUID, `*` n'existe qu'en dernier, et tout le reste va au serveur.
+**Avant d'ajouter une route :** vérifier que son GET est public et qu'il n'écrit rien, utilitaires
+compris. `edgeApiProxy.test.ts` lit le réglage de production et refuse qu'il couvre une route
+sensible connue.
+
+Comparé à une photo prise juste avant la bascule, par le même relais :
+
+- 12 corps sur 13 identiques à l'octet ; `calendar.ics` ne diffère que par `DTSTAMP`, l'heure de
+  génération. Seul l'en-tête de `/api/news/rss` avait bougé (voir plus bas).
+- 16 routes sensibles essayées (privées, staff, GET qui écrit, POST) : toutes restées au serveur.
+- Aucun repli sur 12 min, 74 tâches planifiées réussies sur 20 min, aucun échec.
+- En cache : ~30 à 100 ms. À construire, à chaud : 130 à 480 ms.
+- **Avec une session, jamais de cache : 138 à 303 ms à chaque lecture.** C'est le surcoût annoncé.
+  Le trafic réel dira ce qu'il pèse sur Supabase.
+- **Démarrage à froid vu jusqu'à ~2,7 s** sur un premier appel. Le démarrage mesuré par Cloudflare
+  (24 à 52 ms) ne compte pas le premier chargement de la route : à ce trafic, ces attentes peuvent
+  être fréquentes. À mesurer sur le trafic réel avant les familles suivantes.
+
+**Piège d'OpenNext.** Il change un `stale-while-revalidate` sans valeur en `=2592000` (30 jours), que
+les navigateurs appliquent aussi. Corrigé sur `/api/news/rss` en retirant la directive, sans effet sur
+le serveur. `/api/twitch-channels`, `/api/patch-notes`, `/api/blizzard-news` et `/api/blizzard-media`
+ont la même écriture : à corriger avant de les envoyer au Worker.
+
+**Un seul Worker pour l'API, décidé le 2026-10-31.** Le script tient largement (25 Mio sur 64) ;
+plusieurs Workers voudraient dire plusieurs builds, 48 secrets à tenir à jour sur chacun, et du code
+partagé à déployer partout. Le seul vrai argument pour découper est la mémoire : 128 Mo par exemplaire,
+partagés entre les requêtes en cours, alors que trois envois de 12,6 Mo à la fois en demandent 277 à
+319 Mo en local. Les envois de fichiers sont donc le seul candidat à un Worker à part, si la production
+le demande ; l'envoi direct vers R2 réglerait aussi ce cas.
 
 **Pas encore mesuré :** temps de calcul et mémoire par requête (`invocation_logs` reste coupé,
 il garderait le secret du relais ; `cf` n'expose pas les statistiques), et le lien entre
