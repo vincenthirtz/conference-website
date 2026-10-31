@@ -101,8 +101,11 @@ async function relay(request, url, config, trusted, env) {
       parseProxyPrefixes(env.API_WORKER_ROUTES),
       url.search
     );
+  let refusedStatus;
   let upstream = viaWorker
-    ? await askApiWorker(env.API_WORKER, target, init, (reason) => {
+    ? await askApiWorker(env.API_WORKER, target, init, (reason, refused) => {
+        refusedStatus = refused;
+        if (refused) return;
         console.error('[relais] Worker de l’API : repli sur le serveur', {
           path: url.pathname,
           reason,
@@ -119,6 +122,17 @@ async function relay(request, url, config, trusted, env) {
       });
       return upstreamUnavailableResponse();
     }
+  }
+  // Un refus confirmé est normal (403 sur /api/admin/me : une joueuse connectée).
+  if (refusedStatus && upstream.status !== refusedStatus) {
+    console.error(
+      '[relais] Worker de l’API : refus non confirmé par le serveur',
+      {
+        path: url.pathname,
+        worker: refusedStatus,
+        server: upstream.status,
+      }
+    );
   }
 
   return new Response(

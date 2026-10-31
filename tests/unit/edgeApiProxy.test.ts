@@ -156,6 +156,9 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
       '/api/player/team',
       '/api/player/matches',
       '/api/player/next-match',
+      '/api/admin/me',
+      '/api/admin/realtime/ticket',
+      '/api/admin/diffusion/overlay-presence',
     ]) {
       expect(servedByApiWorker('GET', path, routes)).toBe(true);
     }
@@ -163,6 +166,10 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
 
   it('une écriture des routes joueuses reste au serveur', () => {
     expect(servedByApiWorker('PATCH', '/api/player/team', routes)).toBe(false);
+  });
+
+  it('une écriture du profil staff reste au serveur', () => {
+    expect(servedByApiWorker('PATCH', '/api/admin/me', routes)).toBe(false);
   });
 
   // Audit du 2026-10-31 : un GET qui écrit, une route privée, ou du direct à l'écran.
@@ -186,7 +193,11 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     `/api/matches/${UUID}/games`,
     `/api/matches/${UUID}/drafts/1`,
     `/api/overlay/match/${UUID}`,
-    '/api/admin/me',
+    // Lit des mémos que les écritures du serveur ne réveillent pas : 15 min de retard.
+    '/api/admin/alerts-summary',
+    // Exige la double authentification : un Worker qui l'oublierait ne se verrait pas.
+    '/api/admin/users/manage',
+    `/api/admin/matches/${UUID}`,
     '/api/bot/v1/reminders',
     '/api/captcha',
     '/api/internal/revalidate',
@@ -231,23 +242,33 @@ describe('Worker de l’API : repli sur le serveur', () => {
     expect(reasons).toEqual([]);
   });
 
-  it.each(['authorization', 'cookie'])(
-    'un 401 avec %s repart vers le serveur, qui tranche',
-    async (name) => {
-      const reasons: string[] = [];
-      const response = await askApiWorker(
-        { fetch: async () => new Response('non', { status: 401 }) },
-        url,
-        { method: 'GET', headers: new Headers({ [name]: 'x' }) },
-        (reason) => reasons.push(reason)
-      );
-      expect(response).toBeNull();
-      expect(reasons).toEqual(['statut 401']);
-    }
-  );
+  it('un 403 anonyme est une vraie réponse', async () => {
+    const { response, reasons } = await ask(
+      async () => new Response(null, { status: 403 })
+    );
+    expect(response?.status).toBe(403);
+    expect(reasons).toEqual([]);
+  });
 
-  it('les autres refus d’une requête identifiée sont de vraies réponses', async () => {
-    for (const status of [403, 404, 429]) {
+  describe.each([401, 403])('un %i à une requête identifiée', (status) => {
+    it.each(['authorization', 'cookie'])(
+      'avec %s repart vers le serveur, qui tranche',
+      async (name) => {
+        const fallbacks: Array<[string, number | undefined]> = [];
+        const response = await askApiWorker(
+          { fetch: async () => new Response('non', { status }) },
+          url,
+          { method: 'GET', headers: new Headers({ [name]: 'x' }) },
+          (reason, refused) => fallbacks.push([reason, refused])
+        );
+        expect(response).toBeNull();
+        expect(fallbacks).toEqual([[`statut ${status}`, status]]);
+      }
+    );
+  });
+
+  it('les autres réponses à une requête identifiée sont de vraies réponses', async () => {
+    for (const status of [404, 429]) {
       const reasons: string[] = [];
       const response = await askApiWorker(
         { fetch: async () => new Response('non', { status }) },

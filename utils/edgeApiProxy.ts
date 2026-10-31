@@ -189,11 +189,12 @@ export function servedByApiWorker(
 }
 
 /**
- * Un 401 à une requête identifiée : pendant la bascule, seul le serveur tranche. Refusée à
- * tort, une joueuse connectée se croirait déconnectée, et un 401 n'est pas une panne.
+ * Un 401 ou un 403 à une requête identifiée : pendant la bascule, seul le serveur tranche.
+ * Refusée à tort, une joueuse connectée se croirait déconnectée et un membre du staff
+ * perdrait son back-office, et aucun des deux n'est une panne.
  */
 function refusesIdentifiedCaller(status: number, init: RequestInit): boolean {
-  if (status !== 401) return false;
+  if (status !== 401 && status !== 403) return false;
   const headers = new Headers(init.headers);
   return headers.has('authorization') || headers.has('cookie');
 }
@@ -201,13 +202,14 @@ function refusesIdentifiedCaller(status: number, init: RequestInit): boolean {
 /**
  * La réponse du Worker de l'API, ou `null` s'il lève, répond 5xx, tarde, ou refuse une
  * requête identifiée : l'appelant rejoue alors la lecture sur le serveur, et la visiteuse
- * ne voit rien. `onFallback` laisse une trace, seul signe du problème.
+ * ne voit rien. `onFallback` laisse une trace, seul signe du problème ; `refusedStatus`
+ * n'est donné que pour un refus, souvent légitime : à comparer à la réponse du serveur.
  */
 export async function askApiWorker(
   binding: ApiWorkerBinding,
   url: string,
   init: RequestInit,
-  onFallback: (reason: string) => void,
+  onFallback: (reason: string, refusedStatus?: number) => void,
   timeoutMs: number = API_WORKER_TIMEOUT_MS
 ): Promise<Response | null> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -219,14 +221,13 @@ export async function askApiWorker(
   });
   try {
     const response = await Promise.race([binding.fetch(url, init), late]);
-    if (
-      response.status < 500 &&
-      !refusesIdentifiedCaller(response.status, init)
-    ) {
-      return response;
-    }
+    const refused = refusesIdentifiedCaller(response.status, init);
+    if (response.status < 500 && !refused) return response;
     await response.body?.cancel();
-    onFallback(`statut ${response.status}`);
+    onFallback(
+      `statut ${response.status}`,
+      refused ? response.status : undefined
+    );
   } catch (err) {
     onFallback(err instanceof Error ? err.message : String(err));
   } finally {

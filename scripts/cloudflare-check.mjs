@@ -178,7 +178,7 @@ md.push(
 );
 for (const c of [
   { path: '/api/captcha', relayed: true, status: 200 },
-  { path: '/api/admin/me', relayed: true, status: 401 },
+  { path: '/api/admin/alerts-summary', relayed: true, status: 401 },
   { path: '/api/internal/revalidate', relayed: false },
 ]) {
   const r = await fetch(base + c.path, { redirect: 'manual' });
