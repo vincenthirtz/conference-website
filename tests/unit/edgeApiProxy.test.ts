@@ -180,6 +180,7 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     readFileSync('wrangler.jsonc', 'utf8').replace(/^\s*\/\/.*$/gm, '')
   );
   const routes = parseProxyPrefixes(config.vars.API_WORKER_ROUTES);
+  const serverOnly = parseProxyPrefixes(config.vars.API_WORKER_SERVER_ONLY);
 
   it('liste exactement les lectures publiques choisies', () => {
     for (const path of [
@@ -325,7 +326,6 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     '/api/team-openings/contact',
     // La génération d'images peut saturer un exemplaire, et couper ce qui tourne à côté.
     `/api/og/player/${UUID}`,
-    `/api/cast/${UUID}`,
     '/api/twitch/oauth-callback',
     '/api/twitch/exchange',
     `/api/matches/${UUID}`,
@@ -338,11 +338,129 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     '/api/admin/alerts-summary',
     // Exige la double authentification : un Worker qui l'oublierait ne se verrait pas.
     '/api/admin/users/manage',
-    `/api/admin/matches/${UUID}`,
     '/api/captcha',
     '/api/internal/revalidate',
   ])('ne couvre jamais %s', (path) => {
-    expect(servedByApiWorker('GET', path, routes)).toBe(false);
+    expect(servedByApiWorker('GET', path, routes, '', serverOnly)).toBe(false);
+  });
+});
+
+describe('les lectures admin sur le Worker (wrangler.jsonc)', () => {
+  const config = JSON.parse(
+    readFileSync('wrangler.jsonc', 'utf8').replace(/^\s*\/\/.*$/gm, '')
+  );
+  const routes = parseProxyPrefixes(config.vars.API_WORKER_ROUTES);
+  const serverOnly = parseProxyPrefixes(config.vars.API_WORKER_SERVER_ONLY);
+  const writes = parseProxyPrefixes(config.vars.API_WORKER_WRITE_ROUTES);
+  const served = (path: string) =>
+    servedByApiWorker('GET', path, routes, '', serverOnly);
+
+  it.each([
+    '/api/admin/me',
+    '/api/admin/realtime/ticket',
+    '/api/admin/diffusion/overlay-presence',
+    `/api/admin/matches/${UUID}`,
+    `/api/admin/tournament/${UUID}/matches`,
+    `/api/admin/teams/${UUID}`,
+    `/api/cast/${UUID}`,
+    '/api/caster/v1/tournaments',
+  ])('%s part au Worker', (path) => {
+    expect(served(path)).toBe(true);
+  });
+
+  it.each([
+    // Double authentification : un Worker qui l'oublierait ne se verrait pas.
+    '/api/admin/users/manage',
+    '/api/admin/users/export',
+    `/api/admin/users/${UUID}/staff`,
+    '/api/admin/api-tokens',
+    `/api/admin/tenants/${UUID}/export`,
+    '/api/admin/helloasso/memberships',
+    '/api/admin/recycle-bin',
+    // Mémos à réveil, à voir passer sur le pont d'abord.
+    '/api/admin/alerts-summary',
+    `/api/admin/tournament/${UUID}/dashboard`,
+    `/api/admin/stages/${UUID}/standings`,
+    // Lourds.
+    '/api/admin/teams/export',
+    `/api/admin/tournament/${UUID}/export-results`,
+    // GET qui écrivent, ou service externe.
+    '/api/admin/documents',
+    '/api/admin/instagram/callback',
+    '/api/admin/tiktok/callback',
+    '/api/admin/twitch/connection',
+    '/api/admin/twitch/predictions',
+  ])('%s reste au serveur', (path) => {
+    expect(served(path)).toBe(false);
+  });
+
+  it('un identifiant qui n’est pas un UUID ne passe pas à côté du refus', () => {
+    expect(served('/api/admin/tenants/un-slug/export')).toBe(false);
+    expect(served('/api/admin/users/un-identifiant/staff')).toBe(false);
+  });
+
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE'])(
+    'aucune écriture %s de l’admin ne bouge',
+    (method) => {
+      for (const path of ['/api/admin/me', `/api/admin/matches/${UUID}`]) {
+        expect(servedByApiWorker(method, path, routes, '', serverOnly)).toBe(
+          false
+        );
+        expect(finalAtApiWorker(method, path, writes, [])).toBe(false);
+      }
+    }
+  );
+
+  it('une inspection du staff (?as=) reste au serveur', () => {
+    expect(
+      servedByApiWorker(
+        'GET',
+        '/api/admin/teams',
+        routes,
+        `?as=${UUID}`,
+        serverOnly
+      )
+    ).toBe(false);
+  });
+
+  it('chaque variable reste sous la limite de 5 Ko de Cloudflare', () => {
+    for (const name of [
+      'API_WORKER_ROUTES',
+      'API_WORKER_SERVER_ONLY',
+      'API_WORKER_WRITE_ROUTES',
+      'API_WORKER_UNREPLAYABLE_READS',
+    ]) {
+      expect(config.vars[name].length).toBeLessThan(5_000);
+    }
+  });
+});
+
+describe('API_WORKER_SERVER_ONLY : la liste de refus', () => {
+  const routes = ['/api/admin/*'];
+  const serverOnly = ['/api/admin/users/manage', '/api/admin/users/:id/staff'];
+  const served = (path: string) =>
+    servedByApiWorker('GET', path, routes, '', serverOnly);
+
+  it('l’emporte sur une famille large', () => {
+    expect(served('/api/admin/users/manage')).toBe(false);
+    expect(served('/api/admin/users/other')).toBe(true);
+  });
+
+  it('`:id` y couvre n’importe quel segment, pas seulement un UUID', () => {
+    expect(served(`/api/admin/users/${UUID}/staff`)).toBe(false);
+    expect(served('/api/admin/users/pas-un-uuid/staff')).toBe(false);
+  });
+
+  it('ailleurs, `:id` reste un UUID', () => {
+    const narrow = ['/api/teams/:id'];
+    expect(servedByApiWorker('GET', `/api/teams/${UUID}`, narrow)).toBe(true);
+    expect(servedByApiWorker('GET', '/api/teams/leave', narrow)).toBe(false);
+  });
+
+  it('sans liste, rien ne change', () => {
+    expect(servedByApiWorker('GET', '/api/admin/users/manage', routes)).toBe(
+      true
+    );
   });
 });
 

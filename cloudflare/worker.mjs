@@ -125,7 +125,8 @@ async function relay(request, url, config, trusted, env) {
       request.method,
       url.pathname,
       parseProxyPrefixes(env.API_WORKER_ROUTES),
-      url.search
+      url.search,
+      parseProxyPrefixes(env.API_WORKER_SERVER_ONLY)
     );
   let refusedStatus;
   let upstream = viaWorker

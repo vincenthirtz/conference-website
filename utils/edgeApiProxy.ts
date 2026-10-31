@@ -156,8 +156,15 @@ const UUID_SEGMENT =
  *   - `*` en dernier : tout ce qui suit, à réserver aux familles sans route privée.
  * Le chemin n'est pas décodé : un encodage inattendu ne correspond à rien, et reste donc
  * au serveur.
+ *
+ * `anyId` : `:id` couvre n'importe quel segment. Pour une liste de refus, où passer à côté
+ * enverrait au Worker ce qui doit rester au serveur.
  */
-function matchesApiWorkerRoute(pathname: string, route: string): boolean {
+function matchesApiWorkerRoute(
+  pathname: string,
+  route: string,
+  anyId = false
+): boolean {
   const want = route.split('/');
   const got = pathname.split('/');
   const open = want[want.length - 1] === '*';
@@ -165,7 +172,8 @@ function matchesApiWorkerRoute(pathname: string, route: string): boolean {
     return false;
   return want.every((segment, i) => {
     if (open && i === want.length - 1) return true;
-    return segment === ':id' ? UUID_SEGMENT.test(got[i]) : segment === got[i];
+    if (segment !== ':id') return segment === got[i];
+    return anyId || UUID_SEGMENT.test(got[i]);
   });
 }
 
@@ -176,15 +184,21 @@ function matchesApiWorkerRoute(pathname: string, route: string): boolean {
  *
  * `?as=` aussi reste au serveur : le staff y inspecte l'écran d'une joueuse (`resolveSubject`,
  * API), et ce GET-là écrit au journal. Le même chemin sans `?as=` n'écrit rien.
+ *
+ * `serverOnly` l'emporte sur `routes` : une famille large (`/api/admin/*`) moins ce qui doit
+ * rester au serveur (API_WORKER_SERVER_ONLY).
  */
 export function servedByApiWorker(
   method: string,
   pathname: string,
   routes: readonly string[],
-  search = ''
+  search = '',
+  serverOnly: readonly string[] = []
 ): boolean {
   if (methodHasBody(method) || isNeverProxiedPath(pathname)) return false;
   if (new URLSearchParams(search).has('as')) return false;
+  if (serverOnly.some((route) => matchesApiWorkerRoute(pathname, route, true)))
+    return false;
   return routes.some((route) => matchesApiWorkerRoute(pathname, route));
 }
 
