@@ -136,7 +136,7 @@ export function matchesProxyPrefix(
 
 /**
  * Worker de l'API (phase 2, docs/API-WORKER.md) : la liaison du Worker du site vers
- * `owwomenscup-api`, à la place du serveur pour les préfixes d'API_WORKER_PREFIXES.
+ * `owwomenscup-api`, à la place du serveur pour les routes d'API_WORKER_ROUTES.
  * Le serveur reste l'amont de tout le reste, et le repli de ceci.
  */
 export type ApiWorkerBinding = {
@@ -146,17 +146,41 @@ export type ApiWorkerBinding = {
 /** Au-delà, sans en-têtes de réponse, la lecture repart vers le serveur. */
 export const API_WORKER_TIMEOUT_MS = 8_000;
 
+const UUID_SEGMENT =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Le chemin correspond-il à cette entrée d'API_WORKER_ROUTES ? Segment par segment,
+ * jamais par début de chemin : `/api/teams` est public, `/api/teams/leave` non.
+ *   - `:id` : un UUID, rien d'autre (`/api/teams/:id` ne couvre pas `/api/teams/leave`) ;
+ *   - `*` en dernier : tout ce qui suit, à réserver aux familles sans route privée.
+ * Le chemin n'est pas décodé : un encodage inattendu ne correspond à rien, et reste donc
+ * au serveur.
+ */
+function matchesApiWorkerRoute(pathname: string, route: string): boolean {
+  const want = route.split('/');
+  const got = pathname.split('/');
+  const open = want[want.length - 1] === '*';
+  if (open ? got.length < want.length : got.length !== want.length)
+    return false;
+  return want.every((segment, i) => {
+    if (open && i === want.length - 1) return true;
+    return segment === ':id' ? UUID_SEGMENT.test(got[i]) : segment === got[i];
+  });
+}
+
 /**
  * Cette requête part-elle vers le Worker de l'API ? Lectures seulement, tant que la
- * bascule se fait famille par famille : une écriture reste au serveur, quel que soit
- * le préfixe, et seule une lecture peut être rejouée sans risque après une panne.
+ * bascule se fait famille par famille : une écriture reste au serveur, quelle que soit
+ * la route, et seule une lecture peut être rejouée sans risque après une panne.
  */
 export function servedByApiWorker(
   method: string,
   pathname: string,
-  prefixes: readonly string[]
+  routes: readonly string[]
 ): boolean {
-  return !methodHasBody(method) && matchesProxyPrefix(pathname, prefixes);
+  if (methodHasBody(method) || isNeverProxiedPath(pathname)) return false;
+  return routes.some((route) => matchesApiWorkerRoute(pathname, route));
 }
 
 /**

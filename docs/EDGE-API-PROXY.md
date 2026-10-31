@@ -6,11 +6,12 @@
 > Function Netlify décrite ci-dessous a été retirée le 2026-10-29 ; ce
 > document garde l’historique de la bascule et le contrat du relais.
 >
-> **Depuis le 2026-10-31**, les lectures (GET, HEAD) des préfixes de
-> `API_WORKER_PREFIXES` (wrangler.jsonc) partent vers le Worker de l’API par sa
-> liaison `API_WORKER`, avec repli sur le serveur si le Worker lève, répond 5xx
-> ou tarde plus de 8 s. Une telle réponse se reconnaît à l’absence d’en-têtes
-> CloudFront. Voir [API-WORKER.md](API-WORKER.md), phase 2.
+> **Depuis le 2026-10-31**, les lectures (GET, HEAD) des routes de
+> `API_WORKER_ROUTES` (wrangler.jsonc : chemins exacts, `:id` = un UUID, `*` en
+> dernier = tout ce qui suit) partent vers le Worker de l’API par sa liaison
+> `API_WORKER`, avec repli sur le serveur si le Worker lève, répond 5xx ou tarde
+> plus de 8 s. Une telle réponse se reconnaît à l’absence d’en-têtes CloudFront.
+> Voir [API-WORKER.md](API-WORKER.md), phase 2.
 
 Les familles d'API qui lisent un cookie du site (session `sb-*`, tenant actif,
 états OAuth) ne peuvent pas passer en cross-origin vers `api.owwomenscup.fr` :

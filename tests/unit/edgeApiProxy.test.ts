@@ -7,6 +7,7 @@
 //   - Un client ne peut jamais forger les en-têtes X-Owwc-* du relais.
 //   - Plusieurs Set-Cookie amont reviennent séparés, jamais fusionnés.
 
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   askApiWorker,
@@ -26,26 +27,64 @@ import {
 
 const SECRET = 's3cr3t-edge-value';
 
-describe('Worker de l’API : qui y part', () => {
-  const prefixes = parseProxyPrefixes('/api/health,/api/public/');
+const UUID = '33333333-3333-4333-8333-333333333333';
 
-  it('les lectures des préfixes listés', () => {
-    expect(servedByApiWorker('GET', '/api/health', prefixes)).toBe(true);
-    expect(servedByApiWorker('HEAD', '/api/public/tcg/live', prefixes)).toBe(
-      true
-    );
+describe('Worker de l’API : qui y part', () => {
+  const routes = parseProxyPrefixes(
+    '/api/health,/api/leagues,/api/leagues/*,/api/public/v1/*,/api/teams,/api/teams/:id,/api/team/:id/stats'
+  );
+  const served = (path: string, method = 'GET') =>
+    servedByApiWorker(method, path, routes);
+
+  it('les lectures des routes listées', () => {
+    expect(served('/api/health')).toBe(true);
+    expect(served('/api/health', 'HEAD')).toBe(true);
+    expect(served('/api/teams')).toBe(true);
+    expect(served(`/api/teams/${UUID}`)).toBe(true);
+    expect(served(`/api/teams/${UUID.toUpperCase()}`)).toBe(true);
+    expect(served(`/api/team/${UUID}/stats`)).toBe(true);
+    expect(served('/api/leagues')).toBe(true);
+    expect(served('/api/leagues/saison-2025')).toBe(true);
+    expect(served(`/api/public/v1/tournaments/${UUID}/matches`)).toBe(true);
   });
 
-  it('jamais une écriture, même sur un préfixe listé', () => {
+  it('jamais une écriture, même sur une route listée', () => {
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE', 'post']) {
-      expect(
-        servedByApiWorker(method, '/api/public/newsletter', prefixes)
-      ).toBe(false);
+      expect(served('/api/teams', method)).toBe(false);
     }
   });
 
-  it('rien hors des préfixes, ni avec une liste vide', () => {
-    expect(servedByApiWorker('GET', '/api/admin/me', prefixes)).toBe(false);
+  it('une route exacte ne couvre pas ce qui la prolonge', () => {
+    expect(served('/api/teams/leave')).toBe(false);
+    expect(served('/api/teams/join-requests')).toBe(false);
+    expect(served(`/api/teams/${UUID}/members`)).toBe(false);
+    expect(served('/api/health/x')).toBe(false);
+    expect(served('/api/healthz')).toBe(false);
+    expect(served('/api/teams-privees')).toBe(false);
+  });
+
+  it(':id n’accepte qu’un UUID', () => {
+    expect(served('/api/teams/une-equipe')).toBe(false);
+    expect(served('/api/team/une-equipe/stats')).toBe(false);
+    expect(served(`/api/teams/${UUID}x`)).toBe(false);
+  });
+
+  it('une route voisine non listée reste au serveur', () => {
+    expect(served(`/api/team/${UUID}/maps`)).toBe(false);
+    expect(served('/api/admin/me')).toBe(false);
+  });
+
+  it('`*` demande un segment de plus', () => {
+    expect(served('/api/public/v1')).toBe(false);
+  });
+
+  it('ni la casse, ni un encodage, ni un slash final ne font entrer', () => {
+    expect(served('/API/health')).toBe(false);
+    expect(served('/api/%74eams')).toBe(false);
+    expect(served('/api/health/')).toBe(false);
+  });
+
+  it('rien avec une liste vide', () => {
     expect(
       servedByApiWorker('GET', '/api/health', parseProxyPrefixes(undefined))
     ).toBe(false);
@@ -54,14 +93,60 @@ describe('Worker de l’API : qui y part', () => {
     ).toBe(false);
   });
 
-  it('jamais /api/internal, même si un préfixe le couvre', () => {
+  it('jamais /api/internal, même si une route le couvre', () => {
     expect(
       servedByApiWorker(
         'GET',
         '/api/internal/revalidate',
-        parseProxyPrefixes('/api/')
+        parseProxyPrefixes('/api/internal/*,/api/internal/revalidate')
       )
     ).toBe(false);
+  });
+});
+
+describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
+  const config = JSON.parse(
+    readFileSync('wrangler.jsonc', 'utf8').replace(/^\s*\/\/.*$/gm, '')
+  );
+  const routes = parseProxyPrefixes(config.vars.API_WORKER_ROUTES);
+
+  it('liste exactement les lectures publiques choisies', () => {
+    for (const path of [
+      '/api/news',
+      '/api/news/rss',
+      '/api/news/comments',
+      '/api/teams',
+      `/api/teams/${UUID}`,
+      `/api/team/${UUID}/stats`,
+      `/api/tournaments/${UUID}/prize-pool`,
+      `/api/tournament/${UUID}/qr`,
+      '/api/players/leaderboard',
+    ]) {
+      expect(servedByApiWorker('GET', path, routes)).toBe(true);
+    }
+  });
+
+  // Audit du 2026-10-31 : un GET qui écrit, une route privée, ou du direct à l'écran.
+  it.each([
+    '/api/public/newsletter/confirm',
+    '/api/public/free-players/remove',
+    '/api/public/team-openings/remove',
+    '/api/teams/leave',
+    '/api/teams/opening',
+    '/api/teams/search-players',
+    `/api/teams/matches/${UUID}/lineup`,
+    `/api/tournament/${UUID}/pool`,
+    `/api/tournament/${UUID}/maps`,
+    `/api/matches/${UUID}`,
+    `/api/matches/${UUID}/games`,
+    `/api/matches/${UUID}/drafts/1`,
+    `/api/overlay/match/${UUID}`,
+    '/api/admin/me',
+    '/api/bot/v1/reminders',
+    '/api/captcha',
+    '/api/internal/revalidate',
+  ])('ne couvre jamais %s', (path) => {
+    expect(servedByApiWorker('GET', path, routes)).toBe(false);
   });
 });
 

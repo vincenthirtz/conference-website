@@ -17,7 +17,7 @@
 //    retour OAuth/HelloAsso, csrfCheck des requêtes à cookie), IP = sortie
 //    Cloudflare (limites de débit partagées). Toléré tant que le Worker n'est
 //    servi que sur *.workers.dev.
-//    Les LECTURES des préfixes d'API_WORKER_PREFIXES vont au Worker de l'API par
+//    Les LECTURES des routes d'API_WORKER_ROUTES vont au Worker de l'API par
 //    sa liaison, avec repli sur le serveur (docs/API-WORKER.md, phase 2).
 //
 // 2) TÂCHES PLANIFIÉES : un Cron Trigger chaque minute → cloudflare/crons.ts.
@@ -98,7 +98,7 @@ async function relay(request, url, config, trusted, env) {
     servedByApiWorker(
       request.method,
       url.pathname,
-      parseProxyPrefixes(env.API_WORKER_PREFIXES)
+      parseProxyPrefixes(env.API_WORKER_ROUTES)
     );
   let upstream = viaWorker
     ? await askApiWorker(env.API_WORKER, target, init, (reason) => {
