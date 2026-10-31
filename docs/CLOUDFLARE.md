@@ -50,6 +50,12 @@ deux jours.
   page ou ses `/_next/data` périmées jusqu'à 30 jours. Le Worker remplace
   l'en-tête par `public, max-age=0, must-revalidate`, comme Netlify.
 - **Fonction Telegram de la VM Freebox** : supprimée (2026-10-28).
+- **`renderToStaticMarkup` et `renderToString` n'existent pas en production** :
+  OpenNext remplace par un module vide le fichier de React qui les contient
+  (`shim-react`), alors qu'ils marchent au build et dans les tests. Tous les articles
+  `/news/<slug>` ont répondu 500 du 2026-10-28 au 2026-10-31. Dans le code servi, passer
+  par `renderToReadableStream` (`utils/news/renderNewsMarkdown.tsx`) ; un test le vérifie,
+  et `scripts/cloudflare-check.mjs` ouvre désormais un vrai article.
 
 ## Secrets du Worker
 

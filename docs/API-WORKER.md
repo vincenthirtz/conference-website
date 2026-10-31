@@ -299,6 +299,20 @@ Comparé à une photo prise juste avant la bascule, par le même relais :
   (24 à 52 ms) ne compte pas le premier chargement de la route : à ce trafic, ces attentes peuvent
   être fréquentes. À mesurer sur le trafic réel avant les familles suivantes.
 
+**Troisième famille, 2026-10-31 : lectures joueuses.** `/api/player/notifications`, `dashboard`,
+`progression`, `team`, `matches` et `next-match`, lancée sans attendre la mesure, à la demande de la
+propriétaire. Authentification par jeton `Bearer`, pas par cookie : **les cookies, le CSRF et la double
+authentification restent à prouver, avec l'admin.** Sans `?as=`, ces GET n'écrivent rien, utilitaires
+compris ; une requête avec `?as=` (inspection du staff, qui écrit au journal) reste au serveur.
+
+Un 401 à une requête identifiée (`authorization` ou `cookie`) repart aussi vers le serveur, qui tranche,
+et laisse une trace `statut 401` : refusée à tort, une joueuse se croirait déconnectée, et le repli ne
+couvrait que les pannes. Repère avant bascule : 226 requêtes joueuses en 24 h, uniquement des 200 et 304.
+
+Constaté : refus anonymes identiques à ceux du serveur, un faux jeton déclenche bien le repli, et une vraie
+session (la propriétaire, le 31) reçoit 200 sur les routes appelées, sans aucun repli. `next-match` n'a pas
+encore reçu de vraie session. Une seule session, donc pas une preuve de charge.
+
 **Piège d'OpenNext.** Il change un `stale-while-revalidate` sans valeur en `=2592000` (30 jours), que
 les navigateurs appliquent aussi. Corrigé sur `/api/news/rss` en retirant la directive, sans effet sur
 le serveur. `/api/twitch-channels`, `/api/patch-notes`, `/api/blizzard-news` et `/api/blizzard-media`
