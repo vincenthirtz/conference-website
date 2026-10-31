@@ -222,8 +222,44 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
       '/api/patch-notes',
       `/api/tournament/${UUID}/maps`,
       `/api/tournament/${UUID}/pool`,
+      '/api/player/agenda.ics',
+      '/api/player/agenda/subscription',
+      `/api/player/messages/${UUID}`,
+      `/api/player/matches/${UUID}`,
+      '/api/player/discovery/search',
+      `/api/player/predictions/${UUID}`,
+      '/api/player/realtime/ticket',
+      // Peut créditer une série : la base ne laisse passer qu'un seul crédit (ON CONFLICT).
+      '/api/player/tcg/sets',
+      '/api/player/tcg/wallet',
+      '/api/player/tcg/trades',
+      '/api/teams/opening',
+      '/api/teams/search-players',
+      `/api/teams/matches/${UUID}/lineup`,
+      `/api/teams/scrim-plannings/${UUID}/suggest`,
     ]) {
       expect(servedByApiWorker('GET', path, routes)).toBe(true);
+    }
+  });
+
+  it('les lectures joueuses ne couvrent pas leurs écritures', () => {
+    const writes = parseProxyPrefixes(config.vars.API_WORKER_WRITE_ROUTES);
+    for (const [method, path] of [
+      ['POST', '/api/player/agenda/subscription'],
+      ['POST', '/api/player/tcg/trades'],
+      ['PUT', '/api/player/team-reviews'],
+      ['PUT', '/api/player/team-rhythm'],
+      ['POST', '/api/teams/opening'],
+      ['POST', `/api/player/messages/${UUID}`],
+    ]) {
+      expect(servedByApiWorker(method, path, routes)).toBe(false);
+      expect(finalAtApiWorker(method, path, writes, [])).toBe(false);
+    }
+  });
+
+  it('une inspection du staff (?as=) reste au serveur', () => {
+    for (const path of ['/api/player/agenda', '/api/player/tcg/wallet']) {
+      expect(servedByApiWorker('GET', path, routes, `?as=${UUID}`)).toBe(false);
     }
   });
 
@@ -254,16 +290,21 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     `/api/player/matches/${UUID}/report-score`,
     `/api/player/matches/${UUID}/evidence`,
     '/api/player/tcg/booster',
-    '/api/player/agenda/subscription',
+    // Lourd, données personnelles complètes, et limité à 5 par minute.
     '/api/player/data-export',
     '/api/player/delete-account',
+    // La Library est fermée, et certains de ses GET écrivent (appartement, duels, paquet).
+    '/api/player/library/me',
+    '/api/player/library/apartment',
+    `/api/player/library/arena/duels/${UUID}`,
+    // Des coordonnées, ou un jeton à deviner : leur limite de fréquence s'affaiblit sur le Worker.
+    '/api/teams/free-players',
+    '/api/teams/invitations/by-token',
+    '/api/teams/invite-links/by-token',
     '/api/public/newsletter/confirm',
     '/api/public/free-players/remove',
     '/api/public/team-openings/remove',
     '/api/teams/leave',
-    '/api/teams/opening',
-    '/api/teams/search-players',
-    `/api/teams/matches/${UUID}/lineup`,
     // Des coordonnées, protégées par une limite de fréquence : à revoir avec les limites partagées.
     '/api/team-openings/contact',
     // La génération d'images peut saturer un exemplaire, et couper ce qui tourne à côté.
