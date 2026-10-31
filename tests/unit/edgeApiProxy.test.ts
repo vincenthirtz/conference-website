@@ -307,8 +307,6 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     `/api/player/matches/${UUID}/report-score`,
     `/api/player/matches/${UUID}/evidence`,
     '/api/player/tcg/booster',
-    // Lourd, données personnelles complètes, et limité à 5 par minute.
-    '/api/player/data-export',
     '/api/player/delete-account',
     // La Library est fermée, et certains de ses GET écrivent (appartement, duels, paquet).
     '/api/player/library/me',
@@ -324,20 +322,12 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     '/api/teams/leave',
     // Des coordonnées, protégées par une limite de fréquence : à revoir avec les limites partagées.
     '/api/team-openings/contact',
-    // La génération d'images peut saturer un exemplaire, et couper ce qui tourne à côté.
-    `/api/og/player/${UUID}`,
     '/api/twitch/oauth-callback',
     '/api/twitch/exchange',
     `/api/matches/${UUID}`,
     `/api/matches/${UUID}/games`,
     `/api/matches/${UUID}/drafts/1`,
-    // Lisent des mémos à l'antenne : ils attendent la preuve du pont des signaux.
-    '/api/overlay/mvp-public',
-    `/api/overlay/match/${UUID}/stats`,
     '/api/caster/me',
-    '/api/admin/alerts-summary',
-    // Exige la double authentification : un Worker qui l'oublierait ne se verrait pas.
-    '/api/admin/users/manage',
     '/api/captcha',
     '/api/internal/revalidate',
   ])('ne couvre jamais %s', (path) => {
@@ -364,39 +354,44 @@ describe('les lectures admin sur le Worker (wrangler.jsonc)', () => {
     `/api/admin/teams/${UUID}`,
     `/api/cast/${UUID}`,
     '/api/caster/v1/tournaments',
+    // Double authentification : réglage comparé à chaque déploiement (worker-routes-check).
+    '/api/admin/users/manage',
+    `/api/admin/users/${UUID}/staff`,
+    '/api/admin/api-tokens',
+    '/api/admin/recycle-bin',
+    // Mémos à réveil : le pont des signaux les prévient.
+    '/api/admin/alerts-summary',
+    `/api/admin/tournament/${UUID}/dashboard`,
+    `/api/admin/stages/${UUID}/standings`,
+    '/api/overlay/mvp-public',
+    `/api/overlay/match/${UUID}/stats`,
+    // Lourds, mais bornés à ce jeu de données ; une panne repart sur le serveur.
+    '/api/admin/users/export',
+    `/api/admin/tenants/${UUID}/export`,
+    `/api/admin/tournament/${UUID}/export-results`,
+    '/api/player/data-export',
+    `/api/og/player/${UUID}`,
+    '/api/admin/twitch/connection',
   ])('%s part au Worker', (path) => {
     expect(served(path)).toBe(true);
   });
 
   it.each([
-    // Double authentification : un Worker qui l'oublierait ne se verrait pas.
-    '/api/admin/users/manage',
-    '/api/admin/users/export',
-    `/api/admin/users/${UUID}/staff`,
-    '/api/admin/api-tokens',
-    `/api/admin/tenants/${UUID}/export`,
-    '/api/admin/helloasso/memberships',
-    '/api/admin/recycle-bin',
-    // Mémos à réveil, à voir passer sur le pont d'abord.
-    '/api/admin/alerts-summary',
-    `/api/admin/tournament/${UUID}/dashboard`,
-    `/api/admin/stages/${UUID}/standings`,
-    // Lourds.
-    '/api/admin/teams/export',
-    `/api/admin/tournament/${UUID}/export-results`,
-    // GET qui écrivent, ou service externe.
     '/api/admin/documents',
+    '/api/admin/documents/download',
     '/api/admin/instagram/callback',
     '/api/admin/tiktok/callback',
-    '/api/admin/twitch/connection',
-    '/api/admin/twitch/predictions',
+    '/api/admin/twitch/connect',
   ])('%s reste au serveur', (path) => {
     expect(served(path)).toBe(false);
   });
 
   it('un identifiant qui n’est pas un UUID ne passe pas à côté du refus', () => {
-    expect(served('/api/admin/tenants/un-slug/export')).toBe(false);
-    expect(served('/api/admin/users/un-identifiant/staff')).toBe(false);
+    expect(
+      servedByApiWorker('GET', '/api/x/slug/y', ['/api/*'], '', [
+        '/api/x/:id/y',
+      ])
+    ).toBe(false);
   });
 
   it.each(['POST', 'PUT', 'PATCH', 'DELETE'])(
