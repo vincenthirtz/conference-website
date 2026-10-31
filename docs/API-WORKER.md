@@ -194,7 +194,8 @@ prouvent qu'elles tournent, pas ce qu'elles feraient sur de vraies données.
 
 | Travail | Taille | Bloquant ? |
 |---|---|---|
-| Bascule par familles derrière le relais, avec observation | 1 à 2 j | Accord de la propriétaire avant chaque famille |
+| Cache des réponses `s-maxage` dans le Worker, que CloudFront assure aujourd'hui | 0,5 j | Oui, avant d'élargir : sans lui, chaque lecture interroge la base |
+| Bascule des familles suivantes derrière le relais, avec observation | 1 à 2 j | Accord de la propriétaire avant chaque famille |
 | Limites de fréquence partagées (132 appels, synchrones) | 0,5 à 1 j | Pas pour une première famille en lecture. À trancher avant les familles sensibles (connexion, captcha, formulaires), avec le nombre d'exemplaires observé |
 
 **Premier déploiement, 2026-10-31.** Le Worker `owwomenscup-api` tourne sans adresse
@@ -215,6 +216,30 @@ refusent cette limite (erreur 1001).
 poser les secrets un par un (`workers secrets update NOM --type secret_text --body @fichier`)
 et relire la liste. Le profil `cf` par défaut de ce PC est un autre compte : toujours
 passer `--profile owwomenscup`.
+
+**Première famille, 2026-10-31.** Le relais du site (`API_WORKER_PREFIXES`,
+wrangler.jsonc) envoie au Worker les lectures de `/api/health`, `/api/seasonal-logo`,
+`/api/leagues`, `/api/public/tcg/live`, `/api/public/openapi` et `/api/public/v1/`. GET et
+HEAD seulement ; si le Worker lève, répond 5xx ou tarde plus de 8 s, la lecture repart vers
+le serveur. Retour arrière : vider la variable et redéployer le site. Pas tout
+`/api/public/` : certains de ses GET écrivent (`newsletter/confirm`).
+
+Constaté en production, sur la vraie base et avec les vrais secrets :
+
+- Réponses identiques à l'octet à celles du serveur sur les 8 routes de lecture comparées
+  (`/api/health` mise à part, qui décrit l'exemplaire qui répond).
+- Écritures, `/api/admin/*`, `/api/captcha` et route inconnue toujours servies par le serveur.
+- Aucun repli sur 20 min, aucune erreur dans les journaux du Worker.
+- Sans cache des deux côtés, le Worker n'est pas plus lent : 128 à 301 ms contre 184 à
+  347 ms. Démarrage à froid vu jusqu'à ~1 s.
+- **Le cache manque** : CloudFront sert ces routes depuis son cache (~10 ms), le Worker
+  interroge la base à chaque lecture (50 à 450 ms). Sans gravité à ce volume, à corriger
+  avant d'élargir. Clé de cache à reprendre avec soin : ne jamais mettre en cache une
+  requête portant `Authorization` ou un cookie.
+
+**Pas encore mesuré :** temps de calcul et mémoire par requête (`invocation_logs` reste coupé,
+il garderait le secret du relais ; `cf` n'expose pas les statistiques), et le lien entre
+exemplaires des signaux. Écritures, e-mails, Discord et tâches planifiées n'ont pas tourné.
 
 **Appels directs.** Le navigateur pour `/api/public/*` et les tâches planifiées du site
 appellent `api.owwomenscup.fr` sans passer par le relais. Ils ne basculeront pas avec
