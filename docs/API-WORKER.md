@@ -196,6 +196,7 @@ prouvent qu'elles tournent, pas ce qu'elles feraient sur de vraies données.
 |---|---|---|
 | Bascule des familles suivantes derrière le relais, avec observation | 1 à 2 j | Accord de la propriétaire avant chaque famille |
 | Limites de fréquence partagées (132 appels, synchrones) | 0,5 à 1 j | Pas pour une première famille en lecture. À trancher avant les familles sensibles (connexion, captcha, formulaires), avec le nombre d'exemplaires observé |
+| Signaux d'écriture entre le serveur et le Worker (mémos de sommeil, voir la quatrième famille) | à chiffrer | **Oui, avant la première écriture sur le Worker** et pour `/api/admin/alerts-summary` |
 
 **Premier déploiement, 2026-10-31.** Le Worker `owwomenscup-api` tourne sans adresse
 publique (`workers.dev` répond 404, aucune route) et sans tâches planifiées
@@ -282,9 +283,9 @@ le reste est réservé au staff, ou sert au draft en direct.
 La comparaison par début de chemin a disparu : `/api/teams` aurait couvert les routes privées de
 `/api/teams/*`, dont certaines agissent sur un GET. `API_WORKER_ROUTES` compare segment par
 segment, `:id` n'accepte qu'un UUID, `*` n'existe qu'en dernier, et tout le reste va au serveur.
-**Avant d'ajouter une route :** vérifier que son GET est public et qu'il n'écrit rien, utilitaires
-compris. `edgeApiProxy.test.ts` lit le réglage de production et refuse qu'il couvre une route
-sensible connue.
+**Avant d'ajouter une route :** vérifier que son GET n'écrit rien, utilitaires compris, et qu'il ne
+lit aucun mémo de sommeil (voir la quatrième famille). `edgeApiProxy.test.ts` lit le réglage de
+production et refuse qu'il couvre une route sensible connue.
 
 Comparé à une photo prise juste avant la bascule, par le même relais :
 
@@ -312,6 +313,48 @@ couvrait que les pannes. Repère avant bascule : 226 requêtes joueuses en 24 h,
 Constaté : refus anonymes identiques à ceux du serveur, un faux jeton déclenche bien le repli, et une vraie
 session (la propriétaire, le 31) reçoit 200 sur les routes appelées, sans aucun repli. `next-match` n'a pas
 encore reçu de vraie session. Une seule session, donc pas une preuve de charge.
+
+**Quatrième famille, 2026-10-31 : premières lectures admin.** `/api/admin/me`,
+`/api/admin/realtime/ticket` et `/api/admin/diffusion/overlay-presence`, en GET : 503 des 1 040 requêtes
+admin d'une journée (événement compris). Aucune n'écrit, garde staff comprise. `PATCH /api/admin/me` et
+`?as=` restent au serveur. Jamais en cache : `/api/admin/` est exclu, et ces requêtes portent un jeton.
+
+Un 403 à une requête identifiée repart désormais vers le serveur, comme un 401 : un faux refus de `me`
+fermerait le back-office, et `getStaffByUserId` rend « pas staff » sur une erreur de lecture passagère.
+Un 403 sur `me` est normal (64 par jour, joueuses connectées) : le relais ne laisse donc une trace,
+`refus non confirmé par le serveur`, que si le serveur répond autre chose. Ces refus coûtent une lecture
+de plus, le temps de la bascule.
+
+**Mémos de sommeil : à régler avant toute écriture sur le Worker.** Un mémo (`createDormancyMemo`) garde
+une lecture jusqu'à ce qu'une écriture note son signal, ou 15 min au plus. Le serveur note ces signaux dans
+sa mémoire, le Worker dans son Durable Object : **aucun ne voit les notes de l'autre.** Tant que lectures et
+écritures vivent de deux côtés, un mémo peut donc retarder de 15 min :
+
+- dans ce sens-ci (lecture sur le Worker, écriture sur le serveur), `/api/admin/alerts-summary` : quatre
+  mémos (tournoi en cours, lignes du badge, scrutins MVP, soirs sans staff). Un litige ouvert un soir de
+  match apparaîtrait au badge jusqu'à 15 min plus tard. **Il reste au serveur.** Le relire à chaque fois
+  coûterait ~2 900 requêtes Supabase de plus par jour, soit ~23 % du trafic mesuré.
+- dans l'autre sens, dès la première écriture sur le Worker : `/api/bot/v1/events/pending` et l'envoi des
+  notifications dorment sur le serveur et ne verraient pas un événement écrit par le Worker. Les rappels
+  de match et la détection des litiges en retard dorment de la même façon.
+
+Aucune route des quatre familles en ligne ne lit un tel mémo (vérifié le 31). Il faudra un pont, ou basculer
+d'un bloc écrivains et lecteurs d'un même signal. À décider avant la première écriture.
+
+**`/api/admin/users/manage` reste au serveur** (30 par jour), et avec lui toute route à double
+authentification obligatoire. Un Worker qui ne l'exigerait pas ne se verrait pas : ni erreur, ni repli, et
+le repli ne couvre que les refus. Il faut d'abord prouver sur le Worker le refus d'une session sans double
+authentification.
+
+Constaté après déploiement, sans jeton réel : refus anonymes servis par le Worker et identiques à ceux
+du serveur, faux jeton rejoué sur le serveur sans trace, cinq autres routes admin restées au serveur,
+aucune erreur nouvelle.
+
+**Écart assumé :** un staff retiré garde ces trois lectures jusqu'à 60 s sur le Worker (`getStaffByUserId`,
+`loadStaffTenants`), là où le serveur le coupe aussitôt. Les écritures, restées au serveur, le coupent tout de suite.
+
+**Toujours pas prouvé :** ces routes lisent le jeton `Bearer` et, pour `me`, le seul cookie de l'espace
+actif. **Le cookie de session, le CSRF et la double authentification ne sont pas exercés par cette famille.**
 
 **Piège d'OpenNext.** Il change un `stale-while-revalidate` sans valeur en `=2592000` (30 jours), que
 les navigateurs appliquent aussi. Corrigé sur `/api/news/rss` en retirant la directive, sans effet sur
