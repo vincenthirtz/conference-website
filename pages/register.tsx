@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 import { useT } from '@/lib/i18n/useT';
 import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics/track';
@@ -9,6 +8,7 @@ import { resolveSignupSource } from '@/lib/analytics/attribution';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import nsRegisterPage from '@/lib/i18n/locales/fr/registerPage';
 import { safeNext } from '@/utils/auth/safeNext';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 function RegisterPage() {
   const t = useT(nsRegisterPage);
@@ -100,7 +100,7 @@ function RegisterPage() {
           )}`
         : undefined;
 
-      const { error } = await supabaseClient.auth.signInWithOAuth({
+      const { error } = await identityBrowser.signInWithOAuth({
         provider: 'discord',
         options: {
           redirectTo,

@@ -15,10 +15,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
 import nsBattlenetLogin from '@/lib/i18n/locales/fr/battlenetLogin';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 /** N'accepte qu'un chemin interne relatif (anti open-redirect). */
 function safeNext(raw: unknown): string {
@@ -45,7 +45,7 @@ export default function BattlenetLoginPage() {
       let msg: string | null = null;
 
       if (tokenHash) {
-        const { data, error } = await supabaseClient.auth.verifyOtp({
+        const { data, error } = await identityBrowser.verifyOtp({
           type: 'magiclink',
           token_hash: tokenHash,
         });
@@ -55,7 +55,7 @@ export default function BattlenetLoginPage() {
 
       // Session déjà active (retour arrière, double clic) : on n'échoue pas.
       if (!ok) {
-        const { data } = await supabaseClient.auth.getSession();
+        const { data } = await identityBrowser.getSession();
         if (data?.session) ok = true;
       }
 

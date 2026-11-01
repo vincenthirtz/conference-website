@@ -18,6 +18,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { logger } from '@/utils/logger';
 import { useT } from '@/lib/i18n/useT';
 import nsDiscordSignInCta from '@/lib/i18n/locales/fr/discordSignInCta';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 type Props = {
   /** Path the user lands on after the OAuth round-trip. */
@@ -80,7 +81,7 @@ export default function DiscordSignInCta({
       }
 
       // Mode signin : pas connecté → flow OAuth Discord standard.
-      const { error } = await supabaseClient.auth.signInWithOAuth({
+      const { error } = await identityBrowser.signInWithOAuth({
         provider: 'discord',
         options: { redirectTo, scopes: 'identify email' },
       });

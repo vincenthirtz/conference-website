@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import { loginPathWithNext } from '@/utils/admin/loginRedirect';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 export type AdminFetchOptions = RequestInit & {
   /**
@@ -76,7 +76,7 @@ export function useAdminFetch(
     async (input: string, init: AdminFetchOptions = {}): Promise<Response> => {
       const {
         data: { session },
-      } = await supabaseClient.auth.getSession();
+      } = await identityBrowser.getSession();
       const token = session?.access_token;
 
       const { skipAuthRedirect, headers: rawHeaders, ...rest } = init;

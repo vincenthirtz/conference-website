@@ -22,7 +22,7 @@ import type {
   GetServerSidePropsContext,
   GetServerSidePropsResult,
 } from 'next';
-import { supabaseAdmin, getServerClient } from '@/utils/supabase';
+import { supabaseAdmin } from '@/utils/supabase';
 import {
   requireStaffRoleFromRequest,
   type AuthenticatedStaffContext,
@@ -33,6 +33,7 @@ import { logger, type Logger } from '@/utils/logger';
 import type { AdminDb } from '@/utils/admin/serviceContext';
 import type { SubjectContext } from '@/utils/subject';
 import { ACT_AS_QUERY_PARAM, SUBJECT_QUERY_PARAM } from '@/utils/subjectParam';
+import { identityAdmin, userFromCookies } from '@/utils/identity';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -83,7 +84,7 @@ async function resolveActAsSubject(
   } catch {
     return null;
   }
-  const { data, error } = await supabaseAdmin.auth.admin.getUserById(target);
+  const { data, error } = await identityAdmin.getUserById(target);
   if (error || !data?.user) return null;
 
   try {
@@ -118,10 +119,9 @@ export function defineSubjectPage<P extends Record<string, unknown>>(
   options: SubjectPageOptions<P>
 ): GetServerSideProps<P & { subjectScope: SubjectPageScope }> {
   return async (ctx) => {
-    const supabase = getServerClient(ctx.req, ctx.res);
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await userFromCookies(ctx.req, ctx.res);
     if (!user) {
       return {
         redirect: {

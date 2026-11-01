@@ -3,7 +3,6 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState, type JSX } from 'react';
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useStaffSession } from '@/hooks/useStaffSession';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
@@ -16,6 +15,7 @@ import { useT } from '@/lib/i18n/useT';
 import { useTenantBranding } from '@/lib/branding/TenantBrandingProvider';
 import { useSeasonalLogo } from '@/lib/branding/useSeasonalLogo';
 import nsNavbar from '@/lib/i18n/locales/fr/navbar';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 const DEFAULT_LOGO_SRC = '/img/logos/2026-logo.png';
 
@@ -208,7 +208,7 @@ function Navbar(): JSX.Element {
   // tard.
   const handlePlayerLogout = () => {
     setDrawerOpen(false);
-    void supabaseClient.auth.signOut().catch(() => {});
+    void identityBrowser.signOut().catch(() => {});
     router.push('/');
   };
 

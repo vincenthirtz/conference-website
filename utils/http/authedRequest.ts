@@ -9,7 +9,7 @@
 // n'étant pas un composant, rien ici n'est un hook.
 
 import Router from 'next/router';
-import { supabaseClient } from '@/utils/supabaseBrowser';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 /** Corps d'erreur du noyau `defineRoute` (admin comme joueuse). */
 type ErrorBody = {
@@ -83,7 +83,7 @@ export async function authedRequest<T>(
 
   const {
     data: { session },
-  } = await supabaseClient.auth.getSession();
+  } = await identityBrowser.getSession();
   const token = session?.access_token;
   if (!token) throw config.makeError('Session manquante.', 401, null);
 

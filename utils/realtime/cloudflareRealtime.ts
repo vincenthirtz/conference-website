@@ -14,7 +14,6 @@
 //   à jour par seconde au plus, la dernière gagne (le salon ignore les plus
 //   rapprochées).
 
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import {
   parseRoomMessage,
   pickRealtimeBackend,
@@ -22,6 +21,7 @@ import {
   type RoomMessage,
   ticketPathFor,
 } from './rooms';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 /** Interrupteur lu une fois au chargement de la page (cf. pickRealtimeBackend). */
 export const REALTIME_BACKEND: RealtimeBackend = pickRealtimeBackend(
@@ -67,7 +67,7 @@ async function fetchTicket(path: string, room: string): Promise<TicketResult> {
   try {
     const {
       data: { session },
-    } = await supabaseClient.auth.getSession();
+    } = await identityBrowser.getSession();
     const headers = new Headers({ accept: 'application/json' });
     if (session?.access_token) {
       headers.set('Authorization', `Bearer ${session.access_token}`);

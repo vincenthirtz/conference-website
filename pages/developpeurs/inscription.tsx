@@ -19,7 +19,6 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT, format } from '@/lib/i18n/useT';
 import {
@@ -29,6 +28,7 @@ import {
 import { TRIAL_DAYS } from '@/utils/billing/trial';
 import { CGV_VERSION } from '@/utils/billing/cgv';
 import nsDeveloperRegisterPage from '@/lib/i18n/locales/fr/developerRegisterPage';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 type DevRegisterDict = typeof nsDeveloperRegisterPage.fr;
 
@@ -133,11 +133,12 @@ function DeveloperRegisterPage() {
         }
 
         // Compte fraîchement créé + auto-confirmé → connexion immédiate.
-        const { error: signInError } =
-          await supabaseClient.auth.signInWithPassword({
+        const { error: signInError } = await identityBrowser.signInWithPassword(
+          {
             email: email.trim(),
             password,
-          });
+          }
+        );
 
         if (signInError) {
           // Improbable (compte tout juste créé) : on ne bloque pas, on renvoie

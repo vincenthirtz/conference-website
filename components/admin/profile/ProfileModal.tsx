@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useStaffSession } from '@/hooks/useStaffSession';
@@ -20,6 +19,7 @@ import { ErrorBanner, InfoTile } from './ProfileBits';
 
 import { logger } from '@/utils/logger';
 import nsAdminProfile from '@/lib/i18n/locales/admin-fr/adminProfile';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 type StaffProfile = {
   id: string;
@@ -124,7 +124,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
     setEmailErrorMsg(null);
 
     try {
-      const { error } = await supabaseClient.auth.updateUser({
+      const { error } = await identityBrowser.updateUser({
         email: newEmail,
       });
 
@@ -157,7 +157,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
     setPasswordErrorMsg(null);
 
     try {
-      const { error } = await supabaseClient.auth.updateUser({
+      const { error } = await identityBrowser.updateUser({
         password: newPassword,
       });
 
@@ -243,7 +243,7 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
         throw new Error(body?.error || t.errorDelete);
       }
 
-      await supabaseClient.auth.signOut();
+      await identityBrowser.signOut();
       router.replace('/');
     } catch (err: unknown) {
       logger.error('ProfileModal: delete account error', err);

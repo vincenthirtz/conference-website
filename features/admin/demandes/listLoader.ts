@@ -30,6 +30,7 @@ import {
   type TournamentMini,
   type UserMini,
 } from './listModel';
+import { identityAdmin } from '@/utils/identity';
 
 export const DEMANDES_PAGE_SIZE = 50;
 
@@ -196,7 +197,7 @@ export async function loadDemandesList(
   await Promise.all(
     userIds.map(async (uid) => {
       try {
-        const { data } = await db.auth.admin.getUserById(uid);
+        const { data } = await identityAdmin.getUserById(uid);
         if (data?.user) {
           const meta = (data.user.user_metadata ?? {}) as Record<string, any>;
           userMap.set(uid, {

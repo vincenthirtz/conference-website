@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminResetPassword from '@/lib/i18n/locales/admin-fr/adminResetPassword';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 export default function AdminResetPasswordPage() {
   const router = useRouter();
@@ -36,7 +36,7 @@ export default function AdminResetPasswordPage() {
       const tokenHash = router.query.token_hash as string | undefined;
       const code = router.query.code as string | undefined;
       if (tokenHash) {
-        const { data, error } = await supabaseClient.auth.verifyOtp({
+        const { data, error } = await identityBrowser.verifyOtp({
           type: 'recovery',
           token_hash: tokenHash,
         });
@@ -48,7 +48,7 @@ export default function AdminResetPasswordPage() {
       } else if (code) {
         // 1) PKCE flow : Supabase envoie ?code=xxx (fallback legacy)
         const { data, error } =
-          await supabaseClient.auth.exchangeCodeForSession(code);
+          await identityBrowser.exchangeCodeForSession(code);
         if (error) {
           msg = error.message || t.errorCodeInvalid;
         } else {
@@ -65,7 +65,7 @@ export default function AdminResetPasswordPage() {
         if (errDesc) {
           msg = decodeURIComponent(errDesc);
         } else if (access_token && refresh_token) {
-          const { data, error } = await supabaseClient.auth.setSession({
+          const { data, error } = await identityBrowser.setSession({
             access_token,
             refresh_token,
           });
@@ -79,7 +79,7 @@ export default function AdminResetPasswordPage() {
 
       // 3) Fallback : session déjà active (cookie)
       if (!established) {
-        const { data } = await supabaseClient.auth.getSession();
+        const { data } = await identityBrowser.getSession();
         if (data?.session) established = true;
       }
 
@@ -115,7 +115,7 @@ export default function AdminResetPasswordPage() {
 
     setLoading(true);
     try {
-      const { error } = await supabaseClient.auth.updateUser({
+      const { error } = await identityBrowser.updateUser({
         password: password.trim(),
       });
 

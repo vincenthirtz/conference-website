@@ -15,10 +15,10 @@ import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSession } from '@/hooks/useSession';
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useT, format } from '@/lib/i18n/useT';
 import nsInvitationLink from '@/lib/i18n/locales/fr/invitationLink';
 import { invitationsClient } from '@/utils/invitations/tokenClient';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 export type TeamInvitationInfo = {
   team_name: string | null;
@@ -134,7 +134,7 @@ export default function TeamInvitationPanel({
 
   const switchAccount = useCallback(async () => {
     try {
-      await supabaseClient.auth.signOut();
+      await identityBrowser.signOut();
     } catch {
       // Peu importe : ce qui compte est d'arriver sur /login, qui refera une
       // session propre par-dessus.

@@ -15,8 +15,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import type { AuthChangeEvent, User } from '@supabase/supabase-js';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 export type SessionState = {
   user: User | null;
@@ -44,7 +44,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    supabaseClient.auth.getSession().then(({ data }) => {
+    identityBrowser.getSession().then(({ data }) => {
       if (!mounted) return;
       setState((prev) => ({
         user: data.session?.user ?? null,
@@ -56,7 +56,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }));
     });
 
-    const { data: sub } = supabaseClient.auth.onAuthStateChange(
+    const { data: sub } = identityBrowser.onAuthStateChange(
       (event, session) => {
         if (!mounted) return;
         setState({

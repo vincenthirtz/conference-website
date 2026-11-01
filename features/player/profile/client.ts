@@ -8,13 +8,13 @@
 // d'e-mail / de mot de passe, rafraîchissement et fin de session) : la
 // ré-authentification par le mot de passe actuel reste la garde de chacun.
 
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import { playerRequest } from '@/utils/player/playerHttp';
 import type {
   DeleteAccountResponse,
   TwitchSourceResponse,
   UpdateProfileResponse,
 } from './schemas';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 export const profileUrls = {
   profile: '/api/player/update-profile',
@@ -48,7 +48,7 @@ export class WrongCurrentPasswordError extends Error {
 }
 
 async function reauthenticate(email: string, password: string) {
-  const { error } = await supabaseClient.auth.signInWithPassword({
+  const { error } = await identityBrowser.signInWithPassword({
     email,
     password,
   });
@@ -56,7 +56,7 @@ async function reauthenticate(email: string, password: string) {
 }
 
 export const accountAuth = {
-  refreshSession: () => supabaseClient.auth.refreshSession(),
+  refreshSession: () => identityBrowser.refreshSession(),
   /**
    * Ré-authentifie PUIS demande le changement : une session détournée (JWT en
    * localStorage) ne doit pas pouvoir remplacer l'e-mail en silence.
@@ -67,7 +67,7 @@ export const accountAuth = {
     newEmail: string
   ) => {
     await reauthenticate(currentEmail, currentPassword);
-    const { error } = await supabaseClient.auth.updateUser({ email: newEmail });
+    const { error } = await identityBrowser.updateUser({ email: newEmail });
     if (error) throw error;
   },
   /** Ré-authentifie PUIS change le mot de passe. */
@@ -77,12 +77,12 @@ export const accountAuth = {
     newPassword: string
   ) => {
     await reauthenticate(currentEmail, currentPassword);
-    const { error } = await supabaseClient.auth.updateUser({
+    const { error } = await identityBrowser.updateUser({
       password: newPassword,
     });
     if (error) throw error;
   },
   /** Révoque toutes les sessions (après rotation du mot de passe). */
-  signOutEverywhere: () => supabaseClient.auth.signOut({ scope: 'global' }),
-  signOut: () => supabaseClient.auth.signOut(),
+  signOutEverywhere: () => identityBrowser.signOut({ scope: 'global' }),
+  signOut: () => identityBrowser.signOut(),
 };

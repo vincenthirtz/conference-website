@@ -16,12 +16,13 @@ import Link from 'next/link';
 import type { GetServerSideProps } from 'next';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 
-import { getServerClient, supabaseAdmin } from '@/utils/supabase';
+import { supabaseAdmin } from '@/utils/supabase';
 import { buildBotInviteUrl } from '@/utils/onboard';
 import { logger } from '@/utils/logger';
 import { useT } from '@/lib/i18n/useT';
 import nsOnboardInviteBot from '@/lib/i18n/locales/fr/onboardInviteBot';
 import { socialUrl } from '@/config/socials';
+import { identityAdmin, userFromCookies } from '@/utils/identity';
 
 type StatusFromApi = {
   id: string;
@@ -64,11 +65,10 @@ export const getServerSideProps: GetServerSideProps<ServerProps> = async (
   }
 
   // Auth — required to fetch the request row owned by this user.
-  const supabase = getServerClient(ctx.req, ctx.res);
   const {
     data: { user },
     error: authErr,
-  } = await supabase.auth.getUser();
+  } = await userFromCookies(ctx.req, ctx.res);
 
   if (authErr || !user) {
     const dest = encodeURIComponent(`/onboard/invite-bot/${id}`);
@@ -93,9 +93,7 @@ export const getServerSideProps: GetServerSideProps<ServerProps> = async (
   let isOwner = row.requester_auth_user_id === user.id;
   if (!isOwner) {
     try {
-      const { data: adminUser } = await supabaseAdmin.auth.admin.getUserById(
-        user.id
-      );
+      const { data: adminUser } = await identityAdmin.getUserById(user.id);
       const discordIdentity = (adminUser?.user?.identities ?? []).find(
         (i) => i.provider === 'discord'
       );

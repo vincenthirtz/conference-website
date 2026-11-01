@@ -31,13 +31,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useT, format } from '@/lib/i18n/useT';
 import { logger } from '../../utils/logger';
 import nsPlayerDiscordLink from '@/lib/i18n/locales/fr/playerDiscordLink';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 type LinkStatus = {
   linked: boolean;
@@ -158,7 +158,7 @@ export default function DiscordLinkCard({
   const onAttachIdentity = async () => {
     setBusy(true);
     try {
-      const { error } = await supabaseClient.auth.linkIdentity({
+      const { error } = await identityBrowser.linkIdentity({
         provider: 'discord',
         options: {
           redirectTo: `${window.location.origin}${returnTo ?? router.pathname}`,

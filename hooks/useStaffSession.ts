@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useSession } from '@/hooks/useSession';
 import type { StaffRole } from '@/utils/staffRoles';
 import { staffPermissionsFor } from '@/utils/staffPermissions';
 import type { TenantKind } from '@/utils/tenantKind';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 export const STAFF_CACHE_TTL = 2 * 60 * 1000;
 // Bump v2 : ajout du champ `activeTenantKind`. Le suffixe invalide les vieux
@@ -151,7 +151,7 @@ export function useStaffSession(): StaffSession {
           if (!token) {
             const {
               data: { session },
-            } = await supabaseClient.auth.getSession();
+            } = await identityBrowser.getSession();
             token = session?.access_token ?? null;
           }
 

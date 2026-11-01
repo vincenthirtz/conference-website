@@ -32,7 +32,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Breadcrumb from '@/components/admin/Breadcrumb';
 import { withStaffPage } from '@/utils/staff';
-import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import AdminPageHeader from '@/features/admin/_shared/ui/AdminPageHeader';
@@ -55,6 +54,7 @@ import TenantFormModal from '@/components/admin/tenants/TenantFormModal';
 // Le panneau par défaut reste statique ; les autres arrivent au clic
 // (cf. components/admin/lazyPanel).
 import TenantReadinessPanel from '@/components/admin/onboarding/TenantReadinessPanel';
+import { identityAdmin } from '@/utils/identity';
 
 const TenantRequestsPanel = lazyPanel(
   () => import('@/components/admin/onboarding/TenantRequestsPanel')
@@ -261,9 +261,7 @@ export const getServerSideProps = withStaffPage<{
   async (_ctx, staffCtx) => {
     let discordId: string | null = null;
     try {
-      const { data } = await supabaseAdmin.auth.admin.getUserById(
-        staffCtx.user.id
-      );
+      const { data } = await identityAdmin.getUserById(staffCtx.user.id);
       const identities = data?.user?.identities ?? [];
       const discord = identities.find(
         (i: { provider: string }) => i.provider === 'discord'

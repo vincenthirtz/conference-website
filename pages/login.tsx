@@ -6,10 +6,7 @@ import { useRouter } from 'next/router';
 import Heading from '@/components/Typography/heading';
 import Paragraph from '@/components/Typography/paragraph';
 import Button from '@/components/Buttons/button';
-import {
-  supabaseClient,
-  purgeSupabaseAuthStorage,
-} from '@/utils/supabaseBrowser';
+import { purgeSupabaseAuthStorage } from '@/utils/supabaseBrowser';
 import { STAFF_CACHE_KEY, isStaffRole } from '@/hooks/useStaffSession';
 import { useT } from '@/lib/i18n/useT';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
@@ -19,6 +16,7 @@ import nsLoginPage from '@/lib/i18n/locales/fr/loginPage';
 // Valide `?next=` (anti open-redirect) — règle partagée avec /register et
 // l'API d'inscription.
 import { safeNext } from '@/utils/auth/safeNext';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 // Amorce le cache de session staff (même clé/shape que useStaffSession) à
 // partir de la réponse /api/admin/me déjà obtenue au login. Évite que la
@@ -70,7 +68,7 @@ const LoginPage = () => {
       try {
         const {
           data: { session },
-        } = await supabaseClient.auth.getSession();
+        } = await identityBrowser.getSession();
 
         const token = session?.access_token;
         if (!token) {
@@ -99,7 +97,7 @@ const LoginPage = () => {
         }
 
         if (res.status === 401) {
-          await supabaseClient.auth.signOut({ scope: 'local' }).catch(() => {});
+          await identityBrowser.signOut({ scope: 'local' }).catch(() => {});
           purgeSupabaseAuthStorage();
           if (!cancelled) {
             setError(t.errorInvalidCredentials);
@@ -127,7 +125,7 @@ const LoginPage = () => {
 
     try {
       const { data, error: authError } =
-        await supabaseClient.auth.signInWithPassword({ email, password });
+        await identityBrowser.signInWithPassword({ email, password });
 
       if (authError) {
         setError(t.errorInvalidCredentials);
@@ -172,7 +170,7 @@ const LoginPage = () => {
       }
 
       if (res.status === 401) {
-        await supabaseClient.auth.signOut({ scope: 'local' }).catch(() => {});
+        await identityBrowser.signOut({ scope: 'local' }).catch(() => {});
         purgeSupabaseAuthStorage();
         throw new Error(t.errorInvalidCredentials);
       }
@@ -240,7 +238,7 @@ const LoginPage = () => {
         ? `${baseUrl}/auth/discord-member?next=${encodeURIComponent(next)}`
         : undefined;
 
-      const { error: oauthError } = await supabaseClient.auth.signInWithOAuth({
+      const { error: oauthError } = await identityBrowser.signInWithOAuth({
         provider: 'discord',
         options: {
           redirectTo,

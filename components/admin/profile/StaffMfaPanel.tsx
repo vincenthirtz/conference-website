@@ -5,19 +5,19 @@
 // désactivation. Utilisé par l'onglet Sécurité du profil et par la page
 // /admin/mfa (redirection des gardes quand l'obligation est active).
 //
-// Tout passe par `supabaseClient.auth.mfa` : la session élevée est réécrite
+// Tout passe par `identityBrowser.mfa` : la session élevée est réécrite
 // dans les cookies par le client navigateur, et c'est son jeton que les gardes
 // serveur relisent (utils/staffMfa.ts). Aucune route maison, aucun secret
 // stocké chez nous.
 
 import { useCallback, useEffect, useState } from 'react';
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import { logger } from '@/utils/logger';
 import nsAdminProfile from '@/lib/i18n/locales/admin-fr/adminProfile';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 type PanelState =
   | { kind: 'loading' }
@@ -50,8 +50,8 @@ export default function StaffMfaPanel({
 
   const load = useCallback(async () => {
     const [factors, aal] = await Promise.all([
-      supabaseClient.auth.mfa.listFactors(),
-      supabaseClient.auth.mfa.getAuthenticatorAssuranceLevel(),
+      identityBrowser.mfa.listFactors(),
+      identityBrowser.mfa.getAuthenticatorAssuranceLevel(),
     ]);
     if (factors.error) throw factors.error;
     const verified = (factors.data?.totp ?? []).find(
@@ -80,18 +80,16 @@ export default function StaffMfaPanel({
     try {
       // Un enrôlement abandonné laisse un facteur `unverified` : on le retire,
       // sinon il encombre la liste (et GoTrue en plafonne le nombre).
-      const { data: list } = await supabaseClient.auth.mfa.listFactors();
+      const { data: list } = await identityBrowser.mfa.listFactors();
       for (const f of list?.all ?? []) {
         if (f.factor_type === 'totp' && f.status === 'unverified') {
-          await supabaseClient.auth.mfa.unenroll({ factorId: f.id });
+          await identityBrowser.mfa.unenroll({ factorId: f.id });
         }
       }
-      const { data, error: enrollError } = await supabaseClient.auth.mfa.enroll(
-        {
-          factorType: 'totp',
-          friendlyName: `staff-${Date.now()}`,
-        }
-      );
+      const { data, error: enrollError } = await identityBrowser.mfa.enroll({
+        factorType: 'totp',
+        friendlyName: `staff-${Date.now()}`,
+      });
       if (enrollError || !data) throw enrollError ?? new Error('enroll');
       setCode('');
       setState({
@@ -111,7 +109,7 @@ export default function StaffMfaPanel({
   const cancelEnroll = async (factorId: string) => {
     setBusy(true);
     try {
-      await supabaseClient.auth.mfa.unenroll({ factorId });
+      await identityBrowser.mfa.unenroll({ factorId });
     } catch (err: unknown) {
       logger.error('StaffMfaPanel: cancel enroll error', err);
     } finally {
@@ -130,7 +128,7 @@ export default function StaffMfaPanel({
     setError(null);
     try {
       const { error: verifyError } =
-        await supabaseClient.auth.mfa.challengeAndVerify({ factorId, code });
+        await identityBrowser.mfa.challengeAndVerify({ factorId, code });
       if (verifyError) {
         setError(t.errorMfaCode);
         return;
@@ -151,7 +149,7 @@ export default function StaffMfaPanel({
     setBusy(true);
     setError(null);
     try {
-      const { error: unenrollError } = await supabaseClient.auth.mfa.unenroll({
+      const { error: unenrollError } = await identityBrowser.mfa.unenroll({
         factorId,
       });
       if (unenrollError) throw unenrollError;

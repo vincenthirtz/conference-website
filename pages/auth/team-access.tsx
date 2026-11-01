@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 import { useT } from '@/lib/i18n/useT';
 import nsTeamAccess from '@/lib/i18n/locales/fr/teamAccess';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 /**
  * Consommateur du magic-link « accès espace équipe » émis après création d'une
@@ -44,7 +44,7 @@ export default function TeamAccessPage() {
 
       if (tokenHash) {
         // Flow recommandé : ?token_hash=…&type=magiclink → verifyOtp.
-        const { data, error } = await supabaseClient.auth.verifyOtp({
+        const { data, error } = await identityBrowser.verifyOtp({
           type: 'magiclink',
           token_hash: tokenHash,
         });
@@ -56,7 +56,7 @@ export default function TeamAccessPage() {
       } else if (code) {
         // Fallback PKCE : ?code=xxx
         const { data, error } =
-          await supabaseClient.auth.exchangeCodeForSession(code);
+          await identityBrowser.exchangeCodeForSession(code);
         if (error) {
           msg = error.message || t.errorCodeInvalid;
         } else {
@@ -73,7 +73,7 @@ export default function TeamAccessPage() {
         if (errDesc) {
           msg = decodeURIComponent(errDesc);
         } else if (access_token && refresh_token) {
-          const { data, error } = await supabaseClient.auth.setSession({
+          const { data, error } = await identityBrowser.setSession({
             access_token,
             refresh_token,
           });
@@ -87,7 +87,7 @@ export default function TeamAccessPage() {
 
       // Session déjà active (cookie) ?
       if (!ok) {
-        const { data } = await supabaseClient.auth.getSession();
+        const { data } = await identityBrowser.getSession();
         if (data?.session) ok = true;
       }
 

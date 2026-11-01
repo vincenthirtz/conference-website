@@ -18,13 +18,11 @@
 //      qui redirige vers /login — un aller-retour serveur pour rien.
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import {
-  supabaseClient,
-  purgeSupabaseAuthStorage,
-} from '@/utils/supabaseBrowser';
+import { purgeSupabaseAuthStorage } from '@/utils/supabaseBrowser';
 import { STAFF_CACHE_KEY } from '@/hooks/useStaffSession';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import nsAdminLogout from '@/lib/i18n/locales/admin-fr/adminLogout';
+import { identityBrowser } from '@/utils/identityBrowser';
 
 export default function AdminLogoutPage() {
   const router = useRouter();
@@ -50,7 +48,7 @@ export default function AdminLogoutPage() {
 
       // 2. Local : instantané, hors réseau. Attendu.
       try {
-        await supabaseClient.auth.signOut({ scope: 'local' });
+        await identityBrowser.signOut({ scope: 'local' });
       } catch {}
       purgeSupabaseAuthStorage();
 

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT } from '@/lib/i18n/useT';
 import {
@@ -12,6 +11,7 @@ import {
 
 import { logger } from '../../utils/logger';
 import nsAuthDiscordMember from '@/lib/i18n/locales/fr/authDiscordMember';
+import { identityBrowser } from '@/utils/identityBrowser';
 export default function DiscordMemberRedirect() {
   const router = useRouter();
   const { adminFetch } = useAdminFetch();
@@ -59,7 +59,7 @@ export default function DiscordMemberRedirect() {
         if (code && state) {
           setStatus(t.statusValidating);
           const { error: exchangeError } =
-            await supabaseClient.auth.exchangeCodeForSession(code);
+            await identityBrowser.exchangeCodeForSession(code);
           if (exchangeError) {
             throw exchangeError;
           }
@@ -67,7 +67,7 @@ export default function DiscordMemberRedirect() {
 
         // 2) Récupérer l'utilisateur courant
         const { data: sessionData, error: sessionErr } =
-          await supabaseClient.auth.getSession();
+          await identityBrowser.getSession();
         if (sessionErr || !sessionData.session?.user) {
           setStatus(t.statusSessionNotFound);
           setTimeout(() => router.replace('/'), 1000);
@@ -77,7 +77,7 @@ export default function DiscordMemberRedirect() {
         const user = sessionData.session.user;
         const currentRole = user.user_metadata?.role;
         if (!currentRole) {
-          await supabaseClient.auth.updateUser({
+          await identityBrowser.updateUser({
             data: { role: 'player' },
           });
         }
@@ -122,7 +122,7 @@ export default function DiscordMemberRedirect() {
             // L'utilisateur n'a pas de rôle staff → rediriger vers l'accueil avec message
             setError(t.errNoStaff);
             setStatus(t.statusNoStaffAccess);
-            await supabaseClient.auth.signOut();
+            await identityBrowser.signOut();
             setTimeout(() => router.replace('/'), 2000);
             return;
           }
@@ -136,7 +136,7 @@ export default function DiscordMemberRedirect() {
         // On l'envoie le renseigner AVANT toute autre chose, sauf si elle vient
         // pour l'espace staff — /admin ne s'appuie pas sur le BattleTag et
         // detourner un membre du staff serait gratuit.
-        const linkedUser = (await supabaseClient.auth.getUser()).data.user;
+        const linkedUser = (await identityBrowser.getUser()).data.user;
         const hasBattleTag = Boolean(
           ((linkedUser?.user_metadata?.battle_tag as string) || '').trim()
         );
