@@ -2,13 +2,13 @@
 // (.github/workflows/cloudflare.yml). Doc : docs/API-WORKER.md. Résumé dans $GITHUB_STEP_SUMMARY.
 //
 // Lit la configuration de production (wrangler.jsonc) et vérifie sur le vrai site :
-//   1. chaque route d'API_WORKER_ROUTES servie par le Worker, même statut que le serveur ;
-//   2. chaque route d'API_WORKER_SERVER_ONLY restée au serveur, identifiant non-UUID compris ;
-//   3. un faux jeton ou une fausse clé rejoués sur le serveur, sauf ce qui ne se rejoue jamais ;
-//   4. les écritures là où elles doivent être, sans en faire aucune : anonymes, ou corps refusé ;
-//   5. avec CRON_SECRET : le pont des signaux dans les deux sens, et les mêmes réglages sur le
-//      serveur et le Worker (un Worker qui n'exigerait pas la double authentification ne se
-//      verrait autrement pas).
+//   1. chaque route d'API_WORKER_ROUTES servie par le Worker, même statut en appel direct sur
+//      api.owwomenscup.fr, et CloudFront nulle part : le serveur est éteint ;
+//   2. un faux jeton ou une fausse clé refusés par le Worker, sans serveur derrière ;
+//   3. les écritures là où elles doivent être, sans en faire aucune : anonymes, ou corps refusé ;
+//   4. avec CRON_SECRET : la double authentification exigée sur le Worker comme le dit
+//      wrangler.jsonc (un Worker qui ne l'exigerait pas ne se verrait autrement pas), et aucune
+//      note envoyée vers le serveur.
 //
 // N'écrit rien en base, et n'a besoin d'aucun compte. Dépôt public : n'affiche que des chemins et
 // des statuts, jamais un corps ni un secret.
@@ -62,16 +62,6 @@ async function hit(base, path, init = {}) {
   return { status: res.status, server: onServer(res) };
 }
 
-/** Un démarrage à froid peut tomber sur le repli : une seconde chance avant de conclure. */
-async function hitUntil(path, wanted, init) {
-  let got = await hit(SITE, path, init);
-  if (!wanted(got)) {
-    await new Promise((resolve) => setTimeout(resolve, 3_000));
-    got = await hit(SITE, path, init);
-  }
-  return got;
-}
-
 async function pool(items, size, fn) {
   const out = [];
   let next = 0;
@@ -106,40 +96,25 @@ function reportMany(label, lines) {
   for (const line of wrong) report(false, line);
 }
 
-section('Servi par le Worker, même statut que le serveur');
+section('Servi par le Worker, même statut en appel direct');
 const reads = [...new Set(list('API_WORKER_ROUTES').map(concrete))];
 reportMany(
   'lectures',
   await pool(reads, 6, async (path) => {
-    const got = await hitUntil(path, (r) => !r.server);
-    const server = await hit(API, path);
-    // /api/graphql répond 500 sur le serveur, un défaut qui lui est propre.
-    const same = got.status === server.status || path === '/api/graphql';
-    if (!got.server && same) return null;
-    return `${path.replaceAll(UUID, ':id')} : ${got.status} ${got.server ? 'par le serveur' : 'Worker'}, serveur ${server.status}`;
+    const relayed = await hit(SITE, path);
+    const direct = await hit(API, path);
+    if (
+      !relayed.server &&
+      !direct.server &&
+      relayed.status === direct.status
+    ) {
+      return null;
+    }
+    return `${path.replaceAll(UUID, ':id')} : relais ${relayed.status}${relayed.server ? ' par le serveur' : ''}, direct ${direct.status}${direct.server ? ' par le serveur' : ''}`;
   })
 );
 
-section('Reste au serveur');
-const serverOnly = list('API_WORKER_SERVER_ONLY');
-reportMany(
-  'liste de refus',
-  await pool(serverOnly, 6, async (route) => {
-    const got = await hit(SITE, concrete(route));
-    return got.server ? null : `${route} : ${got.status} par le Worker`;
-  })
-);
-// Dans la liste de refus, `:id` couvre n'importe quel segment.
-for (const route of serverOnly.filter((r) => r.includes(':id')).slice(0, 3)) {
-  const path = route.replaceAll(':id', 'controle-pas-un-uuid');
-  const got = await hit(SITE, path);
-  report(
-    got.server,
-    `${path} : ${got.status}, ${got.server ? 'serveur' : 'Worker'}`
-  );
-}
-
-section('Refus : rejoué sur le serveur, sauf ce qui ne se rejoue jamais');
+section('Refus par le Worker, sans serveur derrière');
 const fakeBearer = {
   authorization: 'Bearer controle-jeton-volontairement-faux',
 };
@@ -149,39 +124,17 @@ for (const [path, headers] of [
   ['/api/admin/users/manage', fakeBearer],
   ['/api/player/tcg/wallet', fakeBearer],
   ['/api/bot/v1/role-sync/snapshot', fakeKey],
+  // Une inspection du staff, longtemps gardée au serveur.
+  [`/api/admin/teams?as=${UUID}`, fakeBearer],
 ]) {
   const got = await hit(SITE, path, { headers });
   report(
-    got.status === 401 && got.server,
-    `${path} : ${got.status}, ${got.server ? 'rejoué sur le serveur' : 'pas rejoué'}`
-  );
-}
-// Sans jeton ni code : aucun de ces GET ne consomme rien, ils refusent ou renvoient vers le site.
-for (const route of list('API_WORKER_UNREPLAYABLE_READS')) {
-  const path = concrete(route);
-  const got = await hit(SITE, path, { headers: fakeKey });
-  report(
-    !got.server,
-    `${path.replaceAll(UUID, ':id')} : ${got.status}, ${got.server ? 'REJOUÉ' : 'Worker, sans repli'}`
+    got.status === 401 && !got.server,
+    `${path.replaceAll(UUID, ':id')} : ${got.status}, ${got.server ? 'par le serveur' : 'Worker'}`
   );
 }
 
 section('Écritures, sans en faire aucune');
-const WRITE_ROUTES = list('API_WORKER_WRITE_ROUTES');
-const isWorkerWrite = (path) =>
-  WRITE_ROUTES.some((route) => {
-    const want = route.split('/');
-    const got = path.split('/');
-    const open = want.at(-1) === '*';
-    if (open ? got.length < want.length : got.length !== want.length)
-      return false;
-    return want.every(
-      (segment, i) =>
-        (open && i === want.length - 1) ||
-        segment === ':id' ||
-        segment === got[i]
-    );
-  });
 const write = (method, headers = {}) => ({
   method,
   headers: { ...JSON_BODY, ...headers },
@@ -211,12 +164,9 @@ const WRITE_SAMPLES = [
   ['POST', '/api/helloasso/webhook'],
 ];
 for (const [method, path] of WRITE_SAMPLES) {
-  const expected = isWorkerWrite(path);
-  // Le serveur, joint par le relais avant la bascule, ou directement ensuite : même refus attendu,
-  // sauf le CSRF, qui compare à l'hôte du relais.
   const got = await hit(SITE, path, write(method));
   report(
-    got.server !== expected && got.status < 500,
+    !got.server && got.status < 500,
     `${method} ${path.replaceAll(UUID, ':id')} : ${got.status}, ${got.server ? 'serveur' : 'Worker'}`
   );
 }
@@ -242,59 +192,32 @@ report(
   `autre origine : ${otherOrigin.status}, attendu 403`
 );
 
-section('Pont des signaux');
-const noteBody = JSON.stringify({
-  notes: [{ name: 'deploy.check', atMs: Date.now() }],
-});
-const toWorker = `${SITE}/api/signals/notes`;
-const toServer = `${API}/api/internal/signal-notes`;
-const post = (url, headers = {}) =>
-  fetch(url, {
-    method: 'POST',
-    headers: { ...JSON_BODY, ...headers },
-    body: noteBody,
-    signal: AbortSignal.timeout(30_000),
-  }).then((res) => res.status);
-report((await post(toWorker)) === 401, 'Worker : refusé sans le secret');
-report((await post(toServer)) === 401, 'serveur : refusé sans le secret');
-
 if (SECRET) {
-  const bearer = { authorization: `Bearer ${SECRET}` };
-  const worker = await post(toWorker, bearer);
-  report(worker === 204, `serveur → Worker : ${worker}`);
-  const server = await post(toServer, bearer);
-  report(server === 204, `Worker → serveur : ${server}`);
-
-  section('Mêmes réglages sur le serveur et le Worker');
-  const config = (base) =>
-    fetch(`${base}/api/health`, {
-      headers: bearer,
-      signal: AbortSignal.timeout(30_000),
-    })
-      .then((res) => res.json())
-      .then((body) => body.config ?? null);
-  const [onWorker, onTheServer] = await Promise.all([
-    config(SITE),
-    config(API),
-  ]);
-  if (!onWorker || !onTheServer) {
+  section('Réglages sur le Worker');
+  const config = await fetch(`${SITE}/api/health`, {
+    headers: { authorization: `Bearer ${SECRET}` },
+    signal: AbortSignal.timeout(30_000),
+  })
+    .then((res) => res.json())
+    .then((body) => body.config ?? null);
+  if (!config) {
     report(false, 'réglages illisibles sur /api/health');
   } else {
+    const wanted = vars.STAFF_MFA_ENFORCED === 'true';
     report(
-      onWorker.staffMfaEnforced === onTheServer.staffMfaEnforced,
-      `double authentification : ${onWorker.staffMfaEnforced ? 'exigée' : 'pas exigée'} sur le Worker, ${onTheServer.staffMfaEnforced ? 'exigée' : 'pas exigée'} sur le serveur`
+      config.staffMfaEnforced === wanted,
+      `double authentification : ${config.staffMfaEnforced ? 'exigée' : 'pas exigée'} sur le Worker, ${wanted ? 'exigée' : 'pas exigée'} dans wrangler.jsonc`
     );
     report(
-      onWorker.staffMfaExemptions === onTheServer.staffMfaExemptions,
-      `comptes exemptés : ${onWorker.staffMfaExemptions} sur le Worker, ${onTheServer.staffMfaExemptions} sur le serveur`
+      !config.signalBridgeToServer,
+      'aucune note envoyée vers le serveur'
     );
-    report(onTheServer.signalBridgeToWorker, 'pont branché sur le serveur');
-    report(onWorker.signalBridgeToServer, 'pont branché sur le Worker');
+    console.log(`comptes exemptés : ${config.staffMfaExemptions}`);
   }
 } else if (process.env.CI) {
-  report(false, 'CRON_SECRET absent : pont et réglages non contrôlés');
+  report(false, 'CRON_SECRET absent : réglages non contrôlés');
 } else {
-  console.log('CRON_SECRET absent : pont et réglages non contrôlés (hors CI).');
+  console.log('CRON_SECRET absent : réglages non contrôlés (hors CI).');
 }
 
 md.push(

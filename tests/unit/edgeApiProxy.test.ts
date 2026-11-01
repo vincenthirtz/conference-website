@@ -479,8 +479,8 @@ describe('le bot sur le Worker de l’API (wrangler.jsonc)', () => {
     '/api/bot/v1/role-sync/snapshot',
     '/api/bot/v1/tenants/all-configs',
     `/api/bot/v1/matches/${UUID}`,
-  ])('la lecture %s garde son repli', (path) => {
-    expect(final('GET', path)).toBe(false);
+  ])('la lecture %s part sans repli : plus de serveur derrière', (path) => {
+    expect(final('GET', path)).toBe(true);
     expect(servedByApiWorker('GET', path, reads)).toBe(true);
   });
 
