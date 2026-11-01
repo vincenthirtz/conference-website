@@ -476,6 +476,33 @@ lui-même), retirer le pont, puis attendre deux semaines. **Pas fait : changemen
 
 **Découvert :** `/api/graphql` répondait 500 sur le serveur, un défaut qui lui est propre ; il répond sur le Worker.
 
+**Mesuré la nuit du 2026-11-01, puis corrigé.** 11 h sur le tout-Worker : 0 réponse 5xx, 0 repli, aucune invocation coupée (CPU p99 393 ms, max 710 ms), 28 tâches sans
+échec. Mais **deux fois plus de requêtes vers Supabase** : ~1 100 par heure contre ~550 la nuit précédente.
+
+- **Tâches planifiées (API 6604b98).** Un déclencheur tombe sur un exemplaire froid : mémos de dormance, tick d'auto-pick, dormance du dispatcher et pas des heartbeats, tous en
+  mémoire du processus, étaient oubliés à chaque minute. Six postes pesaient ~2 000 des 2 400 requêtes de plus sur 4 h. Les tâches passent désormais par un Durable Object fixe
+  (`worker/cronHost.ts`, `CRON_HOST`, `locationHint: weur`, près de la base) qui sert l'application telle quelle. Aucun code métier ne change. Un minuteur l'empêche d'hiberner,
+  sinon il perdrait sa mémoire après 10 s ; il coûte ~330 000 Go-s par mois sur les 400 000 inclus. Objet injoignable : la tâche repart par l'appel direct d'avant.
+  Après coup, par 5 min : auto-pick 5 → 0, heartbeats 6 → 0, outbox 5 → 0, webhooks 5 → 0, verrous 28 → 8. `draft-auto-pick` : médiane 928 ms → moins de 1 ms ; lectures de 800 ms
+  ou plus : 41 % → 7 %.
+- **`redirect: 'error'` (API 74f60a8).** Il lève dès l'appel sur un Worker ; Node l'accepte, donc rien ne le montrait. Aucune page n'était régénérée depuis le Worker
+  (vu sur la première vraie sauvegarde de profil, le 11-01 à 10:10), et les cartes TCG de map, d'équipe et de fan art sortaient sans visuel. `manual` fait pareil, garde-fou
+  `fetchRedirectErrorGuard.test.ts`.
+- **Cartes TCG et R2 (API 45f597e).** Défaut d'avant le Worker : la route ignorait `media.owwomenscup.fr` depuis la bascule du 10-29.
+
+**Vu sans gravité :** `Network connection lost` sur un 403 d'une session : le relais raccroche quand il revérifie un refus auprès du serveur, qui l'a confirmé. YouTube a répondu
+404 au miroir de 23:45 à 06:45 UTC, puis plus rien : une source en panne n'arrête pas les autres, et le passage suivant rattrape.
+
+**Vu sur de vraies sessions, le matin du 11-01 :** inscription, liaison Discord, profil, préférences, abonnement aux notifications, joueuses libres, newsletter, tous en 2xx sur le
+Worker, et refus 403 de `/api/admin/me` à des sessions non staff, tous confirmés par le serveur. La carte d'équipe sur R2 affiche son logo. **Toujours pas vu :** une session staff réelle
+(aucune écriture dans `staff_logs` sur la période), donc ni écriture staff ni refus sans double authentification ; une régénération de page réussie, aucune sauvegarde de profil
+depuis la correction ; webhooks signés ; note réelle sur le pont. E-mails : aucune erreur journalisée, livraison non vérifiée.
+
+**Le bot n'est pas tout entier sur le Worker.** Seuls `reminders`, `role-sync/snapshot` et `role-sync/presence`, qui ont leur propre adresse, passent par le relais. Le reste des
+appels vise `BOT_API_BASE_URL`, qui pointe visiblement vers `api.owwomenscup.fr` : verrous, joueuses libres et liste noire ne sont vus en base que depuis Lightsail
+(~160 requêtes par heure). À corriger par cette variable sur le VPS, ou par la route Worker sur ce nom. Ces appels perdront alors les caches du serveur : à mesurer, et à passer
+eux aussi par `CRON_HOST` si la base le sent.
+
 **Piège d'OpenNext.** Il change un `stale-while-revalidate` sans valeur en `=2592000` (30 jours), que
 les navigateurs appliquent aussi. Corrigé sur les cinq routes concernées, sans effet sur le serveur.
 `bareStaleWhileRevalidateGuard.test.ts` refuse le prochain.
