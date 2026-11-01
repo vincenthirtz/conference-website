@@ -526,7 +526,7 @@ Après coup : 36 cas directs comparés à un relevé d'avant la bascule, 28 iden
 **Trouvé en comparant :** `/api/graphql` acceptait au préflight toute origine, tout en-tête et `credentials: true`, réglage par défaut de yoga que le serveur masquait en répondant en erreur.
 Pas de faille, l'endpoint ne lit que le jeton Bearer, mais contraire à la règle des jetons `pk_live_`, de serveur à serveur. Corrigé (API f812d7f).
 
-**Ce qui n'a plus de filet :** une lecture en panne sur le Worker donne une erreur, et un refus à tort n'est plus rattrapé. **Toujours pas vu en vrai :** une écriture staff, un refus sans double
+**Ce qui n'a plus de filet :** une lecture en panne sur le Worker donne une erreur, et un refus à tort n'est plus rattrapé. Une écriture staff est vue depuis 14:23 (cockpit caster, overlay à jour). **Toujours pas vu en vrai :** un refus sans double
 authentification, une régénération de page réussie, les webhooks signés (Twitch peut révoquer un abonnement après des refus répétés).
 
 **Retour arrière :** il n'y a plus de serveur. Une version du Worker se reprend par `npx wrangler rollback`. Revenir à un serveur voudrait dire en recréer un : l'image est sur GHCR, `Dockerfile` et `deploy/`

@@ -12,8 +12,8 @@ sur D1 ensuite.
 - **Faisable.** Sur un banc d'essai local (moteur des Workers, D1 simulé, aucune donnée réelle), un compte
   repris a gardé son identifiant, son mot de passe bcrypt et son code de double authentification, et un
   jeton signé en est sorti. Reste à prouver sur le vrai réseau : l'accès à la base depuis le Worker.
-- **Pas encore.** La bascule change les chemins que l'API sur Worker n'a pas encore prouvés : une seule
-  écriture au journal du staff depuis la bascule du 10-31, aucun refus de double authentification constaté
+- **Pas encore.** La bascule change les chemins que l'API sur Worker n'a pas encore tous prouvés : les écritures
+  staff sont vues depuis le 2026-11-01, mais aucun refus de double authentification constaté
   (`docs/API-WORKER.md`), et Lightsail vient d'être supprimé, le 2026-11-01. Si ça casse, on ne saurait pas lequel
   des deux changements est en cause.
 - **Quand.** Les deux premiers lots, invisibles, dès que des écritures du staff et un refus sont vus sur le
@@ -419,7 +419,7 @@ Estimations de l'auteur de l'étude, en jours de travail. Celle du Worker de l'A
 
 | # | Preuve | Par qui | Si ça rate |
 |---|---|---|---|
-| P1 | Des écritures de vraies sessions staff (une seule au journal depuis le 10-31, origine non lue **[base]**), et **le refus d'une session sans code** sur une route sensible, sur le Worker | Propriétaire + journaux | On corrige le Worker d'abord |
+| P1 | Des écritures de vraies sessions staff : **vues le 2026-11-01** (cockpit caster, `PATCH` en 204, overlay à jour, en base depuis Cloudflare seulement). Reste **le refus d'une session sans code** sur une route sensible, sur le Worker | Propriétaire + journaux | On corrige le Worker d'abord |
 | P2 | Lightsail supprimé : **fait le 2026-11-01** (`docs/API-WORKER.md`), route Worker sur `api.owwomenscup.fr`, pont retiré, plus de repli | Fait | Sans objet |
 | P3 | `wrangler hyperdrive create` avec un rôle de test, en direct puis par le session pooler | Propriétaire pour le mot de passe | Adaptateur PostgREST, +2 jours |
 | P4 | Relevé du tableau de bord Auth : SMTP, modèles, adresses de retour, durées, limites, Discord | Propriétaire | Lot 5 à l'aveugle sur les e-mails |
@@ -433,7 +433,7 @@ Toute migration est écrite dans conference-api et appliquée par la propriétai
 | Lot | Ce qu'il change | Vérification | Retour arrière | Jours |
 |---|---|---|---|---|
 | **1. Une seule porte** — **fait le 2026-11-01** | `utils/identity.ts` (API, recopié au site) et `utils/identityBrowser.ts` (site), qui rendent ce que rend Supabase : 49 appels `auth.admin` côté API, `getUser`, 59 appels propres au site. Les 80 mentions de `user_metadata` ne bougent pas. Garde-fou `identityDoorGuard` dans les deux dépôts. Aucun effet visible | Tests et CI, `worker-routes-check`, volumes `/auth/v1/*` identiques | `git revert` | 3–4 |
-| **2. Plus de jeton vers la base** — **fait le 2026-11-01, essai réel à faire** | Routes `/api/admin/caster/*` pour les scènes et thèmes, même garde que la page (`caster`, plus étroite que l'ancienne règle « staff actif » : arbitres et aides n'ouvrent pas le cockpit), cockpit et overlay dessus. `/api/overlay/caster/*` **sans cache** : l'enveloppe met en cache un GET anonyme avec `s-maxage`. Garde-fou `casterNoDirectDb` | Scène modifiée dans le cockpit → overlay OBS à jour, en conditions réelles. Journaux : plus d'appel `rest/v1/caster_*` depuis un navigateur | `git revert` | 2–3 |
+| **2. Plus de jeton vers la base** — **fait et essayé en conditions réelles le 2026-11-01** | Routes `/api/admin/caster/*` pour les scènes et thèmes, même garde que la page (`caster`, plus étroite que l'ancienne règle « staff actif » : arbitres et aides n'ouvrent pas le cockpit), cockpit et overlay dessus. `/api/overlay/caster/*` **sans cache** : l'enveloppe met en cache un GET anonyme avec `s-maxage`. Garde-fou `casterNoDirectDb` | Scène modifiée dans le cockpit → overlay OBS à jour, en conditions réelles. Journaux : plus d'appel `rest/v1/caster_*` depuis un navigateur | `git revert` | 2–3 |
 | **3. Library** (selon décision 2) | Canaux privés sur Durable Objects, ou fournisseur OIDC, ou coupure | Deux navigateurs : déplacements, chat, présence ; mêmes refus que `library_can_join` | Interrupteur | 3–5, ou 1–2 |
 | **4. Tables de comptes** | Tables `auth_user`, `auth_account`, `auth_session`, `auth_verification`, `auth_two_factor`, `auth_jwks`, `auth_rate_limit`, RLS sans règle, aucun droit pour `anon` et `authenticated`. Copie, puis miroir par déclencheurs sur `auth.users` et `auth.identities`. **44 clés repointées** en `NOT VALID` puis `VALIDATE`, 8 fonctions réécrites, la porte lit la table : 99 appels GoTrue de moins par jour | Essai de la migration sur une restauration (`db-restore-test`, logs en chiffres seuls). Comptages égaux, sorties des fonctions égales par empreinte, inscription réelle visible dans le miroir. Clé anon et jeton de session refusés sur ces tables (Supabase donne par défaut des droits sur toute table neuve de `public`), garde-fou comme `sensitiveColumnsGrantsSql` | Migration `_revert`, rien de perdu tant que `auth.users` est la source | 3–4 |
 | **5. Better Auth dans l'ombre** | `/api/identity/*` sur le Worker, sans écran. Hyperdrive, bcrypt, jeton ES256, `aal`, limites, e-mails par Brevo, retour Discord ajouté à côté de l'ancien, relais et cache | Le scénario du banc, en production sur un compte de test : connexion, code, jeton, Discord, e-mails reçus ; un compte créé par Supabase avec un vrai hachage ; le vrai téléphone ; coût CPU réel | Retirer la route | 3–4 |
