@@ -480,7 +480,6 @@ le régénérer chez Discord : ça couperait la connexion actuelle) et le retour
 - `last_sign_in_at` et `metadata` ne sont alimentés que par le miroir, à reprendre au lot 8 ;
 - une preuve de format des secrets repris de Supabase (SHA-1, 6 chiffres, 30 s) n'existe que sur un secret neuf ; un secret réel se lit avec un accord explicite, au lot 8 ;
 - le coût de calcul en production n'est pas mesuré : le journal automatique est coupé. Temps vus de l'extérieur : 300 à 660 ms pour une connexion ratée, 60 ms pour une lecture de session sans cookie ;
-- 5 lignes `[identity] client Postgres en erreur` vues le 2026-11-01 à 19:31 UTC, sans code ni message, réponses correctes, non revues sur la série suivante. Le message est journalisé depuis `68b4d69` ;
 - `BETTER_AUTH_SECRET` n'existe que chez Cloudflare : à sauvegarder avant d'importer les secrets de double authentification, qu'il chiffrera ;
 - à la bascule : retirer la page d'essai, l'ombre et `disableImplicitSignUp`.
 
