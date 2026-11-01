@@ -12,13 +12,10 @@
 // par jour pour des valeurs que seul l'admin change, ou que ce cron écrit
 // lui-même.
 //
-// FRAÎCHEUR. Toute écriture connue de ces valeurs passe par ce processus (une
-// seule instance d'API en service, cf. deploy/compose.yml) et met le cache à
-// jour aussitôt : invalidation (connexion OAuth, rafraîchissement de jeton,
-// réglage enregistré dans l'admin) ou mise à jour en place (curseur avancé par
-// le cron, jeton TikTok rafraîchi). Le TTL ne couvre donc que les écritures
-// faites HORS du processus — SQL à la main, ou l'autre couleur pendant les
-// quelques secondes d'un déploiement bleu/vert.
+// FRAÎCHEUR. Le cron vit dans le lieu fixe des tâches (worker/cronHost.ts) : il met
+// son cache à jour aussitôt pour ce qu'il écrit lui-même (curseur avancé, jeton TikTok
+// rafraîchi). Le TTL couvre ce qui s'écrit ailleurs : connexion OAuth ou réglage enregistré
+// dans l'admin, servis par un autre exemplaire, SQL à la main.
 //
 // UNE ERREUR NE SE MET JAMAIS EN CACHE : le passage suivant relit. Seul un
 // résultat réussi est rangé — y compris un résultat VIDE (« rien de configuré »),

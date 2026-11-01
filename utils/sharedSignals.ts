@@ -11,7 +11,7 @@
 // un push ou sur une échéance de draft. Tout passe donc par ici, et la phase 2
 // n'aura qu'à brancher le « backend » une fois.
 //
-// AUJOURD'HUI (aucun backend) : une table en mémoire du processus, comportement
+// SANS BACKEND (tests, site) : une table en mémoire du processus, comportement
 // identique aux variables qu'elle remplace.
 //
 // SUR LE WORKER DE L'API : un Durable Object (worker/sharedSignals.ts), posé sur
@@ -23,17 +23,9 @@
 // Le prix : une note peut n'être vue qu'au passage suivant. Une note perdue
 // retombe sur la fenêtre de sûreté, comme une écriture faite en SQL à la main.
 //
-// LE PONT, LE TEMPS DE LA BASCULE. Le serveur et le Worker servent chacun une partie
-// de l'API : une écriture de l'un doit réveiller les mémos de l'autre, sinon un rappel
-// ou un badge attend sa fenêtre de sûreté. `SHARED_SIGNALS_BRIDGE_URL`, posée par le
-// Dockerfile et donc nulle part ailleurs, envoie les notes du serveur au Worker ; le
-// sens inverse part de worker/sharedSignals.ts vers pages/api/internal/signal-notes.ts.
-// Une note perdue retombe sur la fenêtre de sûreté.
-//
 // Module recopié vers le site avec `utils/dormancyMemo.ts` : là-bas, personne ne
 // branche rien.
 
-import { runInBackground } from './background';
 import { logger } from './logger';
 import { registerProcessCache } from './processCaches';
 
@@ -65,53 +57,9 @@ function remember(name: string, atMs: number): void {
   });
 }
 
-/** Une écriture note souvent plusieurs signaux : un seul envoi pour eux tous. */
-const BRIDGE_BATCH_MS = 200;
-/** Le pont n'est qu'un réveil : on n'attend pas au-delà. */
-const BRIDGE_TIMEOUT_MS = 3_000;
-
-const bridgeQueue = new Map<string, number>();
-let bridgeTimer: ReturnType<typeof setTimeout> | null = null;
-
-async function sendBridgeQueue(url: string, secret: string): Promise<void> {
-  const batch = [...bridgeQueue].map(([name, atMs]) => ({ name, atMs }));
-  bridgeQueue.clear();
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${secret}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({ notes: batch }),
-      signal: AbortSignal.timeout(BRIDGE_TIMEOUT_MS),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  } catch (err) {
-    logger.warn('[sharedSignals] pont vers le Worker', {
-      error: err instanceof Error ? err.message : String(err),
-      notes: batch.length,
-    });
-  }
-}
-
-function queueForBridge(name: string, atMs: number): void {
-  const url = process.env.SHARED_SIGNALS_BRIDGE_URL;
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!url || !secret) return;
-  bridgeQueue.set(name, Math.max(atMs, bridgeQueue.get(name) ?? 0));
-  if (bridgeTimer) return;
-  bridgeTimer = setTimeout(() => {
-    bridgeTimer = null;
-    runInBackground(() => sendBridgeQueue(url, secret), 'sharedSignals.bridge');
-  }, BRIDGE_BATCH_MS);
-  bridgeTimer.unref?.();
-}
-
 const memoryBackend: SharedSignalBackend = {
   note(name, atMs) {
     remember(name, atMs);
-    queueForBridge(name, atMs);
   },
   read(name) {
     return notes.get(name) ?? { version: unnotedVersion, lastAtMs: 0 };
@@ -154,23 +102,10 @@ export function readSharedSignal(name: string): SharedSignal {
   return currentBackend().read(name);
 }
 
-/**
- * Les notes venues du Worker par le pont : retenues ici, jamais renvoyées, sinon elles
- * feraient l'aller-retour sans fin.
- */
-export function receiveSharedSignalNotes(
-  received: readonly { name: string; atMs: number }[]
-): void {
-  for (const { name, atMs } of received) remember(name, atMs);
-}
-
 /** Oublie tous les signaux et retire le backend. Usage strictement test. */
 export function __resetSharedSignalsForTests(): void {
   backend = memoryBackend;
   notes.clear();
-  bridgeQueue.clear();
-  if (bridgeTimer) clearTimeout(bridgeTimer);
-  bridgeTimer = null;
   lastVersion += 1;
   unnotedVersion = lastVersion;
 }

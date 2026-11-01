@@ -2,12 +2,9 @@
 // (événements du bot, journaux joueuse, e-mails, posts Discord…) : ce que
 // l'API déclenche sans l'attendre avant de répondre.
 //
-// POURQUOI. Sur Node (serveur Lightsail), une promesse non attendue continue
-// après la réponse : le processus vit. Sur un Worker Cloudflare (phase 2 de
-// conference-website docs/API-WORKER.md), ce qui reste en cours après la
-// réponse PEUT ÊTRE ANNULÉ — sauf si on le confie à `ctx.waitUntil`. Tout
-// passe donc par `runInBackground`, et la phase 2 n'aura qu'à brancher le
-// « runner » une fois, au lieu de retoucher 140 appels.
+// POURQUOI. Sur un Worker Cloudflare, ce qui reste en cours après la réponse
+// PEUT ÊTRE ANNULÉ — sauf si on le confie à `ctx.waitUntil`. Tout passe donc par
+// `runInBackground`, branché une seule fois, au lieu de retoucher 140 appels.
 //
 // AUJOURD'HUI (aucun runner) : comportement identique à `void fn()`, à une
 // différence près — une erreur est TOUJOURS journalisée, au lieu de finir en

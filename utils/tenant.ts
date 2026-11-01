@@ -708,17 +708,14 @@ function normalizeHost(host: string | null | undefined): string | null {
 /**
  * Hôtes de la plateforme connus d'avance.
  *
- * L'API séparée (`conference-api`, même `pages/api`) est servie sur
- * `api.owwomenscup.fr` derrière CloudFront, qui la joint sur
- * `origin-api.owwomenscup.fr` : c'est CE nom qu'elle reçoit en `Host`. Sans
- * eux ici, chaque requête de l'API lisait la table `tenants` pour rien, et un
- * échec de cette lecture la faisait tomber en 5xx `tenant_host_lookup_failed`.
+ * L'API séparée (`conference-api`) est servie sur `api.owwomenscup.fr`. Sans ces noms
+ * ici, chaque requête de l'API lisait la table `tenants` pour rien, et un échec de
+ * cette lecture la faisait tomber en 5xx `tenant_host_lookup_failed`.
  */
 const PLATFORM_HOSTS: readonly string[] = [
   'owwomenscup.fr',
   'www.owwomenscup.fr',
   'api.owwomenscup.fr',
-  'origin-api.owwomenscup.fr',
 ];
 
 /** Nom d'hôte (minuscules) d'une URL d'environnement, `null` si illisible. */

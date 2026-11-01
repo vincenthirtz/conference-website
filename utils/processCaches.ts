@@ -4,9 +4,9 @@
 // « gate » d'un tenant, chaînes Twitch, secrets d'intégration, réglages du
 // miroir social…).
 //
-// POURQUOI. L'API est un serveur persistant depuis la bascule sur Lightsail :
-// une valeur lue une fois peut servir des minutes, là où une lambda Netlify
-// repartait de zéro à chaque appel. Ces caches divisent le trafic vers
+// POURQUOI. Un exemplaire du Worker vit un moment, et le lieu fixe des tâches
+// (worker/cronHost.ts) bien plus : une valeur lue une fois peut y servir des
+// minutes. Ces caches divisent le trafic vers
 // Supabase (et donc ses logs facturés), à condition que chaque écriture
 // connue invalide la sienne — c'est à chaque module de le faire.
 //
