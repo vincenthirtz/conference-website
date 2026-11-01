@@ -33,6 +33,15 @@ export type LibraryRoomView = {
   tenantId: string;
 };
 
+/**
+ * `GET /api/player/library/rooms/{roomId}/realtime-tickets` : un ticket par
+ * canal de la salle, et leur échéance commune en secondes Unix.
+ */
+export type LibraryRealtimeTicketsResponse = {
+  tickets: LibraryTopics;
+  expiresAt: number;
+};
+
 /** `POST /api/player/library/rooms/{roomId}/enter`. */
 export type LibraryEnterResponse = {
   room: LibraryRoomView;

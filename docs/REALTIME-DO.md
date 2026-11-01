@@ -7,8 +7,9 @@ prévient les salons. Étape 3 construite le même jour, puis **bascule des
 écrans le 2026-10-29** (variable `NEXT_PUBLIC_REALTIME_BACKEND=cloudflare`,
 déploiement 40871096927), après un essai de l'overlay OBS : modification
 d'une scène dans le cockpit → overlay à jour en 65 à 500 ms. La Women's
-Library reste sur Supabase Realtime. La base et les comptes restent chez
-Supabase ; seul le « prévenir les écrans » change.
+Library reste sur Supabase Realtime jusqu'à l'étape 5 (construite, pas basculée).
+La base et les comptes restent chez Supabase ; seul le « prévenir les écrans »
+change.
 
 ## Ce qui écoute aujourd'hui
 
@@ -81,9 +82,8 @@ requêtes et 400 000 GB-s de calcul par mois pour les Durable Objects.
   **un tiers** de l'inclus.
 - Seul risque de dépassement : la Women's Library ouverte à beaucoup de
   joueuses (déplacements en continu = salons toujours éveillés). Le
-  dépassement se paie par tranche entière : 12,50 $ le million de GB-s,
-  0,15 $ le million de requêtes. Elle reste sur Supabase Realtime tant
-  qu'elle est en bêta fermée ; à mesurer avant de l'y passer.
+  dépassement se paie : 12,50 $ le million de GB-s, 0,15 $ le million de
+  requêtes. Chiffres et calcul à l'étape 5.
 
 ## Étapes
 
@@ -174,6 +174,42 @@ requêtes et 400 000 GB-s de calcul par mois pour les Durable Objects.
    normal (92 sur 24 h, 7 écrans, pas de boucle). Pas encore observés : une
    notification de `matches` (aucun match modifié depuis la bascule) et le
    salon `demandes:team:` d'une vraie équipe.
+
+5. **La Women's Library sur les salons**, nécessaire pour quitter Supabase
+   (`docs/AUTH-BETTER-AUTH.md`, lot 3). Construite le 2026-11-01, essai par
+   `?realtime=cloudflare` dans l'adresse de la page, à deux navigateurs réglés
+   pareil : Supabase Realtime reste le transport par défaut.
+   - **Quatre salons** : `library:room:<salle>` (présence et déplacements, écrits
+     par les joueuses, rien n'y fait foi), `library:chat:<salle>`,
+     `library:tenant:<espace>`, `library:user:<compte>` (écrits par l'API seule).
+     **Ils portent des données**, contrairement aux autres salons : positions,
+     messages du chat. Le ticket y est donc toujours exigé.
+   - **Entrée :** `GET /api/player/library/rooms/{id}/realtime-tickets` (mêmes
+     refus que l'entrée dans la salle, soit `library_can_join`) rend les quatre
+     tickets d'un coup ; `wss://realtime.owwomenscup.fr/library?ticket=…`.
+   - **Aucune trace de qui fréquente la Grande salle de lecture :** le salon est
+     dans le ticket et jamais dans l'adresse, le ticket ne porte pas la joueuse,
+     les journaux de requêtes du Worker sont coupés (`invocation_logs: false`) et
+     `[publish]` ne dit que l'événement et le nombre d'écrans. Les lignes `[join]`
+     gardent le rythme de connexion des autres écrans, jamais de la Library.
+   - **Durée :** une connexion sans ticket renouvelé est coupée à l'heure (code
+     4401), au prochain message du salon. L'écran renouvelle toutes les 45 min.
+     Même garantie que Supabase, qui relit les droits à chaque jeton : un client
+     qui ignore `banned` ou `kicked` perd l'accès au plus tard là. Une joueuse
+     expulsée garde jusqu'à 5 min un ticket déjà délivré.
+   - **Diffusions :** `POST /publish`, signée `publish.<horodatage>.<corps>` avec
+     le secret des tickets. L'API envoie aux deux transports tant que Supabase
+     Realtime n'est pas retiré (`utils/library/realtimeBroadcast.ts`, adresse dans
+     la variable `REALTIME_PUBLISH_URL`).
+   - **Coût :** chaque déplacement réveille le salon, 450 GB-s par heure où une
+     salle est active. L'inclus de 400 000 GB-s est partagé avec `CRON_HOST`, qui
+     en prend ~330 000 (estimation) : il reste environ 150 heures de salle par
+     mois, puis 12,50 $ le million de GB-s, soit moins de 1 $ pour 150 heures de
+     plus. À relire sur la facture une fois la Library ouverte.
+   - **Bascule :** changer `'supabase'` en `'cloudflare'` dans
+     `LIBRARY_REALTIME_BACKEND` (`features/player/library/realtime/cloudflareClient.ts`).
+     Retour arrière : le geste inverse (~10 min). Le code Supabase et les règles
+     de `realtime.messages` partent au lot 9 de Better Auth.
 
 **Retour arrière, désormais en deux gestes :** appliquer
 `realtime_publication_drop_migrated_revert.sql` (conference-api), PUIS vider

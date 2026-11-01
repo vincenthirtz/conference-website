@@ -81,20 +81,32 @@ function sameHex(a: string, b: string): boolean {
  * signature HMAC-SHA256 de `${timestamp}.${body}`, en-têtes
  * `x-realtime-timestamp` (millisecondes) et `x-realtime-signature` (hex).
  */
-export async function verifyNotify(opts: {
+export async function verifyNotify(opts: SignedRequest): Promise<boolean> {
+  return verifySigned(opts, '');
+}
+
+type SignedRequest = {
   secret: string;
   body: string;
   timestamp: string | null;
   signature: string | null;
   now: number;
-}): Promise<boolean> {
+};
+
+async function verifySigned(
+  opts: SignedRequest,
+  prefix: string
+): Promise<boolean> {
   const { secret, body, timestamp, signature, now } = opts;
   if (!secret || !timestamp || !signature) return false;
   if (!/^\d{1,16}$/.test(timestamp) || !/^[0-9a-f]{64}$/.test(signature)) {
     return false;
   }
   if (Math.abs(now - Number(timestamp)) > NOTIFY_MAX_SKEW_MS) return false;
-  return sameHex(await hmacHex(secret, `${timestamp}.${body}`), signature);
+  return sameHex(
+    await hmacHex(secret, `${prefix}${timestamp}.${body}`),
+    signature
+  );
 }
 
 export type ChangeOp = 'INSERT' | 'UPDATE' | 'DELETE';
@@ -207,6 +219,171 @@ export async function verifyTicket(opts: {
   const user =
     typeof data.u === 'string' && ID_PATTERN.test(data.u) ? data.u : null;
   return { ok: true, user };
+}
+
+/* ------------------------------------------------- la Women's Library --- */
+
+/**
+ * Salons de la Women's Library : `room` (présence et déplacements, écrits par
+ * les joueuses, rien n'y fait foi), `chat`, `tenant` et `user` (écrits par
+ * l'API seule). À la différence des autres salons, ils portent des données :
+ * positions, messages du chat. Le ticket y est donc toujours exigé, et décidé
+ * par les mêmes règles que l'entrée dans la salle.
+ *
+ * AUCUNE TRACE DE QUI FRÉQUENTE LA GRANDE SALLE DE LECTURE
+ * (conference-api tests/unit/libraryReadingRoomPrivacy.test.ts) : le salon ne
+ * figure pas dans l'adresse de connexion (il est dans le ticket), le ticket ne
+ * porte pas la joueuse, et le Worker ne journalise ni salon ni personne.
+ */
+const LIBRARY_ROOM_PATTERN =
+  /^library:(room|chat|tenant|user):[A-Za-z0-9_-]{1,64}$/;
+
+export function isLibraryRoom(name: string): boolean {
+  return typeof name === 'string' && LIBRARY_ROOM_PATTERN.test(name);
+}
+
+/** Le seul salon de la Library où les écrans écrivent. */
+export function isLibraryPeerRoom(name: string): boolean {
+  return isLibraryRoom(name) && name.startsWith('library:room:');
+}
+
+/**
+ * Durée d'une connexion sans ticket renouvelé. Comme Supabase Realtime, qui
+ * relit les droits au plus tard à chaque jeton (une heure) : un bannissement
+ * ou une expulsion finit par couper aussi un client qui ignorerait l'événement.
+ */
+export const LIBRARY_CONNECTION_MAX_MS = 60 * 60_000;
+/** Une présence au plus sur ce délai : l'écran en envoie une par seconde. */
+export const LIBRARY_TRACK_MIN_MS = 500;
+/** Messages relayés au plus par seconde et par écran (un écran honnête : ~8). */
+export const LIBRARY_RELAY_MAX_PER_S = 20;
+
+export const MAX_PUBLISH_BYTES = 64 * 1024;
+export const MAX_PUBLISH_MESSAGES = 20;
+
+const EVENT_PATTERN = /^[a-z_]{1,32}$/;
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  !!v && typeof v === 'object' && !Array.isArray(v);
+
+/** Le salon annoncé par un ticket, SANS le vérifier (`verifyTicket` le fait). */
+export function ticketRoom(ticket: string): string | null {
+  if (typeof ticket !== 'string' || ticket.length > 1024) return null;
+  const dot = ticket.lastIndexOf('.');
+  if (dot <= 0) return null;
+  try {
+    const { r } = JSON.parse(fromB64url(ticket.slice(0, dot))) as {
+      r?: unknown;
+    };
+    return typeof r === 'string' ? r : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Diffusion envoyée par l'API : mêmes en-têtes que `verifyNotify`, HMAC-SHA256
+ * de `publish.${timestamp}.${body}` avec le secret des tickets, que l'API a
+ * déjà. Le préfixe empêche de rejouer une signature d'un autre usage.
+ */
+export async function verifyPublish(opts: SignedRequest): Promise<boolean> {
+  return verifySigned(opts, 'publish.');
+}
+
+export type PublishMessage = {
+  room: string;
+  event: string;
+  payload: Record<string, unknown>;
+};
+
+/** Corps d'une diffusion : `{ messages: [{ room, event, payload }] }`. */
+export function parsePublishBody(
+  raw: string
+): { ok: true; messages: PublishMessage[] } | { ok: false; error: string } {
+  let v: unknown;
+  try {
+    v = JSON.parse(raw);
+  } catch {
+    return { ok: false, error: 'json' };
+  }
+  const list = isPlainObject(v) ? v.messages : null;
+  if (
+    !Array.isArray(list) ||
+    list.length === 0 ||
+    list.length > MAX_PUBLISH_MESSAGES
+  ) {
+    return { ok: false, error: 'messages' };
+  }
+  const messages: PublishMessage[] = [];
+  for (const m of list) {
+    if (!isPlainObject(m)) return { ok: false, error: 'messages' };
+    const { room, event, payload } = m;
+    if (typeof room !== 'string' || !isLibraryRoom(room)) {
+      return { ok: false, error: 'room' };
+    }
+    if (typeof event !== 'string' || !EVENT_PATTERN.test(event)) {
+      return { ok: false, error: 'event' };
+    }
+    if (!isPlainObject(payload)) return { ok: false, error: 'payload' };
+    messages.push({ room, event, payload });
+  }
+  return { ok: true, messages };
+}
+
+/** Un événement diffusé aux écrans d'un salon de la Library. */
+export function broadcastMessage(
+  event: string,
+  payload: Record<string, unknown>
+): string {
+  return JSON.stringify({ type: 'broadcast', event, payload });
+}
+
+export type LibraryClientMessage =
+  | { type: 'broadcast'; event: string; payload: Record<string, unknown> }
+  | { type: 'track'; key: string; state: Record<string, unknown> }
+  | { type: 'untrack' }
+  | { type: 'renew'; ticket: string };
+
+/**
+ * Message d'un écran dans un salon de la Library ; sinon `null`. Le contenu
+ * n'est pas jugé ici : les écrans qui le reçoivent le valident, et ne montrent
+ * une présence que si son jeton signé se vérifie.
+ */
+export function parseLibraryClientMessage(
+  raw: unknown
+): LibraryClientMessage | null {
+  if (typeof raw !== 'string' || raw.length > MAX_CLIENT_MESSAGE_BYTES) {
+    return null;
+  }
+  let v: unknown;
+  try {
+    v = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!isPlainObject(v)) return null;
+  switch (v.type) {
+    case 'broadcast':
+      return typeof v.event === 'string' &&
+        EVENT_PATTERN.test(v.event) &&
+        isPlainObject(v.payload)
+        ? { type: 'broadcast', event: v.event, payload: v.payload }
+        : null;
+    case 'track':
+      return typeof v.key === 'string' &&
+        ID_PATTERN.test(v.key) &&
+        isPlainObject(v.state)
+        ? { type: 'track', key: v.key, state: v.state }
+        : null;
+    case 'untrack':
+      return { type: 'untrack' };
+    case 'renew':
+      return typeof v.ticket === 'string' && v.ticket.length <= 1024
+        ? { type: 'renew', ticket: v.ticket }
+        : null;
+    default:
+      return null;
+  }
 }
 
 /**

@@ -24,7 +24,8 @@
 // plus, sans autre effet.
 //
 // Le client Realtime et le client HTTP sont injectables (tests, page de
-// développement) ; par défaut, supabase-js du navigateur et l'API.
+// développement) ; par défaut, supabase-js du navigateur ou les salons du Worker
+// temps réel (`LIBRARY_REALTIME_BACKEND`, ./cloudflareClient.ts), et l'API.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -39,6 +40,10 @@ import {
   publishLibraryChatContext,
   publishLibraryChatEvent,
 } from './chatBus';
+import {
+  createCloudflareLibraryRealtime,
+  LIBRARY_REALTIME_BACKEND,
+} from './cloudflareClient';
 import {
   createLibraryRoomConnection,
   type LibraryChannel,
@@ -144,7 +149,13 @@ function refusalOf(err: unknown): LibraryRoomRefusal {
 }
 
 let defaultRealtime: LibraryRealtimeClient | null = null;
-function browserRealtime(): LibraryRealtimeClient {
+function browserRealtime(roomId: string): LibraryRealtimeClient {
+  // Les tickets valent pour une salle : un client par entrée.
+  if (LIBRARY_REALTIME_BACKEND === 'cloudflare') {
+    return createCloudflareLibraryRealtime({
+      fetchTickets: () => librarySocialClient.realtimeTickets(roomId),
+    });
+  }
   defaultRealtime ??= supabaseRealtimeClient(
     supabaseClient as unknown as SupabaseClient
   );
@@ -228,7 +239,7 @@ export function useLibraryRoomChannel(
             ? opts.position(entered)
             : opts.position;
         connection = createLibraryRoomConnection({
-          client: opts.realtime ?? browserRealtime(),
+          client: opts.realtime ?? browserRealtime(entered.room.id),
           enter: entered,
           position: start,
           onState: (state) => {

@@ -15,5 +15,8 @@
     "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
-  "observability": { "enabled": true }
+  // Pas de journal par requête : il garderait l'adresse de connexion, et la
+  // Grande salle de lecture ne laisse aucune trace (realtime/protocol.ts). Les
+  // lignes `[notify]`, `[publish]` et `[join]` restent.
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } }
 }

@@ -96,8 +96,30 @@ Les constats de ce document portent leur source :
 | **[supposé]** | Déduit, pas prouvé. Voir « À prouver avant de démarrer » |
 
 **N'a pas été essayé :** Hyperdrive et Postgres depuis un Worker, un vrai Discord, les e-mails, Better Auth à travers
-OpenNext et le relais du site, le coût de calcul en production, le tableau de bord Auth de Supabase (SMTP, modèles
-d'e-mails, adresses de retour, durées), non lisible avec les outils de cette étude.
+OpenNext et le relais du site, le coût de calcul en production.
+
+### Tableau de bord Auth de Supabase (P4)
+
+Relevé par la propriétaire le 2026-11-01, sur captures, complété par `GET /auth/v1/settings` :
+
+| Réglage | Aujourd'hui | Ce que Better Auth doit faire |
+|---|---|---|
+| Fournisseurs | `email` et `discord` ; inscriptions ouvertes ; confirmation par e-mail exigée | Les mêmes |
+| SMTP | **Aucun.** Les e-mails d'authentification partent de l'expéditeur par défaut de Supabase, limité à **2 par heure** | Envois par Brevo, déjà en place : la limite disparaît. Rien à reprendre : les textes sont à écrire (décision 8) |
+| Notifications de sécurité | Actives : mot de passe changé, adresse changée, méthode de connexion liée, retirée, double authentification ajoutée, retirée. Inactive : téléphone changé | **À reproduire, oublié par l'étude :** 6 e-mails de plus au lot 5 |
+| Limites par adresse IP | Connexions et inscriptions 30 / 5 min, vérifications de code 30 / 5 min, renouvellements 150 / 5 min, délai de 60 s entre deux envois à une même personne | Point de départ des règles de `customRules`, à la place des 3 par 10 s par défaut |
+| Adresses | Site `https://owwomenscup.fr`. Liste de retour : `/auth/discord-member`, `/admin/reset-password`, `/login**`, et le `localhost` de développement | Autoriser l'origine du site entière (`trustedOrigins`) : la liaison Discord revient sur la page d'où elle part (`DiscordLinkCard`), hors de cette liste |
+| Sessions | Pas de durée maximale ni de délai d'inactivité (réglages du plan Pro), jeton de 1 h, détection de réutilisation du jeton de renouvellement active | Décision 5 : 30 jours renouvelés à l'usage. Vérifier le comportement de Better Auth si un cookie de session est rejoué |
+
+### Plan Free : le bandeau de quota (2026-11-01)
+
+Le tableau de bord affiche « Grace period is over ». D'après [la doc](https://supabase.com/docs/guides/platform/billing-faq#fair-use-policy),
+il reste affiché même revenu sous les limites, et signifie qu'**au prochain dépassement il n'y a plus de délai** : pause, lecture seule
+ou 402 sur tous les appels, levés au cycle suivant ou tout de suite par le passage en Pro. Quota de journaux annoncé par la doc : 5 Go,
+[facturation pas encore active](https://supabase.com/docs/guides/platform/manage-your-usage/logs-ingest). Estimation de ce jour : environ
+3,6 Go par mois (48 000 lignes sur 24 h, à 2,75 Ko), dont 91 % d'appels à l'API de la base, que seul le passage à D1 retire. Le quota à
+l'origine du bandeau n'est pas connu : la page Usage n'est pas lisible avec nos outils. Le tableau de coût plus haut suppose que le plan
+Free tient jusque-là : **en cas de restriction, le plan Pro (25 $ par mois) est le recours immédiat**, à la décision de la propriétaire.
 
 ## 1. Inventaire de la dépendance à Supabase Auth
 
@@ -422,7 +444,7 @@ Estimations de l'auteur de l'étude, en jours de travail. Celle du Worker de l'A
 | P1 | Des écritures de vraies sessions staff : **vues le 2026-11-01** (cockpit caster, `PATCH` en 204, overlay à jour, en base depuis Cloudflare seulement). Reste **le refus d'une session sans code** sur une route sensible, sur le Worker | Propriétaire + journaux | On corrige le Worker d'abord |
 | P2 | Lightsail supprimé : **fait le 2026-11-01** (`docs/API-WORKER.md`), route Worker sur `api.owwomenscup.fr`, pont retiré, plus de repli | Fait | Sans objet |
 | P3 | `wrangler hyperdrive create` avec un rôle de test, en direct puis par le session pooler | Propriétaire pour le mot de passe | Adaptateur PostgREST, +2 jours |
-| P4 | Relevé du tableau de bord Auth : SMTP, modèles, adresses de retour, durées, limites, Discord | Propriétaire | Lot 5 à l'aveugle sur les e-mails |
+| P4 | Relevé du tableau de bord Auth : **fait le 2026-11-01**, voir « Tableau de bord Auth de Supabase » | Fait | Sans objet |
 | P5 | Better Auth et `pg` dans le build OpenNext d'un Worker sans route : taille, démarrage | CI, au lot 5 | Montage hors de Next |
 | P6 | Le fournisseur OIDC s'ajoute sur le plan Free, **seulement si la Library reste sur Realtime** | Propriétaire | Salons Durable Objects |
 
@@ -434,7 +456,7 @@ Toute migration est écrite dans conference-api et appliquée par la propriétai
 |---|---|---|---|---|
 | **1. Une seule porte** — **fait le 2026-11-01** | `utils/identity.ts` (API, recopié au site) et `utils/identityBrowser.ts` (site), qui rendent ce que rend Supabase : 49 appels `auth.admin` côté API, `getUser`, 59 appels propres au site. Les 80 mentions de `user_metadata` ne bougent pas. Garde-fou `identityDoorGuard` dans les deux dépôts. Aucun effet visible | Tests et CI, `worker-routes-check`, volumes `/auth/v1/*` identiques | `git revert` | 3–4 |
 | **2. Plus de jeton vers la base** — **fait et essayé en conditions réelles le 2026-11-01** | Routes `/api/admin/caster/*` pour les scènes et thèmes, même garde que la page (`caster`, plus étroite que l'ancienne règle « staff actif » : arbitres et aides n'ouvrent pas le cockpit), cockpit et overlay dessus. `/api/overlay/caster/*` **sans cache** : l'enveloppe met en cache un GET anonyme avec `s-maxage`. Garde-fou `casterNoDirectDb` | Scène modifiée dans le cockpit → overlay OBS à jour, en conditions réelles. Journaux : plus d'appel `rest/v1/caster_*` depuis un navigateur | `git revert` | 2–3 |
-| **3. Library** (selon décision 2) | Canaux privés sur Durable Objects, ou fournisseur OIDC, ou coupure | Deux navigateurs : déplacements, chat, présence ; mêmes refus que `library_can_join` | Interrupteur | 3–5, ou 1–2 |
+| **3. Library** — **construit le 2026-11-01, à essayer à deux navigateurs avant de basculer** | Quatre canaux privés sur les salons du Worker temps réel (`docs/REALTIME-DO.md`, étape 5), décidés par `GET …/rooms/{id}/realtime-tickets`. Essai par `?realtime=cloudflare`, Supabase Realtime reste le transport par défaut | Deux navigateurs : déplacements, chat, présence ; mêmes refus que `library_can_join` (`libraryRealtimeTickets.test.ts`) ; `realtime-check` à chaque déploiement du Worker | Interrupteur (une ligne, `LIBRARY_REALTIME_BACKEND`) | 3–5, ou 1–2 |
 | **4. Tables de comptes** | Tables `auth_user`, `auth_account`, `auth_session`, `auth_verification`, `auth_two_factor`, `auth_jwks`, `auth_rate_limit`, RLS sans règle, aucun droit pour `anon` et `authenticated`. Copie, puis miroir par déclencheurs sur `auth.users` et `auth.identities`. **44 clés repointées** en `NOT VALID` puis `VALIDATE`, 8 fonctions réécrites, la porte lit la table : 99 appels GoTrue de moins par jour | Essai de la migration sur une restauration (`db-restore-test`, logs en chiffres seuls). Comptages égaux, sorties des fonctions égales par empreinte, inscription réelle visible dans le miroir. Clé anon et jeton de session refusés sur ces tables (Supabase donne par défaut des droits sur toute table neuve de `public`), garde-fou comme `sensitiveColumnsGrantsSql` | Migration `_revert`, rien de perdu tant que `auth.users` est la source | 3–4 |
 | **5. Better Auth dans l'ombre** | `/api/identity/*` sur le Worker, sans écran. Hyperdrive, bcrypt, jeton ES256, `aal`, limites, e-mails par Brevo, retour Discord ajouté à côté de l'ancien, relais et cache | Le scénario du banc, en production sur un compte de test : connexion, code, jeton, Discord, e-mails reçus ; un compte créé par Supabase avec un vrai hachage ; le vrai téléphone ; coût CPU réel | Retirer la route | 3–4 |
 | **6. L'API accepte les deux** | Porte serveur : jeton par `iss`, cookies `sb-*` ou Better Auth, `aal` des deux côtés. Rendu serveur par `API_WORKER` | Matrice de gardes (joueuse, staff, sensible) avec les deux jetons, **`aal1` refusé**, exemption, jeton forgé refusé, ajoutée à `worker-routes-check` | Réglage | 2 |

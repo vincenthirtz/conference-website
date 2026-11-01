@@ -6,6 +6,8 @@
 // 2. Salon public de contrôle (`test:ci-…`) : connexion, ping/pong, présence
 //    diffusée, notification signée reçue.
 // 3. Salon privé avec un ticket signé : connexion acceptée, notification reçue.
+// 4. Salons de la Women's Library (`ci-…`) : refus, présence, relais sans écho,
+//    salon du serveur fermé aux écrans, publication signée reçue.
 //
 // Secrets lus dans l'environnement : REALTIME_NOTIFY_SECRET,
 // REALTIME_TICKET_SECRET. Usage : node scripts/realtime-check.mjs <url>
@@ -77,6 +79,7 @@ function open(url) {
     ws.addEventListener('open', () =>
       resolve({
         ws,
+        inbox,
         next(test, ms = 8000) {
           const found = inbox.find(test);
           if (found) return Promise.resolve(found);
@@ -185,6 +188,181 @@ const json = (s) => {
     c.ws.close();
   } catch (e) {
     check(false, 'salon privé avec ticket', e.message);
+  }
+}
+
+// 4. Women's Library : le salon est dans le ticket, jamais dans l'adresse.
+{
+  const id = `ci-${randomBytes(4).toString('hex')}`;
+  const peerRoom = `library:room:${id}`;
+  const chatRoom = `library:chat:${id}`;
+  const libraryUrl = (room) =>
+    `${wsBase}/library?ticket=${encodeURIComponent(ticketFor(room))}`;
+  const httpLibrary = (ticket) =>
+    fetch(`${base}/library?ticket=${encodeURIComponent(ticket)}`);
+  const publish = async (messages, secret = TICKET) => {
+    const body = JSON.stringify({ messages });
+    const ts = String(Date.now());
+    const r = await fetch(`${base}/publish`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-realtime-timestamp': ts,
+        'x-realtime-signature': hmac(secret, `publish.${ts}.${body}`),
+      },
+      body,
+    });
+    return { status: r.status, body: await r.text() };
+  };
+  const pong = async (c) => {
+    c.inbox.length = 0;
+    c.ws.send('ping');
+    await c.next((m) => m === 'pong');
+  };
+
+  try {
+    const none = await fetch(`${base}/library`);
+    check(
+      none.status === 401,
+      'Library : sans ticket, refus',
+      String(none.status)
+    );
+    const forged = await httpLibrary(
+      `${ticketFor(peerRoom).slice(0, -8)}00000000`
+    );
+    check(
+      forged.status === 401,
+      'Library : ticket forgé, refus',
+      String(forged.status)
+    );
+    const otherFamily = await httpLibrary(ticketFor('demandes:team:ci'));
+    check(
+      otherFamily.status === 401,
+      'Library : ticket d’un autre salon, refus',
+      String(otherFamily.status)
+    );
+    const valid = await httpLibrary(ticketFor(peerRoom));
+    check(
+      valid.status === 426,
+      'Library : ticket valide sans WebSocket, 426',
+      String(valid.status)
+    );
+    const named = await fetch(
+      `${base}/rooms/${peerRoom}?ticket=${encodeURIComponent(ticketFor(peerRoom))}`
+    );
+    check(
+      named.status === 404,
+      'Library : pas de salon nommé dans l’adresse',
+      String(named.status)
+    );
+    const unsigned = await fetch(`${base}/publish`, {
+      method: 'POST',
+      body: JSON.stringify({ messages: [] }),
+    });
+    check(
+      unsigned.status === 401,
+      'publication non signée refusée',
+      String(unsigned.status)
+    );
+    const wrongKey = await publish(
+      [{ room: chatRoom, event: 'kicked', payload: {} }],
+      NOTIFY
+    );
+    check(
+      wrongKey.status === 401,
+      'publication signée par un autre secret refusée',
+      String(wrongKey.status)
+    );
+    const notLibrary = await publish([
+      { room: 'demandes:team:ci', event: 'kicked', payload: {} },
+    ]);
+    check(
+      notLibrary.status === 400,
+      'publication hors Library refusée',
+      String(notLibrary.status)
+    );
+
+    const a = await open(libraryUrl(peerRoom));
+    const b = await open(libraryUrl(peerRoom));
+    const empty = json(await a.next((m) => json(m)?.type === 'presence_state'));
+    check(empty?.entries?.length === 0, 'Library : salon vide à l’arrivée');
+
+    a.ws.send(
+      JSON.stringify({
+        type: 'track',
+        key: 'ci-a',
+        state: { userId: 'ci-a', gx: 3 },
+      })
+    );
+    const joined = json(await b.next((m) => json(m)?.type === 'presence_join'));
+    check(
+      joined?.key === 'ci-a' && joined?.state?.gx === 3,
+      'Library : présence reçue par l’autre écran'
+    );
+
+    a.ws.send(
+      JSON.stringify({ type: 'broadcast', event: 'move', payload: { gx: 4 } })
+    );
+    const moved = json(await b.next((m) => json(m)?.event === 'move'));
+    check(moved?.payload?.gx === 4, 'Library : déplacement relayé');
+    await pong(a);
+    check(
+      !a.inbox.some((m) => json(m)?.type === 'broadcast'),
+      'Library : pas d’écho à l’émetteur'
+    );
+
+    const c = await open(libraryUrl(peerRoom));
+    const snapshot = json(
+      await c.next((m) => json(m)?.type === 'presence_state')
+    );
+    check(
+      snapshot?.entries?.some((e) => e.key === 'ci-a' && e.state?.gx === 3),
+      'Library : la nouvelle venue reçoit la présence en cours'
+    );
+
+    b.inbox.length = 0;
+    a.ws.close();
+    const after = json(await b.next((m) => json(m)?.type === 'presence_state'));
+    check(
+      after?.entries?.length === 0,
+      'Library : un départ retire la présence'
+    );
+    b.ws.close();
+    c.ws.close();
+
+    const reader = await open(libraryUrl(chatRoom));
+    const writer = await open(libraryUrl(chatRoom));
+    writer.ws.send(
+      JSON.stringify({
+        type: 'broadcast',
+        event: 'kicked',
+        payload: { userId: 'x' },
+      })
+    );
+    await pong(writer);
+    await pong(reader);
+    check(
+      !reader.inbox.some((m) => json(m)?.type === 'broadcast'),
+      'Library : un salon du serveur ne s’écrit pas'
+    );
+
+    const sent = await publish([
+      { room: chatRoom, event: 'kicked', payload: { userId: 'ci' } },
+    ]);
+    check(
+      sent.status === 200 && json(sent.body)?.delivered === 2,
+      'Library : publication signée acceptée',
+      sent.body
+    );
+    const kicked = json(await reader.next((m) => json(m)?.event === 'kicked'));
+    check(
+      kicked?.payload?.userId === 'ci',
+      'Library : événement du serveur reçu'
+    );
+    reader.ws.close();
+    writer.ws.close();
+  } catch (e) {
+    check(false, 'salons de la Library', e.message);
   }
 }
 

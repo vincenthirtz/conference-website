@@ -24,12 +24,15 @@ import type {
   LibraryBlocksResponse,
   LibraryEnterResponse,
   LibraryKickResponse,
+  LibraryRealtimeTicketsResponse,
   LibraryReportResponse,
 } from '../socialResponses';
 
 export const librarySocialUrls = {
   enter: (roomId: string) =>
     `/api/player/library/rooms/${encodeURIComponent(roomId)}/enter`,
+  realtimeTickets: (roomId: string) =>
+    `/api/player/library/rooms/${encodeURIComponent(roomId)}/realtime-tickets`,
   blocks: '/api/player/library/blocks',
   reports: '/api/player/library/reports',
   kick: '/api/player/library/apartment/kick',
@@ -41,6 +44,11 @@ export const librarySocialClient = {
     playerRequest<LibraryEnterResponse>(librarySocialUrls.enter(roomId), {
       method: 'POST',
     }),
+  /** Mêmes refus que `enter` : les tickets des quatre canaux de la salle. */
+  realtimeTickets: (roomId: string) =>
+    playerRequest<LibraryRealtimeTicketsResponse>(
+      librarySocialUrls.realtimeTickets(roomId)
+    ),
   blocks: () => playerRequest<LibraryBlocksResponse>(librarySocialUrls.blocks),
   block: (input: LibraryBlockInput) =>
     playerRequest<LibraryBlockResponse>(librarySocialUrls.blocks, {
