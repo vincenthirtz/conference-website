@@ -106,6 +106,12 @@ la base en service sans l'avoir décidé).
    l'import (sinon ils rejoueraient leurs effets).
 4. Vérifier : nombre de comptes (`select count(*) from auth.users`), de
    matchs, d'équipes, comparés au résumé du workflow de la nuit choisie.
+   **Jusqu'à la bascule de Better Auth**, vérifier aussi le miroir des comptes :
+   `select tgname from pg_trigger where tgname like 'auth_mirror%'` doit rendre
+   2 lignes. La sauvegarde ne garde sans doute pas les déclencheurs posés sur
+   `auth.*` (à constater à la prochaine restauration) : sans eux, plus aucun compte
+   neuf n'est visible. Pour les remettre, rejouer conference-api
+   `database/migrations/add_auth_accounts_mirror.sql`, qui recopie aussi les comptes.
 5. Rebrancher le site et l'API sur le nouveau projet (clés et adresse
    Supabase dans GitHub et sur le serveur de l'API) — décision à prendre au
    moment, selon la panne.
