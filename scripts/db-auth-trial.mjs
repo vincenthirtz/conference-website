@@ -432,7 +432,7 @@ function checkMirror() {
 
   // L'effacement d'un VRAI compte restauré : celui qui a le plus de liens.
   const fks = sql(
-    `select string_agg(c.conrelid::regclass::text || ':' || a.attname || ':' || c.confdeltype, ' ')
+    `select string_agg(c.conrelid::regclass::text || ':' || a.attname::text || ':' || c.confdeltype::text, ' ')
      from pg_constraint c join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
      where c.contype = 'f' and c.confrelid = 'public.auth_user'::regclass and c.connamespace = 'public'::regnamespace`
   )
