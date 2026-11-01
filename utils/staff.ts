@@ -9,7 +9,6 @@ import type {
 import type { User } from '@supabase/supabase-js';
 import {
   supabaseAdmin,
-  getServerClient,
   type SupabaseServerReq,
   type SupabaseServerRes,
 } from './supabase';
@@ -39,6 +38,7 @@ import {
   staffMfaRedirect,
   type AuthenticatorAssuranceLevel,
 } from './staffMfa';
+import { cookieSession, userFromToken } from '@/utils/identity';
 export type { StaffRole } from '@/types/admin';
 export type {
   StaffMember,
@@ -221,7 +221,7 @@ const tokenUserCache = new Map<
 >();
 
 // Cookie header → user cache (60s). Sur les pages SSR admin, chaque navigation
-// Next refait un `supabase.auth.getUser()` (roundtrip GoTrue) car la requête
+// Next refait un `userFromCookies(req, res)` (roundtrip GoTrue) car la requête
 // de données Next ne porte pas de header Bearer : on tombe alors dans la
 // branche cookies ci-dessous, jusqu'ici non cachée — c'était le coût dominant
 // de latence pour atteindre le back-office. On mémoïse par header cookie
@@ -281,7 +281,7 @@ export async function resolveUserFromToken(
     const {
       data: { user },
       error,
-    } = await supabaseAdmin.auth.getUser(token);
+    } = await userFromToken(token);
     if (error) {
       logger.error('resolveUserFromToken error:', error);
       setUserCacheEntry(tokenUserCache, token, {
@@ -345,11 +345,11 @@ export async function getStaffContextFromRequest(
       user = cached.user;
       if (user) reqWithCache[STAFF_TOKEN_KEY] = cached.accessToken ?? null;
     } else {
-      const supabase = getServerClient(req, res);
+      const session = cookieSession(req, res);
       const {
         data: { user: cookieUser },
         error: cookieError,
-      } = await supabase.auth.getUser();
+      } = await session.getUser();
 
       if (cookieError) {
         // On ignore les erreurs "Auth session missing" qui sont normales
@@ -370,15 +370,7 @@ export async function getStaffContextFromRequest(
       // Jeton de la session que `getUser` vient de valider (même client, donc
       // même session, rafraîchie le cas échéant) : sert au niveau d'assurance
       // MFA. Best-effort — sans lui, la session compte comme `aal1`.
-      let accessToken: string | null = null;
-      if (user && typeof supabase.auth.getSession === 'function') {
-        try {
-          const { data } = await supabase.auth.getSession();
-          accessToken = data?.session?.access_token ?? null;
-        } catch {
-          accessToken = null;
-        }
-      }
+      const accessToken = user ? await session.accessToken() : null;
       if (user) reqWithCache[STAFF_TOKEN_KEY] = accessToken;
       if (cookieHeader) {
         setUserCacheEntry(cookieUserCache, cookieHeader, {

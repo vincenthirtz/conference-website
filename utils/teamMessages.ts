@@ -22,6 +22,7 @@ import { DEFAULT_TENANT_ID } from './tenant';
 import { resolveCurrentTournamentId } from './currentTournament';
 import { emitBotEvent } from './botEvents';
 import { logger } from './logger';
+import { identityAdmin } from '@/utils/identity';
 
 /** Longueur max d'un message Discord (le handler bot re-tronque par sécurité). */
 export const TEAM_MESSAGE_MAX = 1900;
@@ -339,7 +340,7 @@ async function listNeverSignedInUserIds(
   let page = 1;
   const perPage = 1000;
   while (true) {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+    const { data, error } = await identityAdmin.listUsers({
       page,
       perPage,
     });

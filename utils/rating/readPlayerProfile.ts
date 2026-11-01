@@ -28,6 +28,7 @@ import type {
   ProfilePlacement,
   ProfileSeason,
 } from '@/types/rating';
+import { identityAdmin } from '@/utils/identity';
 
 const RECENT_MATCHES_LIMIT = 20;
 const H2H_TOP_LIMIT = 10;
@@ -503,8 +504,7 @@ async function readPlayerTwitch(
   tenantId: string
 ): Promise<string | null> {
   try {
-    const { data: authUser } =
-      await supabaseAdmin.auth.admin.getUserById(userId);
+    const { data: authUser } = await identityAdmin.getUserById(userId);
     const self = resolvePlayerTwitch(authUser?.user?.user_metadata?.twitch, []);
     if (self) return self.value;
   } catch (err) {

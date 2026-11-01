@@ -1888,7 +1888,7 @@ export function sendCircuitPartnerConfirmationEmail(opts: {
 /**
  * Password reset email — sent in place of the native Supabase reset email
  * so we control the design. The action link is generated server-side via
- * `supabaseAdmin.auth.admin.generateLink({ type: 'recovery' })`.
+ * `identityAdmin.generateLink({ type: 'recovery' })`.
  */
 export function sendPasswordResetEmail(opts: {
   to: string;

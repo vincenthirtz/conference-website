@@ -33,6 +33,7 @@ import {
   grantDefeatRewards,
   MATCH_LOSS_SOURCE_KIND,
 } from '../tcg/grantDefeatRewards';
+import { identityAdmin } from '@/utils/identity';
 
 const SCORED_STATUSES = new Set(['finished', 'walkover']);
 
@@ -813,8 +814,7 @@ export async function rebuildRatings(
     const avatarByUser = new Map<string, string | null>();
     for (const uid of ratings.keys()) {
       try {
-        const { data: authData } =
-          await supabaseAdmin.auth.admin.getUserById(uid);
+        const { data: authData } = await identityAdmin.getUserById(uid);
         const meta =
           (authData?.user?.user_metadata as Record<string, unknown>) ?? {};
         const dn =

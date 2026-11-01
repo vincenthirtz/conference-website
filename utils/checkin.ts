@@ -42,6 +42,7 @@ import { noteMatchWrite } from './competitionWrites';
 
 import { logger } from './logger';
 import { oneRelation, type Relation } from '@/utils/supabase/relation';
+import { identityAdmin } from '@/utils/identity';
 export const CHECKIN_OPEN_MINUTES = 60;
 export const REMINDER_30_MINUTES = 30;
 export const REMINDER_15_MINUTES = 15;
@@ -504,7 +505,7 @@ export async function getCheckinRecipientEmails(
   const emails: string[] = [];
   for (const userId of userIds) {
     try {
-      const { data } = await supabaseAdmin.auth.admin.getUserById(userId);
+      const { data } = await identityAdmin.getUserById(userId);
       const email = data?.user?.email ?? null;
       if (email && !emails.includes(email)) emails.push(email);
     } catch (e) {

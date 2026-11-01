@@ -72,7 +72,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { User } from '@supabase/supabase-js';
 
-import { supabaseAdmin } from './supabase';
 import {
   withAuthRoute,
   requireStaffRoleFromRequest,
@@ -93,6 +92,7 @@ import {
 } from './subjectParam';
 
 import { logger } from './logger';
+import { identityAdmin } from '@/utils/identity';
 
 // Re-exported so server code has a single import site; the constant itself
 // lives in `subjectParam` because the client imports it too.
@@ -262,7 +262,7 @@ export async function resolveSubject(
   // The target must exist — an unknown id is a 404, never an empty snapshot
   // (which would read as "this user has nothing" instead of "wrong id").
   const { data: authData, error: authErr } =
-    await supabaseAdmin.auth.admin.getUserById(target);
+    await identityAdmin.getUserById(target);
   if (authErr || !authData?.user) {
     res
       .status(404)

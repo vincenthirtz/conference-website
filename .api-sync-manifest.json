@@ -1,6 +1,6 @@
 {
-  "apiCommit": "0618e4220dffbf6c21095cf945952ce5fccf928a",
-  "syncedAt": "2026-11-01T12:55:16.521Z",
+  "apiCommit": "d1aa7e167ae2b2e22720c400436d35bd7bf8bd9a",
+  "syncedAt": "2026-11-01T13:40:58.380Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -166,6 +166,7 @@
     "utils/freePlayers.ts",
     "utils/heroes/overwatch.ts",
     "utils/heroes/recommendCardHero.ts",
+    "utils/identity.ts",
     "utils/images/optimizableImage.ts",
     "utils/integrationSecrets.ts",
     "utils/leagues/readLeagueDetail.ts",
