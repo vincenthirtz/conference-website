@@ -3,8 +3,8 @@
 // changements en Realtime.
 //
 // Utilisé des DEUX côtés :
-//  - les overlays hébergés (/overlay/caster/*) : lecture avec la clé anon
-//    (policy SELECT publique), pour appliquer couleurs et polices à l'antenne ;
+//  - les overlays hébergés (/overlay/caster/*) : lecture publique, sans session,
+//    pour appliquer couleurs et polices à l'antenne ;
 //  - le cockpit (/admin/caster) : même lecture, pour l'aperçu et l'édition.
 //
 // Realtime sur la table entière (pas de filtre) : une activation change DEUX
@@ -15,7 +15,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import { logger } from '@/utils/logger';
 import { normalizeThemeData } from '@/utils/caster/theme';
 import {
@@ -49,19 +48,20 @@ export function useCasterTheme({
   }, []);
 
   const reload = useCallback(async () => {
-    const { data, error } = await supabaseClient
-      .from('caster_themes')
-      .select('*')
-      .order('created_at', { ascending: true });
-    if (!alive.current) return;
-    if (error) {
+    let rows: CasterTheme[];
+    try {
+      const res = await fetch('/api/overlay/caster/themes');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      rows = ((await res.json()) as { themes: CasterTheme[] }).themes;
+    } catch (error) {
+      if (!alive.current) return;
       // Thème = habillage : en cas d'erreur on garde le défaut plutôt que de
       // priver l'overlay de rendu.
       logger.error('[useCasterTheme] load error', error);
       setLoaded(true);
       return;
     }
-    const rows = (data as CasterTheme[]) ?? [];
+    if (!alive.current) return;
     setThemes(rows);
     const active = rows.find((t) => t.is_active) ?? rows[0] ?? null;
     setActiveId(active?.id ?? null);

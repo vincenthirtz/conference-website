@@ -145,6 +145,8 @@ const READ_ROUTES = [
   '/api/teams/scrim-plannings/:id',
   '/api/teams/scrim-plannings/:id/suggest',
   '/api/overlay/alerts',
+  '/api/overlay/caster/themes',
+  '/api/overlay/caster/scene',
   '/api/overlay/day',
   '/api/overlay/donations',
   '/api/overlay/scrim-result',

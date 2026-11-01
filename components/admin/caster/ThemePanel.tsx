@@ -17,7 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
-import { supabaseClient } from '@/utils/supabaseBrowser';
+import { casterThemesClient } from '@/features/admin/caster/client';
 import { logger } from '@/utils/logger';
 import { logCasterAction } from '@/utils/caster/auditClient';
 import { normalizeThemeData } from '@/utils/caster/theme';
@@ -105,15 +105,13 @@ export default function ThemePanel({ themes, activeId, reload }: Props) {
     setSaving(true);
     try {
       const raw = (editing.data as Record<string, unknown>) || {};
-      const { error } = await supabaseClient
-        .from('caster_themes')
-        // Spread de la data brute d'abord : `template`, `positions`,
-        // `headingFont`… survivent même si l'UI web ne les édite pas.
-        .update({
-          data: { ...raw, colors: draftColors, font: draftFont },
-        })
-        .eq('id', editing.id);
-      if (error) throw new Error(error.message);
+      // Spread de la data brute d'abord : `template`, `positions`,
+      // `headingFont`… survivent même si l'UI web ne les édite pas.
+      await casterThemesClient.update(editing.id, {
+        ...raw,
+        colors: draftColors,
+        font: draftFont,
+      });
       dirty.current = false;
     } catch (err) {
       logger.error('[ThemePanel] save error', err);
@@ -141,21 +139,8 @@ export default function ThemePanel({ themes, activeId, reload }: Props) {
   async function activate(id: string) {
     const target = themes.find((x) => x.id === id);
     if (!target || target.is_active) return;
-    // Un seul actif : l'index unique partiel refuserait deux `true`, donc on
-    // désactive l'ancien AVANT d'activer le nouveau.
     try {
-      if (activeId) {
-        const { error: offErr } = await supabaseClient
-          .from('caster_themes')
-          .update({ is_active: false })
-          .eq('id', activeId);
-        if (offErr) throw new Error(offErr.message);
-      }
-      const { error } = await supabaseClient
-        .from('caster_themes')
-        .update({ is_active: true })
-        .eq('id', id);
-      if (error) throw new Error(error.message);
+      await casterThemesClient.activate(id);
       await reload();
       addToast(format(t.themeActivated, { name: target.name }), 'success');
       logCasterAction({
@@ -177,18 +162,12 @@ export default function ThemePanel({ themes, activeId, reload }: Props) {
   async function duplicate() {
     if (!editing) return;
     try {
-      const { data: created, error } = await supabaseClient
-        .from('caster_themes')
-        .insert({
-          name: format(t.themeCopyName, { name: editing.name }),
-          data: editing.data,
-          is_active: false,
-        })
-        .select('id')
-        .single();
-      if (error) throw new Error(error.message);
+      const created = await casterThemesClient.create({
+        name: format(t.themeCopyName, { name: editing.name }),
+        data: editing.data as Record<string, unknown>,
+      });
       await reload();
-      if (created?.id) setEditingId(created.id as string);
+      setEditingId(created.id);
       addToast(t.themeDuplicated, 'success');
     } catch (err) {
       logger.error('[ThemePanel] duplicate error', err);
@@ -209,11 +188,7 @@ export default function ThemePanel({ themes, activeId, reload }: Props) {
     });
     if (!ok) return;
     try {
-      const { error } = await supabaseClient
-        .from('caster_themes')
-        .delete()
-        .eq('id', editing.id);
-      if (error) throw new Error(error.message);
+      await casterThemesClient.remove(editing.id);
       setEditingId(activeId);
       await reload();
       addToast(t.themeDeleted, 'success');

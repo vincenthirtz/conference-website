@@ -8,8 +8,8 @@
 // responsabilité de l'appelant (draft local, cf. /admin/caster).
 //
 // Lot 7 — CRUD complet (création / renommage / duplication / suppression /
-// réordonnancement), en écriture directe Supabase comme `saveSceneData` (RLS
-// staff actif). Toute la logique PURE est déléguée : `utils/caster/sceneCrud.ts`
+// réordonnancement), par l'API comme `saveSceneData` (staff, même garde que la
+// page). Toute la logique PURE est déléguée : `utils/caster/sceneCrud.ts`
 // (nom, overlay et `data` par défaut d'un type) et `utils/caster/sceneReorder.ts`
 // (diff des `sort_order`). Les mutateurs `throw` en cas d'échec — l'appelant
 // décide du toast : ici on ne sait pas si l'action était à l'antenne ou non.
@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
-import { supabaseClient } from '@/utils/supabaseBrowser';
+import { casterScenesClient } from '@/features/admin/caster/client';
 import { logger } from '@/utils/logger';
 import {
   defaultOverlayFile,
@@ -57,19 +57,16 @@ export function useCasterScenes({ enabled = true, onStatus }: Options = {}) {
   }, []);
 
   const reload = useCallback(async () => {
-    const { data, error: err } = await supabaseClient
-      .from('caster_scenes')
-      .select('*')
-      .order('sort_order', { ascending: true });
-    if (!alive.current) return;
-    if (err) {
-      logger.error('[useCasterScenes] load error', err);
-      setError(err.message);
-    } else {
-      const list = (data as CasterScene[]) ?? [];
+    try {
+      const { scenes: list } = await casterScenesClient.list();
+      if (!alive.current) return;
       scenesRef.current = list;
       setScenes(list);
       setError(null);
+    } catch (err) {
+      if (!alive.current) return;
+      logger.error('[useCasterScenes] load error', err);
+      setError((err as Error).message);
     }
     setLoading(false);
   }, []);
@@ -92,18 +89,16 @@ export function useCasterScenes({ enabled = true, onStatus }: Options = {}) {
   });
 
   /**
-   * Écrit la config d'une scène (colonne jsonb `data`). RLS : staff actif.
-   * Le Realtime propage ensuite vers l'app desktop et les overlays.
+   * Écrit la config d'une scène (colonne jsonb `data`). Le Realtime propage
+   * ensuite vers les overlays.
    */
   const saveSceneData = useCallback(
     async (sceneId: string, data: Record<string, unknown>) => {
-      const { error: err } = await supabaseClient
-        .from('caster_scenes')
-        .update({ data })
-        .eq('id', sceneId);
-      if (err) {
+      try {
+        await casterScenesClient.update(sceneId, { data });
+      } catch (err) {
         logger.error('[useCasterScenes] save error', err);
-        throw new Error(err.message);
+        throw err;
       }
     },
     []
@@ -135,16 +130,14 @@ export function useCasterScenes({ enabled = true, onStatus }: Options = {}) {
       // Séquentiel : la liste fait une dizaine de lignes, et un ordre d'écriture
       // déterministe rend le journal Postgres lisible en cas d'incident.
       for (const { id, sort_order } of updates) {
-        const { error: err } = await supabaseClient
-          .from('caster_scenes')
-          .update({ sort_order })
-          .eq('id', id);
-        if (err) {
+        try {
+          await casterScenesClient.update(id, { sort_order });
+        } catch (err) {
           logger.error('[useCasterScenes] reorder error', err);
           // On recharge : l'ordre en base est peut-être partiellement appliqué,
           // l'UI doit montrer la vérité plutôt que l'ordre optimiste.
           await reload();
-          throw new Error(err.message);
+          throw err;
         }
       }
       await reload();
@@ -160,23 +153,20 @@ export function useCasterScenes({ enabled = true, onStatus }: Options = {}) {
    */
   const createScene = useCallback(
     async (type: CasterSceneType): Promise<string> => {
-      const { data, error: err } = await supabaseClient
-        .from('caster_scenes')
-        .insert({
+      try {
+        const { id } = await casterScenesClient.create({
           name: defaultSceneName(type),
           type,
           overlay: defaultOverlayFile(type),
           data: defaultSceneData(type),
           sort_order: nextSortOrder(),
-        })
-        .select('id')
-        .single();
-      if (err || !data) {
+        });
+        await reload();
+        return id;
+      } catch (err) {
         logger.error('[useCasterScenes] create error', err);
-        throw new Error(err?.message || 'insert failed');
+        throw err;
       }
-      await reload();
-      return (data as { id: string }).id;
     },
     [nextSortOrder, reload]
   );
@@ -186,13 +176,11 @@ export function useCasterScenes({ enabled = true, onStatus }: Options = {}) {
     async (sceneId: string, name: string) => {
       const trimmed = name.trim();
       if (!trimmed) throw new Error('empty name');
-      const { error: err } = await supabaseClient
-        .from('caster_scenes')
-        .update({ name: trimmed })
-        .eq('id', sceneId);
-      if (err) {
+      try {
+        await casterScenesClient.update(sceneId, { name: trimmed });
+      } catch (err) {
         logger.error('[useCasterScenes] rename error', err);
-        throw new Error(err.message);
+        throw err;
       }
       await reload();
     },
@@ -210,9 +198,9 @@ export function useCasterScenes({ enabled = true, onStatus }: Options = {}) {
       const list = scenesRef.current;
       const source = list.find((scene) => scene.id === sceneId);
       if (!source) throw new Error('scene not found');
-      const { data, error: err } = await supabaseClient
-        .from('caster_scenes')
-        .insert({
+      let createdId: string;
+      try {
+        const created = await casterScenesClient.create({
           name: duplicateName(
             source.name,
             list.map((scene) => scene.name)
@@ -221,14 +209,12 @@ export function useCasterScenes({ enabled = true, onStatus }: Options = {}) {
           overlay: source.overlay ?? defaultOverlayFile(source.type),
           data: source.data ?? {},
           sort_order: nextSortOrder(),
-        })
-        .select('id')
-        .single();
-      if (err || !data) {
+        });
+        createdId = created.id;
+      } catch (err) {
         logger.error('[useCasterScenes] duplicate error', err);
-        throw new Error(err?.message || 'insert failed');
+        throw err;
       }
-      const createdId = (data as { id: string }).id;
       await reload();
       await reorderScenes(
         orderWithDuplicateAfter(
@@ -245,13 +231,11 @@ export function useCasterScenes({ enabled = true, onStatus }: Options = {}) {
   /** Supprime une scène. La confirmation est la responsabilité de l'appelant. */
   const deleteScene = useCallback(
     async (sceneId: string) => {
-      const { error: err } = await supabaseClient
-        .from('caster_scenes')
-        .delete()
-        .eq('id', sceneId);
-      if (err) {
+      try {
+        await casterScenesClient.remove(sceneId);
+      } catch (err) {
         logger.error('[useCasterScenes] delete error', err);
-        throw new Error(err.message);
+        throw err;
       }
       await reload();
     },

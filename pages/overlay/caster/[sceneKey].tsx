@@ -7,8 +7,7 @@
 // scène (`match`). Par type, on prend la première au sort_order — le même
 // ordre que le hub de scènes du caster.
 //
-// - Aucune auth : la table a une policy SELECT publique (les overlays lisent
-//   avec la clé anon, comme n'importe quel client). Lecture via supabaseClient.
+// - Aucune auth : lecture publique, /api/overlay/caster/scene, jamais en cache.
 // - Chrome-less : `pages/_app.tsx` rend `/overlay/*` bare + noindex.
 // - Temps réel : Supabase Realtime sur la ligne résolue — le payload UPDATE
 //   contient la ligne complète (payload.new), appliquée SANS refetch. Filet de
@@ -35,7 +34,6 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useCallback, useEffect, useState } from 'react';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { supabaseClient } from '@/utils/supabaseBrowser';
 import { useRealtimeChannel } from '@/hooks/useRealtimeChannel';
 import { isValidUUID } from '@/utils/apiHelpers';
 import { CASTER_SCENE_TYPES, type CasterScene } from '@/types/caster';
@@ -128,17 +126,15 @@ function CasterOverlayPage() {
       return;
     }
     try {
-      const base = supabaseClient.from('caster_scenes').select('*');
-      const query = isValidUUID(sceneKey)
-        ? base.eq('id', sceneKey).limit(1)
-        : base
-            .eq('type', sceneKey)
-            .order('sort_order', { ascending: true })
-            .limit(1);
-      const { data, error } = await query;
+      const res = await fetch(
+        `/api/overlay/caster/scene?key=${encodeURIComponent(sceneKey)}`
+      );
       // Erreur transitoire : on garde le dernier état rendu (jamais de trou
       // noir à l'antenne), le prochain poll retentera.
-      if (!error) setScene((data?.[0] as CasterScene | undefined) ?? null);
+      if (res.ok) {
+        const body = (await res.json()) as { scene: CasterScene | null };
+        setScene(body.scene);
+      }
     } catch {
       /* réseau : silencieux, le poll suivant réessaie */
     } finally {
