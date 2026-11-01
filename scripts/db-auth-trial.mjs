@@ -476,6 +476,89 @@ function checkMirror() {
   );
 }
 
+/* ------------------------------------------------------------ le rôle de Better Auth --- */
+
+function checkAuthAppRole() {
+  applyFile('add_auth_app_role');
+  applyFile('add_auth_app_role');
+  check(
+    sql(
+      `select rolcanlogin or rolsuper or rolbypassrls or rolcreaterole or rolcreatedb from pg_roles where rolname = 'auth_app'`
+    ) === 'f',
+    'rôle de Better Auth : sans connexion ni passe-droit à sa création'
+  );
+
+  // Mot de passe jetable, sur la base jetable : le vrai reste hors de ce script.
+  const pw = randomUUID().replaceAll('-', '');
+  sql(`alter role auth_app login password '${pw}'`);
+  const url = db.replace(/\/\/[^@]+@/, `//auth_app:${pw}@`);
+  const runs = (q) => {
+    try {
+      sql(q, url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const uid = sql(`select id from public.auth_user limit 1`);
+  const token = randomUUID();
+  const allowed = {
+    'lire un compte': `select id, metadata from public.auth_user limit 1`,
+    'lire un hachage': `select count(password) from public.auth_account`,
+    'ouvrir une session': `insert into public.auth_session (user_id, token, expires_at) values ('${uid}', '${token}', now() + interval '1 hour')`,
+    'marquer le niveau': `update public.auth_session set aal = 'aal2' where token = '${token}'`,
+    'fermer la session': `delete from public.auth_session where token = '${token}'`,
+    'poser une vérification': `insert into public.auth_verification (identifier, value, expires_at) values ('${token}', 'x', now())`,
+    'compter une limite': `insert into public.auth_rate_limit (key, count, last_request) values ('${token}', 1, 1)`,
+    'poser une clé': `insert into public.auth_jwks (public_key, private_key) values ('x', 'y')`,
+    'poser un code': `insert into public.auth_two_factor (user_id, secret, backup_codes) values ('${uid}', 'x', 'y')`,
+  };
+  const refused = Object.entries(allowed)
+    .filter(([, q]) => !runs(q))
+    .map(([name]) => name);
+  check(
+    refused.length === 0,
+    'rôle de Better Auth : travaille sur ses tables, malgré la RLS',
+    refused.join(', ')
+  );
+  const denied = {
+    'une table du site': `select count(*) from public.team_members`,
+    'le staff': `select count(*) from public.staff`,
+    'auth.users': `select count(*) from auth.users`,
+    'auth.identities': `select count(*) from auth.identities`,
+    'une fonction de lecture': `select count(*) from public.admin_list_users()`,
+    'le miroir': `select public.auth_mirror_user('${uid}')`,
+  };
+  const open = Object.entries(denied)
+    .filter(([, q]) => runs(q))
+    .map(([name]) => name);
+  check(
+    open.length === 0,
+    'rôle de Better Auth : refusé partout ailleurs',
+    open.join(', ')
+  );
+  check(
+    sql(
+      `select has_table_privilege('anon', 'public.auth_account', 'SELECT')`
+    ) === 'f' &&
+      sql(
+        `select has_table_privilege('authenticated', 'public.auth_user', 'SELECT')`
+      ) === 'f',
+    'le navigateur reste dehors'
+  );
+  sql(`delete from public.auth_two_factor where secret = 'x'`);
+  sql(`delete from public.auth_jwks where public_key = 'x'`);
+
+  applyFile('add_auth_app_role_revert');
+  check(
+    count(`select count(*) from pg_roles where rolname = 'auth_app'`) === 0 &&
+      count(
+        `select count(*) from pg_policies where policyname = 'auth_app_all'`
+      ) === 0,
+    'rôle de Better Auth : retour arrière complet'
+  );
+}
+
 /* ------------------------------------------------------------------------ l'essai --- */
 
 function run() {
@@ -548,6 +631,7 @@ function run() {
   applyAll();
   checkInstalled('réappliquées');
   checkMirror();
+  checkAuthAppRole();
 }
 
 try {
