@@ -3,7 +3,6 @@
 
 import type { NextApiRequest } from 'next';
 import { TEAM_ROLE_VALUES } from '@/utils/teamRoles';
-import { identityAdmin } from '@/utils/identity';
 
 // PAS d'import statique de `@/utils/supabase` ici : ce module sert aussi au
 // code client (`isValidUUID`, `sanitizeUrl`), et `utils/supabase` crée ses
@@ -118,6 +117,7 @@ export async function validateExistingUserId(
   if (!supabaseAdmin) {
     return { ok: false, status: 503, error: 'Service unavailable.' };
   }
+  const { identityAdmin } = await import('@/utils/identity');
   const { data, error } = await identityAdmin.getUserById(trimmed);
   if (error || !data?.user?.id) {
     return {
