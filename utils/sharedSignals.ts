@@ -103,10 +103,7 @@ function queueForBridge(name: string, atMs: number): void {
   if (bridgeTimer) return;
   bridgeTimer = setTimeout(() => {
     bridgeTimer = null;
-    runInBackground(
-      () => sendBridgeQueue(url, secret),
-      'sharedSignals.bridge'
-    );
+    runInBackground(() => sendBridgeQueue(url, secret), 'sharedSignals.bridge');
   }, BRIDGE_BATCH_MS);
   bridgeTimer.unref?.();
 }

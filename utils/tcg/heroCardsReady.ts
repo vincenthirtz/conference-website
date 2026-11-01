@@ -35,7 +35,10 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { isMissingColumnError } from '@/utils/moderation/missingColumn';
-import { canJoinInFlightRead, registerProcessCache } from '@/utils/processCaches';
+import {
+  canJoinInFlightRead,
+  registerProcessCache,
+} from '@/utils/processCaches';
 
 /** La colonne que la migration ajoute à `tcg_pack_cards` et `tcg_trade_items`. */
 export const HERO_CARD_COLUMN = 'card_hero_slug';

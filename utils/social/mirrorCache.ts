@@ -26,7 +26,10 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
-import { canJoinInFlightRead, registerProcessCache } from '@/utils/processCaches';
+import {
+  canJoinInFlightRead,
+  registerProcessCache,
+} from '@/utils/processCaches';
 
 /**
  * TTL des réglages et des comptes connectés du miroir.

@@ -28,7 +28,10 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { isMissingColumnError } from '@/utils/moderation/missingColumn';
-import { canJoinInFlightRead, registerProcessCache } from '@/utils/processCaches';
+import {
+  canJoinInFlightRead,
+  registerProcessCache,
+} from '@/utils/processCaches';
 
 /** La colonne sondée ; `target_slug` arrive dans la même transaction. */
 export const FANART_TARGET_KIND_COLUMN = 'target_kind';
