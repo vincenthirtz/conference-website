@@ -1,22 +1,14 @@
 // utils/edgeApiProxy.ts
 //
-// Logique pure du relais même-origine /api/* → conference-api, exécuté par
-// l'Edge Function Netlify `netlify/edge-functions/api-proxy.ts`.
+// Logique pure du relais même-origine /api/* → Worker de l'API, exécuté par
+// cloudflare/worker.mjs. Le relais garde l'URL sur le site : le navigateur envoie ses
+// cookies et reçoit les Set-Cookie sur le bon domaine.
 //
-// POURQUOI UN RELAIS. utils/remoteApi.ts bascule les appels navigateur en
-// cross-origin vers api.owwomenscup.fr, mais les familles qui lisent un cookie
-// du site (session, tenant actif, états OAuth) ne peuvent pas partir : le
-// cookie est posé sur owwomenscup.fr. Le relais garde l'URL sur le site (le
-// navigateur envoie ses cookies, reçoit les Set-Cookie sur le bon domaine) et
-// fait l'aller-retour vers l'API côté serveur.
+// APIs web standard uniquement (Headers, URL), aucun import Node, imports relatifs avec
+// extension. La lecture de l'environnement reste dans le Worker.
 //
-// CE MODULE TOURNE SOUS DENO (Edge Functions) ET SOUS NODE (vitest) : APIs web
-// standard uniquement (Headers, URL), aucun import Node, imports relatifs AVEC
-// extension (exigence Deno). Pas de `process.env`, pas de `Netlify.env` : la
-// lecture de l'environnement reste dans l'edge function.
-//
-// VARIABLES ABSENTES = AUCUN CHANGEMENT : `resolveEdgeProxyConfig` renvoie
-// `null` et l'edge function rend la main (`context.next()`).
+// VARIABLES ABSENTES = AUCUN CHANGEMENT : `resolveEdgeProxyConfig` renvoie `null` et la
+// requête reste au site.
 
 import { sanitizeApiOrigin } from './remoteApi.ts';
 
@@ -99,10 +91,9 @@ export function resolveEdgeProxyConfig(raw: {
 
 /**
  * Routes JAMAIS relayées, quoi que dise API_PROXY_PREFIXES (même `/api/`) :
- * `/api/internal/*` doit être servi par Netlify. C'est là que conference-api
- * déclenche la régénération ISR des pages du site
- * (`pages/api/internal/revalidate.ts`) ; relayée, la demande reviendrait à
- * l'API, qui ne peut rien régénérer côté Netlify.
+ * `/api/internal/*` doit être servi par le site. C'est là que conference-api
+ * déclenche la régénération ISR de ses pages (`pages/api/internal/revalidate.ts`) ;
+ * relayée, la demande reviendrait à l'API, qui ne peut rien y régénérer.
  */
 const NEVER_PROXIED = '/api/internal';
 
@@ -132,143 +123,6 @@ export function matchesProxyPrefix(
 ): boolean {
   if (isNeverProxiedPath(pathname)) return false;
   return prefixes.some((p) => pathname.startsWith(p));
-}
-
-/**
- * Worker de l'API (phase 2, docs/API-WORKER.md) : la liaison du Worker du site vers
- * `owwomenscup-api`, à la place du serveur pour les routes d'API_WORKER_ROUTES.
- * Le serveur reste l'amont de tout le reste, et le repli de ceci.
- */
-export type ApiWorkerBinding = {
-  fetch(url: string, init: RequestInit): Promise<Response>;
-};
-
-/** Au-delà, sans en-têtes de réponse, la lecture repart vers le serveur. */
-export const API_WORKER_TIMEOUT_MS = 8_000;
-
-const UUID_SEGMENT =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * Le chemin correspond-il à cette entrée d'API_WORKER_ROUTES ? Segment par segment,
- * jamais par début de chemin : `/api/teams` est public, `/api/teams/leave` non.
- *   - `:id` : un UUID, rien d'autre (`/api/teams/:id` ne couvre pas `/api/teams/leave`) ;
- *   - `*` en dernier : tout ce qui suit, à réserver aux familles sans route privée.
- * Le chemin n'est pas décodé : un encodage inattendu ne correspond à rien, et reste donc
- * au serveur.
- *
- * `anyId` : `:id` couvre n'importe quel segment. Pour une liste de refus, où passer à côté
- * enverrait au Worker ce qui doit rester au serveur.
- */
-function matchesApiWorkerRoute(
-  pathname: string,
-  route: string,
-  anyId = false
-): boolean {
-  const want = route.split('/');
-  const got = pathname.split('/');
-  const open = want[want.length - 1] === '*';
-  if (open ? got.length < want.length : got.length !== want.length)
-    return false;
-  return want.every((segment, i) => {
-    if (open && i === want.length - 1) return true;
-    if (segment !== ':id') return segment === got[i];
-    return anyId || UUID_SEGMENT.test(got[i]);
-  });
-}
-
-/**
- * Cette requête part-elle vers le Worker de l'API ? Lectures seulement, tant que la
- * bascule se fait famille par famille : une écriture reste au serveur, quelle que soit
- * la route, et seule une lecture peut être rejouée sans risque après une panne.
- *
- * `?as=` aussi reste au serveur : le staff y inspecte l'écran d'une joueuse (`resolveSubject`,
- * API), et ce GET-là écrit au journal. Le même chemin sans `?as=` n'écrit rien.
- *
- * `serverOnly` l'emporte sur `routes` : une famille large (`/api/admin/*`) moins ce qui doit
- * rester au serveur (API_WORKER_SERVER_ONLY).
- */
-export function servedByApiWorker(
-  method: string,
-  pathname: string,
-  routes: readonly string[],
-  search = '',
-  serverOnly: readonly string[] = []
-): boolean {
-  if (methodHasBody(method) || isNeverProxiedPath(pathname)) return false;
-  if (new URLSearchParams(search).has('as')) return false;
-  if (serverOnly.some((route) => matchesApiWorkerRoute(pathname, route, true)))
-    return false;
-  return routes.some((route) => matchesApiWorkerRoute(pathname, route));
-}
-
-/**
- * Cette requête part-elle vers le Worker de l'API SANS retour possible ? Une écriture, ou
- * un GET qui écrit (`/api/bot/v1/reminders` marque ses rappels comme envoyés). Rejouée
- * après une panne ou un délai, elle pourrait s'exécuter deux fois, ou perdre ce que le
- * premier passage a déjà consommé : sa réponse, même une erreur, est la réponse.
- */
-export function finalAtApiWorker(
-  method: string,
-  pathname: string,
-  writeRoutes: readonly string[],
-  unreplayableReads: readonly string[]
-): boolean {
-  if (isNeverProxiedPath(pathname)) return false;
-  const routes = methodHasBody(method) ? writeRoutes : unreplayableReads;
-  return routes.some((route) => matchesApiWorkerRoute(pathname, route));
-}
-
-/**
- * Un 401 ou un 403 à une requête identifiée : pendant la bascule, seul le serveur tranche.
- * Refusée à tort, une joueuse connectée se croirait déconnectée, un membre du staff
- * perdrait son back-office, le bot perdrait ses lectures, et aucun des trois n'est une panne.
- */
-function refusesIdentifiedCaller(status: number, init: RequestInit): boolean {
-  if (status !== 401 && status !== 403) return false;
-  const headers = new Headers(init.headers);
-  return (
-    headers.has('authorization') ||
-    headers.has('cookie') ||
-    headers.has('x-api-key')
-  );
-}
-
-/**
- * La réponse du Worker de l'API, ou `null` s'il lève, répond 5xx, tarde, ou refuse une
- * requête identifiée : l'appelant rejoue alors la lecture sur le serveur, et la visiteuse
- * ne voit rien. `onFallback` laisse une trace, seul signe du problème ; `refusedStatus`
- * n'est donné que pour un refus, souvent légitime : à comparer à la réponse du serveur.
- */
-export async function askApiWorker(
-  binding: ApiWorkerBinding,
-  url: string,
-  init: RequestInit,
-  onFallback: (reason: string, refusedStatus?: number) => void,
-  timeoutMs: number = API_WORKER_TIMEOUT_MS
-): Promise<Response | null> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const late = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error(`délai de ${timeoutMs} ms`)),
-      timeoutMs
-    );
-  });
-  try {
-    const response = await Promise.race([binding.fetch(url, init), late]);
-    const refused = refusesIdentifiedCaller(response.status, init);
-    if (response.status < 500 && !refused) return response;
-    await response.body?.cancel();
-    onFallback(
-      `statut ${response.status}`,
-      refused ? response.status : undefined
-    );
-  } catch (err) {
-    onFallback(err instanceof Error ? err.message : String(err));
-  } finally {
-    clearTimeout(timer);
-  }
-  return null;
 }
 
 /** URL amont : origine de l'API + chemin + query, sans le fragment. */

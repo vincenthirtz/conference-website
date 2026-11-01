@@ -509,7 +509,7 @@ en minute à 5 min, puis par heure) compte tous les appels. Stable à ~113 par h
 l'extinction : le relais revérifie au serveur chaque 401 ou 403 d'une session, et le pont y envoie une note à chaque écriture ; ces appels reviennent avec les visites et ne cessent
 qu'à la route Worker sur `api.owwomenscup.fr`. Le détail par route est dans le journal de Caddy, dont la lecture par SSH a été refusée par le mode automatique le 11-01.
 
-**Lightsail arrêté le 2026-11-01, à la demande de la propriétaire**, sans les deux semaines d'observation d'abord envisagées :
+**Lightsail arrêté puis supprimé le 2026-11-01, à la demande de la propriétaire**, sans les deux semaines d'observation d'abord envisagées :
 
 | UTC | Étape |
 |---|---|
@@ -517,7 +517,9 @@ qu'à la route Worker sur `api.owwomenscup.fr`. Le détail par route est dans le
 | ~12:16 | Vraie session staff sur le Worker : `/api/admin/me`, tableau de bord, alertes, ticket temps réel, en 2xx/304 |
 | 12:18 | Route `api.owwomenscup.fr/*` → `owwomenscup-api` (tableau de bord), enregistrement `api` passé en « proxied » (`cf dns records edit`) |
 | ~12:25 | Site 9d6914bd1 : `API_WORKER_UNREPLAYABLE_READS=/api/*`, plus aucun repli ni revérification ; `worker-routes-check` compare relais et appel direct, CloudFront nulle part |
-| 12:30 | `aws lightsail stop-instance` : arrêtée, ni disque ni adresse IP touchés |
+| 12:30 | `aws lightsail stop-instance` : arrêtée |
+| 12:44 | Enregistrement `origin-api` retiré d'abord (l'adresse libérée aurait pu revenir à un tiers), instance et adresse IP fixe supprimées. **Sans retour possible** |
+| ~13:00 | Nettoyage : API `Dockerfile`, `deploy/`, `image.yml`, pont des signaux ; `worker.yml` lance lui-même les tests avant de déployer. Site : plus de repli dans le relais |
 
 Après coup : 36 cas directs comparés à un relevé d'avant la bascule, 28 identiques, 7 avec seulement un en-tête en plus, 1 corrigé (ci-dessous) ; 0 réponse 5xx, tâches et bot sans échec.
 
@@ -527,11 +529,10 @@ Pas de faille, l'endpoint ne lit que le jeton Bearer, mais contraire à la règl
 **Ce qui n'a plus de filet :** une lecture en panne sur le Worker donne une erreur, et un refus à tort n'est plus rattrapé. **Toujours pas vu en vrai :** une écriture staff, un refus sans double
 authentification, une régénération de page réussie, les webhooks signés (Twitch peut révoquer un abonnement après des refus répétés).
 
-**Retour arrière, ~10 min :** `aws lightsail start-instance --instance-name ubuntu-stockholm --profile owwc` (IP fixe), repasser `api` en « DNS only » (renvoie vers CloudFront), restaurer dans `wrangler.jsonc`
-du site la liste des GET qui consomment (`git show 9d6914bd1`) et remettre `SHARED_SIGNALS_SERVER_URL` dans celui de l'API (`git show 3f1d0dc`). Une image à jour attend sur GHCR : `image.yml` tourne toujours.
+**Retour arrière :** il n'y a plus de serveur. Une version du Worker se reprend par `npx wrangler rollback`. Revenir à un serveur voudrait dire en recréer un : l'image est sur GHCR, `Dockerfile` et `deploy/`
+dans l'historique de conference-api (avant 0618e42), les réglages à recopier depuis les secrets du Worker.
 
-**Reste à décider, rien de supprimé :** une instance arrêtée se facture encore (~7 $ par mois) : l'économie ne vient qu'en la supprimant, avec son IP fixe, ce qui rend ce retour arrière impossible.
-La distribution CloudFront ne coûte rien sans trafic. Puis nettoyage du code qui ne sert qu'au serveur : pont, `deploy/`, `Dockerfile`, et `image.yml`, dont `worker.yml` dépend encore pour ses tests.
+**Reste sur AWS :** la distribution CloudFront `E1P9VA302EJUME` et son certificat, sans trafic ni coût, plus aucune origine derrière. L'enregistrement `api` la vise encore, sans jamais la contacter (`proxied`, route Worker). Non supprimés : ce n'était pas demandé.
 
 **Piège d'OpenNext.** Il change un `stale-while-revalidate` sans valeur en `=2592000` (30 jours), que
 les navigateurs appliquent aussi. Corrigé sur les cinq routes concernées, sans effet sur le serveur.

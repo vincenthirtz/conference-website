@@ -2,7 +2,7 @@
 
 Décision du 2026-10-28 : le **site** passe de Netlify à Cloudflare Workers
 (OpenNext) ; l'API reste alors sur Lightsail, puis passe sur son propre Worker
-et Lightsail est arrêté le 2026-11-01 ([API-WORKER.md](API-WORKER.md)).
+et Lightsail est supprimé le 2026-11-01 ([API-WORKER.md](API-WORKER.md)).
 Bascule faite le même jour : owwomenscup.fr est servi par le Worker. Le
 2026-10-29, la migration est déclarée finie : Netlify ne construit plus le
 site et son code a quitté le dépôt. L'adresse technique *.workers.dev est
@@ -84,14 +84,13 @@ allume les statistiques et la PWA au build.
   Netlify DNS.
 - Tous les enregistrements sont en « DNS only » (nuage gris) — MX OVH ×3,
   DKIM Brevo ×2, `_dmarc`, TXT `brevo-code` et TikTok, `ovh-zimbra-…`,
-  `stats` (Freebox), la validation ACM d'`api`, `origin-api` (serveur arrêté),
-  `bot` — **sauf** le domaine nu et `www` : CNAME vers
+  `stats` (Freebox), la validation ACM d'`api`, `bot` — **sauf** le domaine nu et `www` : CNAME vers
   `owwomenscup.netlify.app`, **proxied**. La cible n'est jamais contactée :
   deux **routes Worker** (`owwomenscup.fr/*`, `www.owwomenscup.fr/*` →
   `owwomenscup`) prennent toutes les requêtes. De même `api` : CNAME vers
   CloudFront, **proxied** depuis le 2026-11-01, route `api.owwomenscup.fr/*` →
-  `owwomenscup-api`. L'appel ne va jamais à CloudFront ; repasser ce seul
-  enregistrement en « DNS only » y renvoie le trafic.
+  `owwomenscup-api`. L'appel ne va jamais à CloudFront, qui n'a plus d'origine :
+  **ne pas repasser cet enregistrement en « DNS only »**, l'API serait coupée.
 - Routes plutôt que domaines personnalisés : un domaine personnalisé ne se
   crée pas sur un nom qui a déjà un CNAME. Il aurait fallu supprimer le CNAME
   d'abord, et le trou, mis en cache négatif par les résolveurs (jusqu'à

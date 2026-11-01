@@ -14,7 +14,7 @@ sur D1 ensuite.
   jeton signé en est sorti. Reste à prouver sur le vrai réseau : l'accès à la base depuis le Worker.
 - **Pas encore.** La bascule change les chemins que l'API sur Worker n'a pas encore prouvés : une seule
   écriture au journal du staff depuis la bascule du 10-31, aucun refus de double authentification constaté
-  (`docs/API-WORKER.md`), et Lightsail vient d'être arrêté, le 2026-11-01. Si ça casse, on ne saurait pas lequel
+  (`docs/API-WORKER.md`), et Lightsail vient d'être supprimé, le 2026-11-01. Si ça casse, on ne saurait pas lequel
   des deux changements est en cause.
 - **Quand.** Les deux premiers lots, invisibles, dès que des écritures du staff et un refus sont vus sur le
   Worker. La bascule une soirée sans match, une fois le travail fait : **pas avant mi-décembre 2026**, à ce
@@ -32,7 +32,7 @@ sur D1 ensuite.
 |---|---|---|---|---|
 | Supabase (plan Free, vérifié) | 0 $ | 0 $ | 0 $ | projet supprimé |
 | Workers Paid | 5 $ | 5 $ | 5 $, Hyperdrive inclus | 5 $, D1 dans l'inclus (à mesurer alors) |
-| Lightsail | 7 $ | 0 $ | 0 $ | 0 $ |
+| Lightsail (supprimé le 2026-11-01) | 7 $ | 0 $ | 0 $ | 0 $ |
 | **Total** | **12 $** | **5 $** | **5 $** | **5 $** |
 
 Supabase Auth est gratuit sur ce plan : le remplacer ne rapporte rien. Le plan Pro (25 $) n'a pas été pris,
@@ -417,7 +417,7 @@ Estimations de l'auteur de l'étude, en jours de travail. Celle du Worker de l'A
 | # | Preuve | Par qui | Si ça rate |
 |---|---|---|---|
 | P1 | Des écritures de vraies sessions staff (une seule au journal depuis le 10-31, origine non lue **[base]**), et **le refus d'une session sans code** sur une route sensible, sur le Worker | Propriétaire + journaux | On corrige le Worker d'abord |
-| P2 | Lightsail arrêté : **fait le 2026-11-01** (`docs/API-WORKER.md`), route Worker sur `api.owwomenscup.fr`, pont retiré, plus de repli. S'il est rallumé, le retour au serveur lirait des jetons et cookies qu'il ne sait pas traiter sans Hyperdrive | Fait | Sans objet |
+| P2 | Lightsail supprimé : **fait le 2026-11-01** (`docs/API-WORKER.md`), route Worker sur `api.owwomenscup.fr`, pont retiré, plus de repli | Fait | Sans objet |
 | P3 | `wrangler hyperdrive create` avec un rôle de test, en direct puis par le session pooler | Propriétaire pour le mot de passe | Adaptateur PostgREST, +2 jours |
 | P4 | Relevé du tableau de bord Auth : SMTP, modèles, adresses de retour, durées, limites, Discord | Propriétaire | Lot 5 à l'aveugle sur les e-mails |
 | P5 | Better Auth et `pg` dans le build OpenNext d'un Worker sans route : taille, démarrage | CI, au lot 5 | Montage hors de Next |
