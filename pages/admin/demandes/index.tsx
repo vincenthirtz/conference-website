@@ -10,6 +10,7 @@ import { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
+import { identityAdmin } from '@/utils/identity';
 import { supabaseAdmin } from '@/utils/supabase';
 import { useUrlFilters } from '@/utils/useUrlFilters';
 import { useToast } from '@/components/Toast';
@@ -80,6 +81,7 @@ export const getServerSideProps = withStaffPage(
       tenantId: staffCtx.tenantId,
       staffId: staffCtx.staff.id,
       db: supabaseAdmin,
+      getAuthUser: identityAdmin.getUserById,
     })
 );
 

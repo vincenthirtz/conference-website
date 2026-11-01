@@ -10,8 +10,9 @@
 // add_staff_assignment_to_demandes_and_support_tickets, la liste se relit
 // sans ces colonnes ni le filtre, et `assignmentAvailable` vaut false.
 //
-// La base est REÇUE (client service role fourni par la page), jamais importée
-// ici : règle 3 de tests/unit/adminBoundariesGuard.test.ts.
+// La base et la lecture des comptes sont REÇUES (fournies par la page), jamais
+// importées ici : règle 3 de tests/unit/adminBoundariesGuard.test.ts, et ce module
+// est aussi dans le bundle du navigateur, pour DEMANDES_PAGE_SIZE.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ParsedUrlQuery } from 'querystring';
@@ -30,7 +31,7 @@ import {
   type TournamentMini,
   type UserMini,
 } from './listModel';
-import { identityAdmin } from '@/utils/identity';
+import type { identityAdmin } from '@/utils/identity';
 
 export const DEMANDES_PAGE_SIZE = 50;
 
@@ -69,6 +70,7 @@ export async function loadDemandesList(
     staffId: string;
     /** Client service role ; `null` = Supabase non configuré. */
     db: SupabaseClient<any> | null;
+    getAuthUser: typeof identityAdmin.getUserById;
   }
 ): Promise<DemandesListProps> {
   const type = str(query.type);
@@ -96,7 +98,7 @@ export async function loadDemandesList(
   // Client `supabaseAdmin` (non typé) de la page SSR ; filtres d'assignation
   // conditionnels (repli 42703). Le périmètre (tenant) reste explicite sur
   // chaque requête.
-  const { db, tenantId, staffId } = scope;
+  const { db, getAuthUser, tenantId, staffId } = scope;
 
   // Filtres communs à la page et aux compteurs (statut à part).
   function filtered(q: any, withAssignment: boolean) {
@@ -197,7 +199,7 @@ export async function loadDemandesList(
   await Promise.all(
     userIds.map(async (uid) => {
       try {
-        const { data } = await identityAdmin.getUserById(uid);
+        const { data } = await getAuthUser(uid);
         if (data?.user) {
           const meta = (data.user.user_metadata ?? {}) as Record<string, any>;
           userMap.set(uid, {
