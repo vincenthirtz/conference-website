@@ -325,6 +325,267 @@ export type Database = {
         }
         Relationships: []
       }
+      auth_account: {
+        Row: {
+          access_token: string | null
+          access_token_expires_at: string | null
+          account_id: string
+          created_at: string
+          id: string
+          id_token: string | null
+          identity_data: Json | null
+          password: string | null
+          provider_id: string
+          refresh_token: string | null
+          refresh_token_expires_at: string | null
+          scope: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          account_id: string
+          created_at?: string
+          id?: string
+          id_token?: string | null
+          identity_data?: Json | null
+          password?: string | null
+          provider_id: string
+          refresh_token?: string | null
+          refresh_token_expires_at?: string | null
+          scope?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          account_id?: string
+          created_at?: string
+          id?: string
+          id_token?: string | null
+          identity_data?: Json | null
+          password?: string | null
+          provider_id?: string
+          refresh_token?: string | null
+          refresh_token_expires_at?: string | null
+          scope?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auth_account_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_user"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auth_jwks: {
+        Row: {
+          alg: string | null
+          created_at: string
+          crv: string | null
+          expires_at: string | null
+          id: string
+          private_key: string
+          public_key: string
+        }
+        Insert: {
+          alg?: string | null
+          created_at?: string
+          crv?: string | null
+          expires_at?: string | null
+          id?: string
+          private_key: string
+          public_key: string
+        }
+        Update: {
+          alg?: string | null
+          created_at?: string
+          crv?: string | null
+          expires_at?: string | null
+          id?: string
+          private_key?: string
+          public_key?: string
+        }
+        Relationships: []
+      }
+      auth_rate_limit: {
+        Row: {
+          count: number
+          id: string
+          key: string
+          last_request: number
+        }
+        Insert: {
+          count: number
+          id?: string
+          key: string
+          last_request: number
+        }
+        Update: {
+          count?: number
+          id?: string
+          key?: string
+          last_request?: number
+        }
+        Relationships: []
+      }
+      auth_session: {
+        Row: {
+          aal: string
+          created_at: string
+          expires_at: string
+          id: string
+          ip_address: string | null
+          token: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          aal?: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          ip_address?: string | null
+          token: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          aal?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          token?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auth_session_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_user"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auth_two_factor: {
+        Row: {
+          backup_codes: string
+          failed_verification_count: number
+          id: string
+          locked_until: string | null
+          secret: string
+          user_id: string
+          verified: boolean
+        }
+        Insert: {
+          backup_codes: string
+          failed_verification_count?: number
+          id?: string
+          locked_until?: string | null
+          secret: string
+          user_id: string
+          verified?: boolean
+        }
+        Update: {
+          backup_codes?: string
+          failed_verification_count?: number
+          id?: string
+          locked_until?: string | null
+          secret?: string
+          user_id?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auth_two_factor_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_user"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auth_user: {
+        Row: {
+          banned_until: string | null
+          created_at: string
+          email: string
+          email_verified: boolean
+          id: string
+          image: string | null
+          last_sign_in_at: string | null
+          metadata: Json
+          name: string
+          two_factor_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          banned_until?: string | null
+          created_at?: string
+          email: string
+          email_verified?: boolean
+          id?: string
+          image?: string | null
+          last_sign_in_at?: string | null
+          metadata?: Json
+          name?: string
+          two_factor_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          banned_until?: string | null
+          created_at?: string
+          email?: string
+          email_verified?: boolean
+          id?: string
+          image?: string | null
+          last_sign_in_at?: string | null
+          metadata?: Json
+          name?: string
+          two_factor_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      auth_verification: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          identifier: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          identifier: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          identifier?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       blacklist_alerts: {
         Row: {
           battle_tag: string | null

@@ -1110,6 +1110,8 @@ export const PERSONAL_DATA_TABLES: readonly PersonalDataTable[] = [
  * Le test de dérive échoue si une entrée ne correspond plus au schéma.
  */
 export const NOT_PERSONAL_DATA_COLUMNS: Readonly<Record<string, string>> = {
+  'auth_account.user_id':
+    'Le compte lui-même (hachage, comptes liés) : jamais exporté, part en cascade avec lui.',
   // Actions de staff : la personne AGIT sur une ligne qui ne la concerne pas.
   'broadcast_schedules.created_by':
     'Membre du staff qui a programmé une campagne (FK SET NULL).',

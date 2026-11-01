@@ -5,11 +5,14 @@
 // la bascule. Ici, il n'y en a plus qu'un endroit, et le jour venu seul ce module change.
 //
 // AUCUNE LOGIQUE, VOLONTAIREMENT : chaque fonction rend exactement ce que rend Supabase, même
-// forme, mêmes erreurs. `identityDoorGuard.test.ts` refuse tout nouvel appel hors d'ici.
+// forme, mêmes erreurs. `identityDoorGuard.test.ts` refuse tout nouvel appel hors d'ici. Seule
+// exception : `getUserById` lit d'abord le miroir `auth_user` (lot 4), sous la même forme.
 //
 // Recopié vers le site par la synchro, ses pages serveur s'en servent aussi. Le navigateur a
 // sa propre porte, côté site : utils/identityBrowser.ts.
 
+import type { User, UserResponse } from '@supabase/supabase-js';
+import { logger } from './logger';
 import {
   getServerClient,
   supabaseAdmin,
@@ -20,9 +23,90 @@ import {
 
 type AdminAuth = typeof supabaseAdmin.auth.admin;
 
+type MirrorRow = {
+  id: string;
+  email: string;
+  email_verified: boolean;
+  created_at: string;
+  updated_at: string;
+  metadata: User['user_metadata'];
+  last_sign_in_at: string | null;
+  banned_until: string | null;
+  auth_account: Array<{
+    provider_id: string;
+    account_id: string;
+    identity_data: Record<string, unknown> | null;
+    created_at: string;
+    updated_at: string;
+  }> | null;
+};
+
+/** Une ligne du miroir, sous la forme d'un compte Supabase. */
+function userOfMirrorRow(row: MirrorRow): User {
+  return {
+    id: row.id,
+    aud: 'authenticated',
+    role: 'authenticated',
+    email: row.email,
+    // Le miroir ne garde que le oui/non : seule sa présence a un sens.
+    email_confirmed_at: row.email_verified ? row.created_at : undefined,
+    last_sign_in_at: row.last_sign_in_at ?? undefined,
+    banned_until: row.banned_until ?? undefined,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    app_metadata: {},
+    user_metadata: row.metadata ?? {},
+    identities: (row.auth_account ?? []).map((account) => {
+      const credential = account.provider_id === 'credential';
+      const id = credential ? row.id : account.account_id;
+      return {
+        id,
+        identity_id: id,
+        user_id: row.id,
+        provider: credential ? 'email' : account.provider_id,
+        identity_data: account.identity_data ?? {},
+        created_at: account.created_at,
+        updated_at: account.updated_at,
+      };
+    }),
+  } as User;
+}
+
+/**
+ * Le compte lu dans le miroir, en une seule requête comme l'appel qu'elle remplace.
+ * `null` si le compte manque ou si la lecture échoue : Supabase, qui reste la source
+ * jusqu'à la bascule, répond alors. Le journal ne dit que le code d'erreur.
+ */
+async function userResponseFromMirror(
+  id: string
+): Promise<UserResponse | null> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('auth_user')
+      .select(
+        'id, email, email_verified, created_at, updated_at, metadata, last_sign_in_at, banned_until, auth_account(provider_id, account_id, identity_data, created_at, updated_at)'
+      )
+      .eq('id', id)
+      .maybeSingle();
+    if (error) {
+      logger.warn('[identity] miroir illisible : %s', error.code ?? 'inconnu');
+      return null;
+    }
+    if (!data) return null;
+    return {
+      data: { user: userOfMirrorRow(data as unknown as MirrorRow) },
+      error: null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Gestion des comptes, avec la clé de service. */
 export const identityAdmin = {
-  getUserById: (id: string) => supabaseAdmin.auth.admin.getUserById(id),
+  getUserById: async (id: string): Promise<UserResponse> =>
+    (await userResponseFromMirror(id)) ??
+    supabaseAdmin.auth.admin.getUserById(id),
   updateUserById: (...args: Parameters<AdminAuth['updateUserById']>) =>
     supabaseAdmin.auth.admin.updateUserById(...args),
   createUser: (...args: Parameters<AdminAuth['createUser']>) =>
