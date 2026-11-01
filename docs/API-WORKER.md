@@ -504,6 +504,12 @@ reste suivait `BOT_API_BASE_URL`, qui visait `api.owwomenscup.fr` (~160 à 350 r
 2xx sur le Worker, écritures comprises (`free-players/sync`, `locks`, `role-sync/presence`), 0 repli, 0 erreur, et **Lightsail à 0 requête vers Supabase**. Le bot a perdu les caches
 du serveur : à mesurer sur 24 h, et à passer lui aussi par `CRON_HOST` si la base le sent.
 
+**Qui appelle encore Lightsail ?** Tout passe par CloudFront (l'origine refuse le reste), donc sa métrique `Requests` (distribution `E1P9VA302EJUME`, région `us-east-1`, 15 jours de minute
+en minute à 5 min, puis par heure) compte tous les appels. Stable à ~113 par heure la nuit, elle tombe à **0 à 11:30 UTC, à la bascule du bot**, sur les 23 min lues. Ce zéro n'autorise pas
+l'extinction : le relais revérifie au serveur chaque 401 ou 403 d'une session, et le pont y envoie une note à chaque écriture ; ces appels reviennent avec les visites et ne cessent
+qu'à la route Worker sur `api.owwomenscup.fr`. Critère d'extinction : plus aucune requête sur deux semaines, soirée de match comprise, une fois cette route posée. Le détail par route est
+dans le journal de Caddy, dont la lecture par SSH a été refusée par le mode automatique le 11-01 : à demander à la propriétaire si la métrique remonte sans explication.
+
 **Piège d'OpenNext.** Il change un `stale-while-revalidate` sans valeur en `=2592000` (30 jours), que
 les navigateurs appliquent aussi. Corrigé sur les cinq routes concernées, sans effet sur le serveur.
 `bareStaleWhileRevalidateGuard.test.ts` refuse le prochain.
