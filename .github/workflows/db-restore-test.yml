@@ -19,6 +19,10 @@ on:
       day:
         description: 'Sauvegarde à restaurer (AAAA-MM-JJ) ; vide = la plus récente'
         required: false
+      auth_trial:
+        description: 'Essayer ensuite les migrations du lot 4 de Better Auth (scripts/db-auth-trial.mjs)'
+        type: boolean
+        default: false
 
 concurrency:
   group: db-restore-test
@@ -131,8 +135,22 @@ jobs:
       - name: Vérification
         run: node scripts/db-restore-verify.mjs dump "$LOCAL_DB"
 
+      # Les migrations vivent dans le dépôt privé de l'API. Sur la base jetable
+      # seulement ; le script n'affiche que des nombres et des oui/non.
+      - uses: actions/checkout@v4
+        if: ${{ inputs.auth_trial }}
+        with:
+          repository: vincenthirtz/conference-api
+          token: ${{ secrets.API_REPO_DISPATCH_TOKEN }}
+          path: api-repo
+          sparse-checkout: database/migrations
+
+      - name: Essai des migrations du lot 4
+        if: ${{ inputs.auth_trial }}
+        run: node scripts/db-auth-trial.mjs "$LOCAL_DB" api-repo/database/migrations
+
       - name: Nettoyage
         if: always()
         run: |
-          rm -rf dump
+          rm -rf dump api-repo
           (cd restore && supabase stop --no-backup) || true
