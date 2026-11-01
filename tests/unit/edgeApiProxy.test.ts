@@ -290,7 +290,6 @@ describe('API_WORKER_ROUTES de production (wrangler.jsonc)', () => {
     }
   });
 
-
   it('une écriture du profil staff reste au serveur', () => {
     expect(servedByApiWorker('PATCH', '/api/admin/me', routes)).toBe(false);
   });
@@ -490,7 +489,6 @@ describe('le bot sur le Worker de l’API (wrangler.jsonc)', () => {
       expect(final(method, '/api/bot/v1/role-sync/presence')).toBe(true);
     }
   );
-
 });
 
 describe('Worker de l’API : repli sur le serveur', () => {

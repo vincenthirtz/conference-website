@@ -103,11 +103,7 @@ reportMany(
   await pool(reads, 6, async (path) => {
     const relayed = await hit(SITE, path);
     const direct = await hit(API, path);
-    if (
-      !relayed.server &&
-      !direct.server &&
-      relayed.status === direct.status
-    ) {
+    if (!relayed.server && !direct.server && relayed.status === direct.status) {
       return null;
     }
     return `${path.replaceAll(UUID, ':id')} : relais ${relayed.status}${relayed.server ? ' par le serveur' : ''}, direct ${direct.status}${direct.server ? ' par le serveur' : ''}`;
@@ -208,10 +204,7 @@ if (SECRET) {
       config.staffMfaEnforced === wanted,
       `double authentification : ${config.staffMfaEnforced ? 'exigée' : 'pas exigée'} sur le Worker, ${wanted ? 'exigée' : 'pas exigée'} dans wrangler.jsonc`
     );
-    report(
-      !config.signalBridgeToServer,
-      'aucune note envoyée vers le serveur'
-    );
+    report(!config.signalBridgeToServer, 'aucune note envoyée vers le serveur');
     console.log(`comptes exemptés : ${config.staffMfaExemptions}`);
   }
 } else if (process.env.CI) {

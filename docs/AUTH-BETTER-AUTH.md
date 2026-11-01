@@ -14,12 +14,11 @@ sur D1 ensuite.
   jeton signé en est sorti. Reste à prouver sur le vrai réseau : l'accès à la base depuis le Worker.
 - **Pas encore.** La bascule change les chemins que l'API sur Worker n'a pas encore prouvés : une seule
   écriture au journal du staff depuis la bascule du 10-31, aucun refus de double authentification constaté
-  (`docs/API-WORKER.md`), et Lightsail n'est pas éteint à la date de cette étude. Si ça casse, on ne saurait
-  pas lequel des deux changements est en cause.
+  (`docs/API-WORKER.md`), et Lightsail vient d'être arrêté, le 2026-11-01. Si ça casse, on ne saurait pas lequel
+  des deux changements est en cause.
 - **Quand.** Les deux premiers lots, invisibles, dès que des écritures du staff et un refus sont vus sur le
-  Worker. La bascule après l'extinction de Lightsail et ses deux semaines d'attente, une soirée sans match :
-  **pas avant mi-décembre 2026** si Lightsail s'éteint fin novembre. Aucun match n'est planifié en base
-  aujourd'hui, à revérifier.
+  Worker. La bascule une soirée sans match, une fois le travail fait : **pas avant mi-décembre 2026**, à ce
+  rythme de 4 à 6 semaines. Aucun match n'est planifié en base aujourd'hui, à revérifier.
 - **Effort.** 22 à 32 jours de travail, soit 4 à 6 semaines. L'estimation du 10-29 (3 semaines) oubliait
   l'absence de double authentification par session, la Library et les vérifications sur un trafic très
   faible : 14 connexions ou renouvellements en 24 h.
@@ -61,11 +60,11 @@ est aussi le chemin vers D1, qui n'a pas de règles d'accès.
 |---|---|---|
 | Une erreur à la bascule | Personne ne se connecte, staff compris | L'API accepte les deux systèmes avant la bascule (lot 6), essai écran par écran (lot 7), retour par un réglage en 10 min, Supabase Auth intact 14 jours |
 | Double authentification affaiblie sans bruit | Better Auth ne retient pas si le code a été donné dans la session, et ne le demande qu'après un mot de passe : **une connexion Discord passe sans code** ([doc](https://www.better-auth.com/docs/plugins/2fa)) | Niveau ajouté par nous, déjà essayé sur le banc ; les gardes refusent tout jeton sans niveau ; test du refus avant la bascule |
-| Deux chantiers en même temps | Panne impossible à attribuer | Attendre les preuves du Worker et l'extinction de Lightsail |
+| Deux chantiers en même temps | Panne impossible à attribuer | Attendre les preuves du Worker, qui n'a plus de serveur derrière lui |
 
 ### Décisions pour la propriétaire
 
-1. **La séquence** : Lightsail d'abord (rappel du 2026-11-11), bascule ensuite, pas avant mi-décembre.
+1. **La séquence** : les preuves sur le Worker d'abord (P1), bascule ensuite, pas avant mi-décembre.
 2. **Women's Library** : la passer sur les salons Cloudflare qui servent déjà aux autres écrans avant la bascule
    (recommandé, à faire de toute façon pour quitter Supabase), la garder sur Supabase Realtime en faisant reconnaître
    Better Auth par Supabase, ou la couper le temps de la bascule.
@@ -418,7 +417,7 @@ Estimations de l'auteur de l'étude, en jours de travail. Celle du Worker de l'A
 | # | Preuve | Par qui | Si ça rate |
 |---|---|---|---|
 | P1 | Des écritures de vraies sessions staff (une seule au journal depuis le 10-31, origine non lue **[base]**), et **le refus d'une session sans code** sur une route sensible, sur le Worker | Propriétaire + journaux | On corrige le Worker d'abord |
-| P2 | Lightsail éteint selon le critère de `docs/API-WORKER.md` : route Worker sur `api.owwomenscup.fr`, pont retiré, plus aucune requête sur deux semaines, soirée de match comprise | Propriétaire | La bascule attend. Le repli vers le serveur lirait des jetons et cookies qu'il ne sait pas traiter sans Hyperdrive |
+| P2 | Lightsail arrêté : **fait le 2026-11-01** (`docs/API-WORKER.md`), route Worker sur `api.owwomenscup.fr`, pont retiré, plus de repli. S'il est rallumé, le retour au serveur lirait des jetons et cookies qu'il ne sait pas traiter sans Hyperdrive | Fait | Sans objet |
 | P3 | `wrangler hyperdrive create` avec un rôle de test, en direct puis par le session pooler | Propriétaire pour le mot de passe | Adaptateur PostgREST, +2 jours |
 | P4 | Relevé du tableau de bord Auth : SMTP, modèles, adresses de retour, durées, limites, Discord | Propriétaire | Lot 5 à l'aveugle sur les e-mails |
 | P5 | Better Auth et `pg` dans le build OpenNext d'un Worker sans route : taille, démarrage | CI, au lot 5 | Montage hors de Next |

@@ -498,7 +498,7 @@ Worker, et refus 403 de `/api/admin/me` à des sessions non staff, tous confirm�
 (aucune écriture dans `staff_logs` sur la période), donc ni écriture staff ni refus sans double authentification ; une régénération de page réussie, aucune sauvegarde de profil
 depuis la correction ; webhooks signés ; note réelle sur le pont. E-mails : aucune erreur journalisée, livraison non vérifiée.
 
-**Le reste du bot, le 2026-11-01 à 11:30 UTC.** Jusque-là, seuls `reminders`, `role-sync/snapshot` et `role-sync/presence`, qui ont leur propre adresse, passaient par le relais : tout le
+**Le reste du bot, le 2026-11-01 à 11:30 UTC, avant l'arrêt de Lightsail.** Jusque-là, seuls `reminders`, `role-sync/snapshot` et `role-sync/presence`, qui ont leur propre adresse, passaient par le relais : tout le
 reste suivait `BOT_API_BASE_URL`, qui visait `api.owwomenscup.fr` (~160 à 350 requêtes par heure vers Supabase depuis Lightsail). La variable du `.env` du VPS vise maintenant
 `https://owwomenscup.fr/api/bot/v1`, conteneur recréé sans construction d'image, sauvegarde `.env.bak-avant-worker-202611011130` à recopier pour revenir. Après 15 min : 13 routes en
 2xx sur le Worker, écritures comprises (`free-players/sync`, `locks`, `role-sync/presence`), 0 repli, 0 erreur, et **Lightsail à 0 requête vers Supabase**. Le bot a perdu les caches
@@ -507,8 +507,31 @@ du serveur : à mesurer sur 24 h, et à passer lui aussi par `CRON_HOST` si la b
 **Qui appelle encore Lightsail ?** Tout passe par CloudFront (l'origine refuse le reste), donc sa métrique `Requests` (distribution `E1P9VA302EJUME`, région `us-east-1`, 15 jours de minute
 en minute à 5 min, puis par heure) compte tous les appels. Stable à ~113 par heure la nuit, elle tombe à **0 à 11:30 UTC, à la bascule du bot**, sur les 23 min lues. Ce zéro n'autorise pas
 l'extinction : le relais revérifie au serveur chaque 401 ou 403 d'une session, et le pont y envoie une note à chaque écriture ; ces appels reviennent avec les visites et ne cessent
-qu'à la route Worker sur `api.owwomenscup.fr`. Critère d'extinction : plus aucune requête sur deux semaines, soirée de match comprise, une fois cette route posée. Le détail par route est
-dans le journal de Caddy, dont la lecture par SSH a été refusée par le mode automatique le 11-01 : à demander à la propriétaire si la métrique remonte sans explication.
+qu'à la route Worker sur `api.owwomenscup.fr`. Le détail par route est dans le journal de Caddy, dont la lecture par SSH a été refusée par le mode automatique le 11-01.
+
+**Lightsail arrêté le 2026-11-01, à la demande de la propriétaire**, sans les deux semaines d'observation d'abord envisagées :
+
+| UTC | Étape |
+|---|---|
+| 12:15 | API 3f1d0dc : plus de note vers le serveur (`SHARED_SIGNALS_SERVER_URL` retirée, code du pont conservé pour le retour arrière) |
+| ~12:16 | Vraie session staff sur le Worker : `/api/admin/me`, tableau de bord, alertes, ticket temps réel, en 2xx/304 |
+| 12:18 | Route `api.owwomenscup.fr/*` → `owwomenscup-api` (tableau de bord), enregistrement `api` passé en « proxied » (`cf dns records edit`) |
+| ~12:25 | Site 9d6914bd1 : `API_WORKER_UNREPLAYABLE_READS=/api/*`, plus aucun repli ni revérification ; `worker-routes-check` compare relais et appel direct, CloudFront nulle part |
+| 12:30 | `aws lightsail stop-instance` : arrêtée, ni disque ni adresse IP touchés |
+
+Après coup : 36 cas directs comparés à un relevé d'avant la bascule, 28 identiques, 7 avec seulement un en-tête en plus, 1 corrigé (ci-dessous) ; 0 réponse 5xx, tâches et bot sans échec.
+
+**Trouvé en comparant :** `/api/graphql` acceptait au préflight toute origine, tout en-tête et `credentials: true`, réglage par défaut de yoga que le serveur masquait en répondant en erreur.
+Pas de faille, l'endpoint ne lit que le jeton Bearer, mais contraire à la règle des jetons `pk_live_`, de serveur à serveur. Corrigé (API f812d7f).
+
+**Ce qui n'a plus de filet :** une lecture en panne sur le Worker donne une erreur, et un refus à tort n'est plus rattrapé. **Toujours pas vu en vrai :** une écriture staff, un refus sans double
+authentification, une régénération de page réussie, les webhooks signés (Twitch peut révoquer un abonnement après des refus répétés).
+
+**Retour arrière, ~10 min :** `aws lightsail start-instance --instance-name ubuntu-stockholm --profile owwc` (IP fixe), repasser `api` en « DNS only » (renvoie vers CloudFront), restaurer dans `wrangler.jsonc`
+du site la liste des GET qui consomment (`git show 9d6914bd1`) et remettre `SHARED_SIGNALS_SERVER_URL` dans celui de l'API (`git show 3f1d0dc`). Une image à jour attend sur GHCR : `image.yml` tourne toujours.
+
+**Reste à décider, rien de supprimé :** une instance arrêtée se facture encore (~7 $ par mois) : l'économie ne vient qu'en la supprimant, avec son IP fixe, ce qui rend ce retour arrière impossible.
+La distribution CloudFront ne coûte rien sans trafic. Puis nettoyage du code qui ne sert qu'au serveur : pont, `deploy/`, `Dockerfile`, et `image.yml`, dont `worker.yml` dépend encore pour ses tests.
 
 **Piège d'OpenNext.** Il change un `stale-while-revalidate` sans valeur en `=2592000` (30 jours), que
 les navigateurs appliquent aussi. Corrigé sur les cinq routes concernées, sans effet sur le serveur.
