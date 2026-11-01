@@ -7,9 +7,8 @@ prévient les salons. Étape 3 construite le même jour, puis **bascule des
 écrans le 2026-10-29** (variable `NEXT_PUBLIC_REALTIME_BACKEND=cloudflare`,
 déploiement 40871096927), après un essai de l'overlay OBS : modification
 d'une scène dans le cockpit → overlay à jour en 65 à 500 ms. La Women's
-Library reste sur Supabase Realtime jusqu'à l'étape 5 (construite, pas basculée).
-La base et les comptes restent chez Supabase ; seul le « prévenir les écrans »
-change.
+Library y est passée à son tour le 2026-11-01 (étape 5). La base et les comptes
+restent chez Supabase ; seul le « prévenir les écrans » change.
 
 ## Ce qui écoute aujourd'hui
 
@@ -176,9 +175,13 @@ requêtes et 400 000 GB-s de calcul par mois pour les Durable Objects.
    salon `demandes:team:` d'une vraie équipe.
 
 5. **La Women's Library sur les salons**, nécessaire pour quitter Supabase
-   (`docs/AUTH-BETTER-AUTH.md`, lot 3). Construite le 2026-11-01, essai par
-   `?realtime=cloudflare` dans l'adresse de la page, à deux navigateurs réglés
-   pareil : Supabase Realtime reste le transport par défaut.
+   (`docs/AUTH-BETTER-AUTH.md`, lot 3). Construite et **basculée le 2026-11-01
+   sans essai réel à deux navigateurs** : la Library n'est pas utilisée, décision
+   de la propriétaire. Prouvé : `realtime-check` en production (présence, relais,
+   refus, publication signée), le client sur de fausses connexions. **Pas encore
+   vu : de vraies joueuses, et une diffusion réelle de l'API** (ligne `[publish]`
+   d'un événement autre que `kicked` de contrôle, ou `[library/realtime]
+   publication …` côté API). À lire à la première vraie visite.
    - **Quatre salons** : `library:room:<salle>` (présence et déplacements, écrits
      par les joueuses, rien n'y fait foi), `library:chat:<salle>`,
      `library:tenant:<espace>`, `library:user:<compte>` (écrits par l'API seule).
@@ -206,10 +209,12 @@ requêtes et 400 000 GB-s de calcul par mois pour les Durable Objects.
      en prend ~330 000 (estimation) : il reste environ 150 heures de salle par
      mois, puis 12,50 $ le million de GB-s, soit moins de 1 $ pour 150 heures de
      plus. À relire sur la facture une fois la Library ouverte.
-   - **Bascule :** changer `'supabase'` en `'cloudflare'` dans
-     `LIBRARY_REALTIME_BACKEND` (`features/player/library/realtime/cloudflareClient.ts`).
-     Retour arrière : le geste inverse (~10 min). Le code Supabase et les règles
-     de `realtime.messages` partent au lot 9 de Better Auth.
+   - **Retour arrière :** `'supabase'` à la place de `'cloudflare'` dans
+     `LIBRARY_REALTIME_BACKEND` (`features/player/library/realtime/cloudflareClient.ts`,
+     ~10 min), ou `?realtime=supabase` dans l'adresse chargée pour un seul écran.
+     L'adresse doit contenir le paramètre au chargement : un lien interne le perd.
+     Le code Supabase et les règles de `realtime.messages` partent au lot 9 de
+     Better Auth.
 
 **Retour arrière, désormais en deux gestes :** appliquer
 `realtime_publication_drop_migrated_revert.sql` (conference-api), PUIS vider

@@ -28,7 +28,7 @@ import type {
  * la page (essai à deux navigateurs), sinon celui-ci. Lu une fois au chargement.
  */
 export const LIBRARY_REALTIME_BACKEND = pickRealtimeBackend(
-  'supabase',
+  'cloudflare',
   typeof window !== 'undefined' ? window.location.search : undefined
 );
 

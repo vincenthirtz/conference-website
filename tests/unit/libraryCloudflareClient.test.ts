@@ -141,8 +141,8 @@ afterEach(() => {
 });
 
 describe('le transport', () => {
-  it('reste Supabase par défaut : la bascule est un geste à part', () => {
-    expect(LIBRARY_REALTIME_BACKEND).toBe('supabase');
+  it('passe par le Worker par défaut', () => {
+    expect(LIBRARY_REALTIME_BACKEND).toBe('cloudflare');
   });
 });
 
