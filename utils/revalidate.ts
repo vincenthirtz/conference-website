@@ -97,7 +97,9 @@ async function revalidateRemote(
           },
           body: JSON.stringify({ paths: batch }),
           signal: AbortSignal.timeout(REMOTE_TIMEOUT_MS),
-          redirect: 'error',
+          // Pas `error`, qui lève sur un Worker : une 3xx arrive ici avec `ok=false`,
+          // et le secret ne suit pas la redirection.
+          redirect: 'manual',
         });
         if (!resp.ok) {
           const err = new Error(`remote revalidate HTTP ${resp.status}`);
