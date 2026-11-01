@@ -498,10 +498,11 @@ Worker, et refus 403 de `/api/admin/me` à des sessions non staff, tous confirm�
 (aucune écriture dans `staff_logs` sur la période), donc ni écriture staff ni refus sans double authentification ; une régénération de page réussie, aucune sauvegarde de profil
 depuis la correction ; webhooks signés ; note réelle sur le pont. E-mails : aucune erreur journalisée, livraison non vérifiée.
 
-**Le bot n'est pas tout entier sur le Worker.** Seuls `reminders`, `role-sync/snapshot` et `role-sync/presence`, qui ont leur propre adresse, passent par le relais. Le reste des
-appels vise `BOT_API_BASE_URL`, qui pointe visiblement vers `api.owwomenscup.fr` : verrous, joueuses libres et liste noire ne sont vus en base que depuis Lightsail
-(~160 requêtes par heure). À corriger par cette variable sur le VPS, ou par la route Worker sur ce nom. Ces appels perdront alors les caches du serveur : à mesurer, et à passer
-eux aussi par `CRON_HOST` si la base le sent.
+**Le reste du bot, le 2026-11-01 à 11:30 UTC.** Jusque-là, seuls `reminders`, `role-sync/snapshot` et `role-sync/presence`, qui ont leur propre adresse, passaient par le relais : tout le
+reste suivait `BOT_API_BASE_URL`, qui visait `api.owwomenscup.fr` (~160 à 350 requêtes par heure vers Supabase depuis Lightsail). La variable du `.env` du VPS vise maintenant
+`https://owwomenscup.fr/api/bot/v1`, conteneur recréé sans construction d'image, sauvegarde `.env.bak-avant-worker-202611011130` à recopier pour revenir. Après 15 min : 13 routes en
+2xx sur le Worker, écritures comprises (`free-players/sync`, `locks`, `role-sync/presence`), 0 repli, 0 erreur, et **Lightsail à 0 requête vers Supabase**. Le bot a perdu les caches
+du serveur : à mesurer sur 24 h, et à passer lui aussi par `CRON_HOST` si la base le sent.
 
 **Piège d'OpenNext.** Il change un `stale-while-revalidate` sans valeur en `=2592000` (30 jours), que
 les navigateurs appliquent aussi. Corrigé sur les cinq routes concernées, sans effet sur le serveur.
