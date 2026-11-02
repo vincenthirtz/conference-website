@@ -10,8 +10,18 @@
 //
 // Recopié vers le site par la synchro, ses pages serveur s'en servent aussi. Le navigateur a
 // sa propre porte, côté site : utils/identityBrowser.ts.
+//
+// BETTER AUTH (lot 6). La porte accepte aussi ses jetons, reconnus à leur émetteur, et son
+// cookie de session. Elle ne les vérifie pas elle-même : l'enveloppe du Worker de l'API pose un
+// lecteur sur globalThis (worker/identityBackend.ts) quand IDENTITY_ACCEPTED vaut « 1 ». Sans
+// lui (interrupteur coupé, site, tests), un jeton Better Auth est refusé et son cookie ignoré.
+// La personne est ensuite lue dans le miroir, sous la même forme que Supabase.
 
-import type { User, UserResponse } from '@supabase/supabase-js';
+import {
+  AuthApiError,
+  type User,
+  type UserResponse,
+} from '@supabase/supabase-js';
 import { logger } from './logger';
 import {
   getServerClient,
@@ -124,16 +134,87 @@ export function identityAdminAvailable(): boolean {
   return Boolean(supabaseAdmin?.auth?.admin?.getUserById);
 }
 
+const BETTER_AUTH_BACKEND = Symbol.for('owwc.identity.backend');
+const BETTER_AUTH_ISSUER = 'https://owwomenscup.fr/api/identity';
+const BETTER_AUTH_COOKIE = '__Secure-owwc.session_token';
+
+type BetterAuthReader = {
+  userFromToken(token: string): Promise<{ id: string } | null>;
+  sessionFromCookies(
+    cookieHeader: string
+  ): Promise<{ id: string; accessToken: string | null } | null>;
+};
+
+function betterAuthReader(): BetterAuthReader | null {
+  const store = globalThis as unknown as Record<symbol, unknown>;
+  return (store[BETTER_AUTH_BACKEND] as BetterAuthReader | undefined) ?? null;
+}
+
+/** L'émetteur d'un jeton, lu SANS vérification : il ne sert qu'à choisir qui le vérifie. */
+function issuerOf(token: string): unknown {
+  try {
+    const part = token.split('.')[1] ?? '';
+    const b64 = part.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+    const bytes = Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+    return (JSON.parse(new TextDecoder().decode(bytes)) as { iss?: unknown })
+      .iss;
+  } catch {
+    return null;
+  }
+}
+
+function refused(message: string, status: number, code: string): UserResponse {
+  return {
+    data: { user: null },
+    error: new AuthApiError(message, status, code),
+  };
+}
+
+/** Le compte d'une identité Better Auth vérifiée. Suspendu : refusé, comme un jeton invalide. */
+async function betterAuthUser(id: string): Promise<UserResponse> {
+  const res = await identityAdmin.getUserById(id);
+  const until = res.data.user?.banned_until;
+  if (until && Date.parse(until) > Date.now()) {
+    return refused('User is banned', 403, 'user_banned');
+  }
+  return res;
+}
+
+function cookieHeaderOf(req: SupabaseServerReq): string {
+  const header = req.headers?.cookie;
+  return Array.isArray(header) ? header.join('; ') : (header ?? '');
+}
+
+/** La session Better Auth des cookies, `null` sans cookie, sans lecteur ou si elle est refusée. */
+async function betterAuthCookieSession(req: SupabaseServerReq) {
+  const header = cookieHeaderOf(req);
+  if (!header.includes(`${BETTER_AUTH_COOKIE}=`)) return null;
+  const reader = betterAuthReader();
+  if (!reader) return null;
+  return reader.sessionFromCookies(header).catch(() => null);
+}
+
 /** La personne derrière un jeton d'accès. */
-export function userFromToken(token: string) {
+export async function userFromToken(token: string): Promise<UserResponse> {
+  if (issuerOf(token) === BETTER_AUTH_ISSUER) {
+    const verified = await (
+      betterAuthReader()?.userFromToken(token) ?? Promise.resolve(null)
+    ).catch(() => null);
+    return verified
+      ? betterAuthUser(verified.id)
+      : refused('Invalid token', 401, 'bad_jwt');
+  }
   return supabaseAdmin.auth.getUser(token);
 }
 
 /** La personne de la session portée par les cookies de la requête. */
-export function userFromCookies(
+export async function userFromCookies(
   req: SupabaseServerReq,
   res: SupabaseServerRes
-) {
+): Promise<UserResponse> {
+  const session = await betterAuthCookieSession(req);
+  if (session) return betterAuthUser(session.id);
   return getServerClient(req, res).auth.getUser();
 }
 
@@ -152,9 +233,20 @@ export function signOutFromCookies(
  */
 export function cookieSession(req: SupabaseServerReq, res: SupabaseServerRes) {
   const client = getServerClient(req, res);
+  // Lue une seule fois : `getUser` puis `accessToken` parlent de la même session.
+  let betterAuth: ReturnType<typeof betterAuthCookieSession> | null = null;
+  const betterAuthSession = () => {
+    betterAuth ??= betterAuthCookieSession(req);
+    return betterAuth;
+  };
   return {
-    getUser: () => client.auth.getUser(),
+    getUser: async (): Promise<UserResponse> => {
+      const session = await betterAuthSession();
+      return session ? betterAuthUser(session.id) : client.auth.getUser();
+    },
     accessToken: async (): Promise<string | null> => {
+      const session = await betterAuthSession();
+      if (session) return session.accessToken;
       if (typeof client.auth.getSession !== 'function') return null;
       try {
         const { data } = await client.auth.getSession();
