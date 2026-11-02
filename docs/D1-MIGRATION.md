@@ -1,0 +1,212 @@
+# Base de données : de Supabase (Postgres) à Cloudflare D1
+
+Étude du 2026-11-02, après la bascule des comptes vers Better Auth ([AUTH-BETTER-AUTH.md](AUTH-BETTER-AUTH.md)). Elle porte sur
+**toute la base** dans la configuration actuelle :
+
+- l'API dans le Worker `owwomenscup-api` ([API-WORKER.md](API-WORKER.md)) ;
+- le site dans le Worker `owwomenscup`, dont le rendu serveur lit la base ;
+- le temps réel sur Durable Objects ([REALTIME-DO.md](REALTIME-DO.md)) ;
+- les fichiers sur R2 ([R2-MEDIA.md](R2-MEDIA.md)).
+
+Sources des chiffres :
+
+- **[prod]** : lectures seules des catalogues de la base de production (2026-11-02) ;
+- **[code]** : inventaire des deux dépôts ;
+- **[schéma]** : rejeu des 407 migrations de conference-api ;
+- **[doc]** : documentation officielle de Cloudflare, lien donné.
+
+## En bref
+
+- **Le volume n'est pas un sujet.** 42 Mo, 186 tables, ~14 600 lignes **[prod]**. Une base D1 va jusqu'à 10 Go
+  ([doc](https://developers.cloudflare.com/d1/platform/limits/)). ~55 000 appels par jour depuis décembre 2025 **[prod]**,
+  loin des 25 milliards de lignes lues et 50 millions écrites incluses chaque mois
+  ([doc](https://developers.cloudflare.com/d1/platform/pricing/)) : **aucun coût en plus** du forfait Workers payant.
+- **Le chantier, c'est ce qui vit dans Postgres et la façon dont le code lui parle.**
+  - 2 601 appels au constructeur de requêtes de Supabase dans l'API, 147 dans le site **[code]**.
+  - 36 fonctions SQL appelées par l'API, ~2 000 à 2 500 lignes de plpgsql, dont 21 avec verrous de ligne et 9 avec verrous
+    consultatifs **[code][schéma]**.
+  - 65 déclencheurs **[schéma]**.
+  - D1 n'a **aucune bibliothèque de type Supabase** **[doc]**. Il n'a **pas de transaction ouverte**, seulement des envois
+    groupés atomiques (`batch()`) **[doc]**. Et il traite **une requête à la fois** par base **[doc]**.
+- **Durée : ~40 à 60 jours de travail pour D1.** Les 5 premiers lots sont invisibles et peuvent avancer entre deux journées
+  de match. Comptez **~20 à 28 jours** pour garder Postgres ailleurs (voir « L'autre voie »).
+- **Le lot 1 sert aux deux voies** : on le fait d'abord, et le choix du moteur se prend à sa fin.
+
+## Mesures
+
+| Élément | Nombre | Source |
+|---|---|---|
+| Taille de la base / des tables | 42 Mo / 20 Mo | [prod] |
+| Tables `public` (dont 8 de Better Auth) | 186–187 | [prod][schéma] |
+| Lignes (estimation) | ~14 600 | [prod] |
+| Appels de l'API à la base depuis le 2025-12-27 | ~17 millions (~55 000/jour) | [prod] |
+| Tables les plus écrites | présence Discord, réglages, joueuses libres, secrets d'espace, héros | [prod] |
+| Colonnes | ~2 075 : 551 uuid, 463 timestamptz, 87 booléens, 42 jsonb, 19 tableaux, 20 date/heure, 7 numeric | [schéma] |
+| Contraintes | 343 clés étrangères (153 cascade, 80 à null, 62 restrict), ~305 vérifications dont 16 par regex | [schéma] |
+| Index | 433, dont 130 partiels, 12 sur expression, 6 GIN (2 trigrammes, 4 tableaux) | [schéma] |
+| Déclencheurs | 65 : 46 dates de modification, 15 logique métier, 6 temps réel (`pg_net`) | [schéma] |
+| Fonctions | 105 (92 plpgsql), 36 appelées par l'API | [schéma][code] |
+| Règles d'accès | 94, dont 88 sans effet pour l'API (clé de service) | [schéma] |
+| Extensions utiles | `pg_net`, `supabase_vault`, `pgcrypto` (temps réel), `unaccent`, `pg_trgm`, `uuid-ossp` | [prod] |
+| Tables créées à la main avant les migrations | **12** (`matches`, `teams`, `tournaments`…), sans définition dans le dépôt | [schéma] |
+
+## 1. Ce qui dépend de Postgres
+
+### Dans le code [code]
+
+| Usage | Nombre | Ce que ça demande sur D1 |
+|---|---|---|
+| `.from()` (API / site) | 2 601 en 515 fichiers / 147 en 55 fichiers (lecture seule) | Une **façade au format supabase-js** au-dessus de D1. Réécrire les appels un à un serait bien plus long, et **523 fichiers de test** (~11 000 cas) sont écrits sur cette forme |
+| Relations imbriquées dans `select` | 147 (API) + 28 (site), dont 39 indices de clé, 16 `!inner`, 9 sur deux niveaux, 12 filtres sur la relation | Jointures traduites par la façade (`json_object`, `json_group_array`) |
+| `.or()` / `.not()` / `.filter()` brut | 96 / 74 / 10 | Analyse du mini-langage de filtres de PostgREST |
+| `.ilike` / `.like` / `textSearch` | 23 / 1 / 1 | SQLite ne lit la casse qu'en ASCII et n'a pas `unaccent` : colonne normalisée, ou recherche plein texte (FTS5) |
+| `.in()` | 458 | Limite de 100 paramètres par requête **[doc]** : la façade passe la liste en un seul JSON (`json_each`) |
+| `.upsert()` / écriture suivie de `.select()` | 93 (19 `ignoreDuplicates`) / 296 | SQLite a `ON CONFLICT` et `RETURNING` |
+| `count: 'exact'` / `.range()` | 111 / 79 | Requête de comptage, `LIMIT`/`OFFSET` |
+| `.rpc()` | 38 appels, 36 fonctions | Réécriture en TypeScript (lot 4) |
+| Codes d'erreur Postgres lus par le code | 75 littéraux (`23505`…), 59 aides, 14 textes de message | Une traduction des erreurs SQLite au même endroit |
+| Accès dispersé | 1 463 appels (56 %) hors des `repository` ; `supabaseAdmin` importé par 414 fichiers | Le lot 1 fait passer tout ça par une seule porte |
+
+Bonnes nouvelles :
+
+- **aucun SQL brut** hors des comptes ;
+- **aucune requête directe du navigateur** vers la base ;
+- le temps réel des écrans est déjà sur Cloudflare (`NEXT_PUBLIC_REALTIME_BACKEND=cloudflare`).
+
+### Dans la base [schéma]
+
+1. **36 fonctions transactionnelles** : échanges, forge et portefeuille du TCG, économie de la Bibliothèque, gestion des
+   joueuses sans équipe, effectif des équipes, quotas et verrous des tâches. Elles lisent, **verrouillent**, vérifient, puis
+   écrivent dans plusieurs tables. D1 n'a ni verrou ni transaction ouverte. Il faut des écritures conditionnelles groupées en
+   `batch()`, ou un Durable Object par domaine (`transactionSync()`, vraie transaction **[doc]**).
+2. **6 déclencheurs de temps réel** (matchs, draft, scènes et thèmes caster, demandes). Ils appellent le Worker temps réel
+   depuis la base. Sur D1, c'est l'API qui publie après chaque écriture ; une écriture faite à la main dans la console
+   ne publierait plus.
+3. **50 déclencheurs qui modifient la ligne avant écriture** (46 dates de modification, 4 données dérivées). SQLite ne le
+   permet pas : déclencheur après écriture, ou valeur posée par le code.
+4. **Types** :
+   - uuid et dates deviennent du texte ;
+   - booléens en 0/1 ;
+   - jsonb en texte JSON ;
+   - 19 tableaux en JSON, avec 4 index GIN à remplacer ;
+   - les identifiants sont générés par le code (108 `gen_random_uuid()`).
+5. **16 vérifications par expression régulière**, et `slugify_text` (`unaccent` + regex). D1 n'a ni regex ni `unaccent`
+   **[doc]** : elles passent dans le code.
+6. **Index particuliers** :
+   - 2 trigrammes (recherche dans la liste noire) ;
+   - 4 GIN de tableaux ;
+   - 1 `NULLS NOT DISTINCT` ;
+   - 9 index uniques sans casse, où les accents ne seraient plus repliés.
+7. **2 fonctions à l'heure de Paris** (semaine ISO de la Bibliothèque) et 3 `DISTINCT ON` : réécriture.
+8. **Les 94 règles d'accès disparaissent** : l'API est la seule à lire la base.
+
+## 2. D1 : ce qu'il faut savoir [doc]
+
+- **Une requête à la fois par base.** Au-delà, D1 met les requêtes en file d'attente, puis répond « overloaded »
+  ([limites](https://developers.cloudflare.com/d1/platform/limits/)). Une requête lente bloque tout le monde, d'où
+  l'importance des index les soirs de match. La réplication en lecture (API Sessions) soulagerait les lectures, mais elle
+  est encore en **bêta**.
+- **Pas de transaction ouverte**, seulement `batch()` atomique
+  ([API](https://developers.cloudflare.com/d1/worker-api/d1-database/)). Drizzle et Prisma ne la contournent pas.
+- **Limites** :
+  - 1 000 requêtes par appel du Worker ;
+  - 100 paramètres par requête ;
+  - 30 s par requête ;
+  - motifs `LIKE` de 50 octets ;
+  - résultat de 50 Mo au plus (à partir du 2026-11-04).
+- **Europe** : la juridiction `eu` se choisit **à la création** et ne change plus
+  ([doc](https://developers.cloudflare.com/d1/configuration/data-location/)).
+- **Sauvegardes** :
+  - retour dans le temps sur 30 jours, gratuit, mais qui **écrase** la base en place
+    ([doc](https://developers.cloudflare.com/d1/reference/time-travel/)) ;
+  - l'export **bloque** la base pendant qu'il tourne ;
+  - export quotidien vers R2 par un Workflow ([exemple](https://developers.cloudflare.com/workflows/examples/backup-d1/)).
+- **Better Auth** a son dialecte D1 intégré : une ligne de configuration (déjà essayé, voir AUTH-BETTER-AUTH.md).
+- **Le site et l'API peuvent lier la même base D1.**
+
+## 3. Le plan pour D1
+
+Même méthode que pour les comptes : une seule porte, le nouveau moteur derrière un interrupteur, une copie répétée sur
+sauvegarde, la bascule un soir sans match, et le retour arrière prêt avant de basculer.
+
+| Lot | Ce qu'il fait | Effet visible | Durée |
+|---|---|---|---|
+| **1. Une seule porte, un contrat** | Commun aux deux voies, le choix du moteur se fait à sa fin. Détail sous le tableau. | Aucun | 4–6 j |
+| **2. Le schéma sur D1** | Relevé exact de la production (`pg_dump --schema-only`, dont les 12 tables sans migration). Traduction de 179 tables, 433 index, ~305 vérifications et 343 clés étrangères. Base D1 créée en juridiction `eu`, vide | Aucun | 4–6 j |
+| **3. Le moteur D1 de la porte** | Détail sous le tableau. | Aucun | 10–15 j |
+| **4. La logique de la base dans le code** | Détail sous le tableau. | Aucun | 15–22 j |
+| **5. Copie et répétition** | Script Postgres → D1 (20 Mo), comparaison table par table (comptes et empreintes), répété sur la sauvegarde quotidienne (`db-restore-test`). Puis quelques jours de **lecture dans l'ombre** : les mêmes lectures sur D1, comparées à Supabase | Aucun | 4–6 j |
+| **6. Bascule** | Un soir sans match : écritures gelées quelques minutes, copie finale, interrupteur sur l'API et le site, contrôles. **Better Auth passe sur D1 la même nuit** (les 44 clés vers les comptes). Retour arrière : interrupteur, plus recopie D1 → Postgres (même schéma), script écrit et essayé avant | Oui | 1–2 j + 48 h |
+| **7. Nettoyage (≥ 14 jours)** | Supabase en lecture seule, puis supprimé. Hyperdrive retiré. Retrait de supabase-js. Sauvegardes D1 : retour dans le temps + export quotidien sur R2 | Non | 2–3 j |
+
+**Lot 1 en détail.**
+
+- **Les 36 fonctions appelées en `rpc`** deviennent des fonctions nommées dans un seul module ;
+  plus aucun `.rpc('…')` ailleurs.
+- **Les codes et messages d'erreur de Postgres** sont lus à un seul endroit ; plus aucun `23505` dans le code.
+- **Un relevé automatique de tout ce que le code demande** au constructeur de requêtes (méthodes, options, relations,
+  filtres) est **figé par un garde-fou**. C'est la liste exacte à fournir par le moteur suivant, et aucun nouvel usage
+  difficile ne passe sans le savoir.
+- **Le site sous les mêmes règles.**
+
+**Lot 3 en détail.** La façade supabase-js au-dessus de D1 :
+
+- `select` avec relations, filtres et mini-langage `or`, tri, pages, comptages ;
+- `upsert`, `RETURNING`, `single` ;
+- listes `in` passées en JSON ;
+- traduction des erreurs.
+
+Les tests des dépôts tournent aussi contre un vrai SQLite, en plus du faux Supabase.
+
+**Lot 4 en détail.**
+
+- **Les 36 fonctions** sont réécrites en TypeScript, avec écritures conditionnelles groupées en `batch()`, ou dans un
+  Durable Object pour le TCG et la Bibliothèque.
+- **Les 65 déclencheurs** :
+  - dates de modification posées par la façade ;
+  - logique métier en déclencheurs SQLite ou dans le code ;
+  - temps réel publié par l'API.
+- **Les 16 regex et `slugify_text`** passent dans le code. Les 3 vues sont réécrites.
+
+**Total : ~40 à 60 jours.**
+
+**Risques principaux :**
+
+- les fonctions transactionnelles du TCG et de la Bibliothèque : une erreur et l'argent virtuel se perd ou se double ;
+- la file unique les soirs de match ;
+- les accents dans les recherches ;
+- les 12 tables sans définition dans le dépôt.
+
+## 4. L'autre voie : quitter Supabase en gardant Postgres
+
+Quitter Supabase fait perdre PostgREST, donc supabase-js, **quelle que soit la base d'arrivée** **[doc]**. La façade du
+lot 3 reste à écrire, mais vers Postgres. Ensuite, presque tout est repris tel quel par une sauvegarde et une restauration :
+
+- fonctions, verrous ;
+- déclencheurs (sauf le temps réel) ;
+- jsonb, tableaux, `unaccent`.
+
+| Base (via Hyperdrive, gratuit sur le forfait payant [doc](https://developers.cloudflare.com/hyperdrive/platform/pricing/)) | Prix / mois | Europe | Sauvegardes |
+|---|---|---|---|
+| **PlanetScale Postgres** PS-5 | ~5 $, **facturable sur la facture Cloudflare** | Francfort / Irlande | toutes les 12 h, retour dans le temps sur 2 jours |
+| **Neon** | 0 $ (1 Go, mise en veille) à ~19 $ (toujours allumée : les tâches de chaque minute l'empêcheraient de dormir) | Francfort | 6 h à 7 jours ; propose une API compatible PostgREST, à vérifier avec supabase-js |
+| **Supabase Pro** (rester) | 25 $ | Irlande (actuel) | quotidiennes, 7 jours |
+
+Cette voie demande **~20 à 28 jours** :
+
+- lots 1, 5, 6, 7 identiques ;
+- façade vers Postgres plus simple : 6–9 j ;
+- temps réel publié par l'API : 3–5 j ;
+- pas de lot 2 ni de lot 4.
+
+La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
+
+## 5. Décisions pour la propriétaire
+
+1. **Lot 1 maintenant** : décidé le 2026-11-02 (« go lot 1 »).
+2. **Le moteur, à la fin du lot 1** : D1 (tout chez Cloudflare, aucun coût, ~40–60 j, logique transactionnelle à refaire)
+   ou Postgres ailleurs (~20–28 j, 5–19 $/mois). **Recommandation** : la voie Postgres si l'objectif premier est de
+   quitter Supabase vite et sans risque sur l'économie TCG/Bibliothèque ; D1 si tout réunir chez Cloudflare vaut deux à
+   trois mois de chantier.
+3. **Un relevé `pg_dump --schema-only` de la production**, nécessaire dans les deux voies. Il se lance depuis la CI qui
+   fait déjà les sauvegardes, et le fichier ne doit contenir **aucune donnée**.
