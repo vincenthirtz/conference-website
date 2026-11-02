@@ -59,6 +59,9 @@ jobs:
       # Temps réel des écrans (docs/REALTIME-DO.md) : « cloudflare » = salons
       # du Worker owwomenscup-realtime. Vide = Supabase Realtime.
       NEXT_PUBLIC_REALTIME_BACKEND: ${{ vars.NEXT_PUBLIC_REALTIME_BACKEND }}
+      # Comptes des écrans (docs/AUTH-BETTER-AUTH.md, lot 8) : « better-auth »
+      # à la bascule, avec IDENTITY_SOURCE dans wrangler.jsonc. Vide = Supabase.
+      NEXT_PUBLIC_AUTH_BACKEND: ${{ vars.NEXT_PUBLIC_AUTH_BACKEND }}
       # Vides tant que CLOUDFLARE_LIVE n'est pas « 1 » (cf. en-tête).
       NEXT_PUBLIC_ENABLE_PWA: ${{ vars.CLOUDFLARE_LIVE == '1' && vars.NEXT_PUBLIC_ENABLE_PWA || '' }}
       NEXT_PUBLIC_ANALYTICS_HOST: ${{ vars.CLOUDFLARE_LIVE == '1' && vars.NEXT_PUBLIC_ANALYTICS_HOST || '' }}
