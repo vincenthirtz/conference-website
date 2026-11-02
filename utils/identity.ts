@@ -149,6 +149,9 @@ type BetterAuthReader = {
   sessionFromCookies(
     cookieHeader: string
   ): Promise<{ id: string; accessToken: string | null } | null>;
+  /** Côté API seulement (worker/identityBackend.ts) : le lecteur du site ne les a pas. */
+  signInLink?(email: string, callbackURL: string): Promise<string | null>;
+  resetPasswordLink?(email: string, redirectTo: string): Promise<string | null>;
 };
 
 function betterAuthReader(): BetterAuthReader | null {
@@ -262,6 +265,37 @@ export function cookieSession(req: SupabaseServerReq, res: SupabaseServerRes) {
       }
     },
   };
+}
+
+/**
+ * Les liens que l'API fabrique (mot de passe oublié, accès équipe) viennent-ils de Better Auth ?
+ * `IDENTITY_LINKS=better-auth`, posé à la bascule (lot 8) ; Supabase sinon.
+ */
+export function betterAuthBuildsLinks(): boolean {
+  return process.env.IDENTITY_LINKS === 'better-auth';
+}
+
+/**
+ * Better Auth : un lien de connexion à usage unique, pour les parcours où l'API ouvre la session
+ * à la place de Supabase (Battle.net, accès équipe). `null` sans lecteur ou en cas d'échec.
+ */
+export async function betterAuthSignInLink(
+  email: string,
+  callbackURL: string
+): Promise<string | null> {
+  const reader = betterAuthReader();
+  if (!reader?.signInLink) return null;
+  return reader.signInLink(email, callbackURL).catch(() => null);
+}
+
+/** Better Auth : le lien de réinitialisation, que l'API envoie avec son propre e-mail. */
+export async function betterAuthResetLink(
+  email: string,
+  redirectTo: string
+): Promise<string | null> {
+  const reader = betterAuthReader();
+  if (!reader?.resetPasswordLink) return null;
+  return reader.resetPasswordLink(email, redirectTo).catch(() => null);
 }
 
 /** Inscription publique : clé anon, sans toucher à la session de l'appelant. */
