@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "db:reads": "node scripts/db-direct-reads.mjs",
     "dev": "next dev",
     "build": "next build",
     "tcg:audit": "node scripts/tcg-audit.mjs",
