@@ -47,6 +47,10 @@
     // « 0 » depuis le 2026-10-31 : les tâches planifiées tournent sur le Worker de l'API, qui est
     // passé à « 1 » au même moment. Jamais les deux ensemble (retour arrière : l'inverse).
     "CRONS_ENABLED": "0",
+    // Better Auth source des comptes (lot 8 de docs/AUTH-BETTER-AUTH.md) : le rendu serveur lit
+    // les comptes dans auth_user et ignore les cookies de Supabase. À poser avec la même variable
+    // de l'API et NEXT_PUBLIC_AUTH_BACKEND=better-auth ; retour arrière : retirer les trois.
+    "IDENTITY_SOURCE": "better-auth",
     // Double authentification du staff (utils/staffMfa.ts) : « true » = toute
     // page admin exige le second facteur. À poser EN MÊME TEMPS que la même
     // variable dans l'API (/etc/conference-api/api.env), qui protège les
