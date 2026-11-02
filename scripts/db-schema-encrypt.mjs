@@ -3,7 +3,8 @@
 //
 // AES-256-GCM pour le fichier, clé AES chiffrée en RSA-OAEP (SHA-256) avec
 // scripts/db-schema-dump-public-key.txt. Seule la clé privée correspondante, gardée hors de ce dépôt, le
-// relit. Ce script refuse un relevé qui contiendrait des données (COPY ou INSERT).
+// relit. Ce script refuse un relevé qui contiendrait des données : un `COPY … FROM stdin` ou un
+// `INSERT INTO` hors du corps d'une fonction (ces corps, entre `$…$`, en contiennent normalement).
 //
 // Usage : node scripts/db-schema-encrypt.mjs <schema.sql> <sortie.json>
 
@@ -27,13 +28,18 @@ if (!input || !output) {
 
 const sql = readFileSync(input);
 const text = sql.toString('utf8');
-if (/^\s*(COPY|INSERT INTO)\s/im.test(text)) {
+// Sans le corps des fonctions : `$$ … $$` ou `$tag$ … $tag$`.
+const outsideBodies = text.replace(/\$([A-Za-z_]*)\$[\s\S]*?\$\1\$/g, '');
+if (/^\s*(COPY\s[^;]*\bFROM\s+stdin\b|INSERT\s+INTO\s)/im.test(outsideBodies)) {
   console.error('Le relevé contient des données (COPY ou INSERT) : refusé.');
   process.exit(1);
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
-const publicKey = readFileSync(join(here, 'db-schema-dump-public-key.txt'), 'utf8');
+const publicKey = readFileSync(
+  join(here, 'db-schema-dump-public-key.txt'),
+  'utf8'
+);
 
 const key = randomBytes(32);
 const iv = randomBytes(12);
