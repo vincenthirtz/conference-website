@@ -518,13 +518,20 @@ Faite le 2026-11-02 vers 13 h 50 UTC, un jour sans match (aucun dans les 14 jour
 5. Inscriptions coupées chez Supabase (`disable_signup` vrai dans les réglages publics).
 6. Secrets d'essai `IDENTITY_SHADOW_KEY` et `IDENTITY_SHADOW_EMAILS` retirés, sur la phrase de la propriétaire. La route de reprise répond 404 depuis.
 
-**Écart avec l'étude : le miroir est ARRÊTÉ**, pas laissé en marche pendant 14 jours. Une fois Better Auth source, toute écriture restante dans `auth.users` écraserait `auth_user` (une connexion Supabase d'un vieil onglet, par exemple), et une suppression y effacerait en cascade les données de la personne. Retour arrière :
+**Écart avec l'étude : le miroir est ARRÊTÉ**, pas laissé en marche pendant 14 jours. Une fois Better Auth source, toute écriture restante dans `auth.users` écraserait `auth_user` (une connexion Supabase d'un vieil onglet, par exemple), et une suppression y effacerait en cascade les données de la personne. Retour arrière (API `e49b161`, fichiers dans `database/migrations/` de conference-api) :
 
-- retirer les trois interrupteurs ;
-- `stop_auth_mirror_revert.sql`, puis `rewrite_supporter_role_to_auth_user_revert.sql` ;
-- vider `NEXT_PUBLIC_AUTH_BACKEND` et retirer `IDENTITY_SOURCE` du site.
+1. Retirer les trois interrupteurs de l'API, vider `NEXT_PUBLIC_AUTH_BACKEND` et retirer `IDENTITY_SOURCE` du site, déployer : Better Auth n'écrit plus rien.
+2. `replay_better_auth_to_supabase_check.sql` (lecture seule) : ce qui va être recopié, en nombres.
+3. `replay_better_auth_to_supabase.sql`, en une transaction :
+   - comptes supprimés, créés (même identifiant), modifiés ;
+   - mots de passe (mêmes hachages bcrypt) ;
+   - Discord lié ou délié ;
+   - double authentification retirée.
+4. Le contrôle à nouveau : tout à 0, sauf les doubles authentifications activées chez Better Auth (à réenrôler).
+5. `stop_auth_mirror_revert.sql`, puis `rewrite_supporter_role_to_auth_user_revert.sql`.
+6. Rouvrir les inscriptions chez Supabase.
 
-Le script de rejeu (Better Auth → Supabase) n'est pas encore écrit : d'ici là, ce qui change côté Better Auth reste dans `auth_user`, sans être recopié.
+Essayé sur un vrai Postgres avec les colonnes de production (`authReplaySql.test.ts`, 9 cas, second passage sans effet). Contrôle passé en production le 2026-11-02 : 1 compte modifié (celui d'essai), rien d'autre. Les 4 comptes qui avaient déjà un mot de passe sans identité e-mail chez Supabase restent tels quels.
 
 **Vérifié en production après la bascule.**
 
@@ -546,10 +553,16 @@ Le script de rejeu (Better Auth → Supabase) n'est pas encore écrit : d'ici l�
 - La dernière connexion n'était plus notée : Better Auth ne tenait pas `last_sign_in_at`, la liste des inscrits et les filtres « inactif » se seraient figés. Corrigé (API `bb02d93`) : notée à la création de chaque session, en SQL direct, pour ne pas renvoyer l'e-mail « second facteur ajouté ».
 - Page owner « Comptes et connexion » (`/admin/connexion`, API `aaa0134`, site `dc9514de8`) : chiffres, staff sans second facteur, réglages (inscriptions, Discord, lien e-mail, durée des sessions, table `auth_settings`, migration `add_auth_settings.sql` à appliquer), gestes sur un compte, déconnexion générale.
 
+**Journaux après la bascule** (premières heures) :
+
+- site : 0 réponse 5xx ;
+- API : refus de jetons Supabase restés dans un vieil onglet ;
+- deux livraisons d'événements au bot expirées, restées dans la file pour son relevé ;
+- un message de fermeture de socket Postgres sans requête en échec, ignoré depuis (`e49b161`).
+
 **Restent.**
 
-- Le script de rejeu.
-- Les 48 h de journaux.
+- La fin des 48 h de journaux (jusqu'au 2026-11-04 vers 14 h UTC).
 - Une connexion de la propriétaire par Discord à l'écran.
 - Battle.net à l'écran.
 
