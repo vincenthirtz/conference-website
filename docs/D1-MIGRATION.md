@@ -131,7 +131,7 @@ sauvegarde, la bascule un soir sans match, et le retour arrière prêt avant de 
 
 | Lot | Ce qu'il fait | Effet visible | Durée |
 |---|---|---|---|
-| **1. Une seule porte, un contrat** | Commun aux deux voies, le choix du moteur se fait à sa fin. Détail sous le tableau. | Aucun | 4–6 j |
+| **1. Une seule porte, un contrat** — **fait le 2026-11-02** | Commun aux deux voies, le choix du moteur se fait à sa fin. Détail sous le tableau. | Aucun | 4–6 j |
 | **2. Le schéma sur D1** | Relevé exact de la production (`pg_dump --schema-only`, dont les 12 tables sans migration). Traduction de 179 tables, 433 index, ~305 vérifications et 343 clés étrangères. Base D1 créée en juridiction `eu`, vide | Aucun | 4–6 j |
 | **3. Le moteur D1 de la porte** | Détail sous le tableau. | Aucun | 10–15 j |
 | **4. La logique de la base dans le code** | Détail sous le tableau. | Aucun | 15–22 j |
@@ -177,6 +177,32 @@ Les tests des dépôts tournent aussi contre un vrai SQLite, en plus du faux Sup
 - les accents dans les recherches ;
 - les 12 tables sans définition dans le dépôt.
 
+### Lot 1 : fait le 2026-11-02
+
+Rien de visible, tests et CI verts.
+
+- **1a** (API `692607c`) : les 38 appels des 36 fonctions SQL passent par `utils/db/rpc.ts`
+  (`dbFunctions(db)(nom, arguments)`). Garde-fou `dbDoorGuard`.
+- **1b** (API `7bc369a`) : les codes et messages d'erreur de la base se lisent dans `utils/db/errors.ts`
+  seul ; 56 fichiers adaptés. Garde-fou `dbErrorsGuard`.
+- **1c** (API `555e0a4`) : le contrat du constructeur de requêtes, relevé par un scanner (API du
+  compilateur TypeScript) et figé dans `database/db-contract.json` (`npm run db:contract`).
+  2 601 chaînes, 0 appel non rattaché. Garde-fou `dbContractGuard`, qui refuse toute méthode
+  nouvelle et tout usage difficile qui bouge. C'est la liste exacte de ce que le moteur suivant
+  devra savoir faire.
+- **1d** (site `712166dc4`, API `680449c`) :
+  - les sources propres du site lisent la base 147 fois dans 55 fichiers, sans écriture, `.rpc`
+    ni code d'erreur ;
+  - `dbDirectReadsGuard` fige ces lectures par fichier (`npm run db:reads`) ;
+  - leur contrat (`database/db-contract-site.json` côté API) ne demande rien de plus que l'API.
+- **Relevé de la structure de production** (API `database/schema-prod.sql`, accord du 2026-11-02) :
+  - workflow `db-schema-dump` du site, structure seule ;
+  - chiffré dans la CI, déchiffré hors du dépôt public ;
+  - 186 tables, dont les 12 sans migration.
+
+**Écart repéré, non corrigé** : le garde-fou des colonnes (`supabaseSelectSchema`, API) ne lit pas
+`features/` (~1 100 appels), qui s'appuie sur les types de `AdminDb`.
+
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
 Quitter Supabase fait perdre PostgREST, donc supabase-js, **quelle que soit la base d'arrivée** **[doc]**. La façade du
@@ -203,10 +229,10 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
 
 ## 5. Décisions pour la propriétaire
 
-1. **Lot 1 maintenant** : décidé le 2026-11-02 (« go lot 1 »).
+1. **Lot 1** : décidé et **fait** le 2026-11-02.
 2. **Le moteur, à la fin du lot 1** : D1 (tout chez Cloudflare, aucun coût, ~40–60 j, logique transactionnelle à refaire)
    ou Postgres ailleurs (~20–28 j, 5–19 $/mois). **Recommandation** : la voie Postgres si l'objectif premier est de
    quitter Supabase vite et sans risque sur l'économie TCG/Bibliothèque ; D1 si tout réunir chez Cloudflare vaut deux à
    trois mois de chantier.
-3. **Un relevé `pg_dump --schema-only` de la production**, nécessaire dans les deux voies. Il se lance depuis la CI qui
-   fait déjà les sauvegardes, et le fichier ne doit contenir **aucune donnée**.
+3. **Un relevé `pg_dump --schema-only` de la production** : accordé et fait le 2026-11-02
+   (`database/schema-prod.sql` dans conference-api). À refaire avant de porter le schéma.
