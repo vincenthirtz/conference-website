@@ -200,8 +200,13 @@ Rien de visible, tests et CI verts.
   - chiffré dans la CI, déchiffré hors du dépôt public ;
   - 186 tables, dont les 12 sans migration.
 
-**Écart repéré, non corrigé** : le garde-fou des colonnes (`supabaseSelectSchema`, API) ne lit pas
-`features/` (~1 100 appels), qui s'appuie sur les types de `AdminDb`.
+**Écart repéré puis corrigé** (API `0776ee0`, 2026-11-02) : le garde-fou des colonnes
+(`supabaseSelectSchema`) ne lisait pas `features/` (~1 100 appels).
+
+- Il les lit maintenant, avec `worker/`.
+- Il résout chaque variable dans sa propre fonction : 17 fausses alertes venaient d'homonymes.
+- Il lit les listes de colonnes en constantes.
+- Résultat : 2 048 selects analysés au lieu de 1 151, 2,3 % d'angles morts, aucune colonne fautive.
 
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
