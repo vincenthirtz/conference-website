@@ -19,6 +19,7 @@
 
 import {
   AuthApiError,
+  type AuthError,
   type User,
   type UserResponse,
 } from '@supabase/supabase-js';
@@ -88,6 +89,9 @@ function userOfMirrorRow(row: MirrorRow): User {
   } as User;
 }
 
+const MIRROR_SELECT =
+  'id, email, email_verified, created_at, updated_at, metadata, last_sign_in_at, banned_until, auth_account(provider_id, account_id, identity_data, created_at, updated_at)';
+
 /**
  * Le compte lu dans le miroir, en une seule requête comme l'appel qu'elle remplace.
  * `null` si le compte manque ou si la lecture échoue : Supabase, qui reste la source
@@ -99,9 +103,7 @@ async function userResponseFromMirror(
   try {
     const { data, error } = await supabaseAdmin
       .from('auth_user')
-      .select(
-        'id, email, email_verified, created_at, updated_at, metadata, last_sign_in_at, banned_until, auth_account(provider_id, account_id, identity_data, created_at, updated_at)'
-      )
+      .select(MIRROR_SELECT)
       .eq('id', id)
       .maybeSingle();
     if (error) {
@@ -118,21 +120,33 @@ async function userResponseFromMirror(
   }
 }
 
-/** Gestion des comptes, avec la clé de service. */
+/** Gestion des comptes, avec la clé de service ; par Better Auth une fois source (lot 8). */
 export const identityAdmin = {
   getUserById: async (id: string): Promise<UserResponse> =>
-    (await userResponseFromMirror(id)) ??
-    supabaseAdmin.auth.admin.getUserById(id),
+    betterAuthIsSource()
+      ? ((await userResponseFromMirror(id)) ?? missingUser())
+      : ((await userResponseFromMirror(id)) ??
+        supabaseAdmin.auth.admin.getUserById(id)),
   updateUserById: (...args: Parameters<AdminAuth['updateUserById']>) =>
-    supabaseAdmin.auth.admin.updateUserById(...args),
+    betterAuthIsSource()
+      ? betterAuthUpdateUser(args[0], args[1] as AdminAttributes)
+      : supabaseAdmin.auth.admin.updateUserById(...args),
   createUser: (...args: Parameters<AdminAuth['createUser']>) =>
-    supabaseAdmin.auth.admin.createUser(...args),
+    betterAuthIsSource()
+      ? betterAuthCreateUser(args[0] as AdminAttributes & { email: string })
+      : supabaseAdmin.auth.admin.createUser(...args),
   deleteUser: (...args: Parameters<AdminAuth['deleteUser']>) =>
-    supabaseAdmin.auth.admin.deleteUser(...args),
+    betterAuthIsSource()
+      ? betterAuthDeleteUser(args[0])
+      : supabaseAdmin.auth.admin.deleteUser(...args),
   generateLink: (...args: Parameters<AdminAuth['generateLink']>) =>
     supabaseAdmin.auth.admin.generateLink(...args),
   listUsers: (...args: Parameters<AdminAuth['listUsers']>) =>
-    supabaseAdmin.auth.admin.listUsers(...args),
+    betterAuthIsSource()
+      ? (betterAuthListUsers(args[0]) as unknown as ReturnType<
+          AdminAuth['listUsers']
+        >)
+      : supabaseAdmin.auth.admin.listUsers(...args),
 };
 
 /** La lecture des comptes est-elle possible ? Faux sans clé de service. */
@@ -152,6 +166,25 @@ type BetterAuthReader = {
   /** Côté API seulement (worker/identityBackend.ts) : le lecteur du site ne les a pas. */
   signInLink?(email: string, callbackURL: string): Promise<string | null>;
   resetPasswordLink?(email: string, redirectTo: string): Promise<string | null>;
+  adminCreateUser?(input: {
+    email: string;
+    password?: string;
+    emailVerified: boolean;
+    metadata: Record<string, unknown>;
+    name?: string;
+  }): Promise<{ id: string } | { error: 'exists' | 'failed' }>;
+  adminUpdateUser?(
+    id: string,
+    patch: {
+      email?: string;
+      emailVerified?: boolean;
+      password?: string;
+      metadata?: Record<string, unknown>;
+      bannedUntil?: Date | null;
+    }
+  ): Promise<boolean>;
+  adminDeleteUser?(id: string): Promise<boolean>;
+  sendVerificationEmail?(email: string, callbackURL?: string): Promise<boolean>;
 };
 
 function betterAuthReader(): BetterAuthReader | null {
@@ -214,6 +247,7 @@ export async function userFromToken(token: string): Promise<UserResponse> {
       ? betterAuthUser(verified.id)
       : refused('Invalid token', 401, 'bad_jwt');
   }
+  if (betterAuthIsSource()) return refused('Invalid token', 401, 'bad_jwt');
   return supabaseAdmin.auth.getUser(token);
 }
 
@@ -224,14 +258,19 @@ export async function userFromCookies(
 ): Promise<UserResponse> {
   const session = await betterAuthCookieSession(req);
   if (session) return betterAuthUser(session.id);
+  if (betterAuthIsSource()) return missingSession();
   return getServerClient(req, res).auth.getUser();
 }
 
-/** Ferme la session portée par les cookies de la requête. */
-export function signOutFromCookies(
+/**
+ * Ferme la session portée par les cookies de la requête. Better Auth source : rien à fermer
+ * ici, le navigateur ferme sa session lui-même (utils/identityBrowser.ts, côté site).
+ */
+export async function signOutFromCookies(
   req: SupabaseServerReq,
   res: SupabaseServerRes
-) {
+): Promise<{ error: AuthError | null }> {
+  if (betterAuthIsSource()) return { error: null };
   return getServerClient(req, res).auth.signOut();
 }
 
@@ -251,11 +290,13 @@ export function cookieSession(req: SupabaseServerReq, res: SupabaseServerRes) {
   return {
     getUser: async (): Promise<UserResponse> => {
       const session = await betterAuthSession();
-      return session ? betterAuthUser(session.id) : client.auth.getUser();
+      if (session) return betterAuthUser(session.id);
+      return betterAuthIsSource() ? missingSession() : client.auth.getUser();
     },
     accessToken: async (): Promise<string | null> => {
       const session = await betterAuthSession();
       if (session) return session.accessToken;
+      if (betterAuthIsSource()) return null;
       if (typeof client.auth.getSession !== 'function') return null;
       try {
         const { data } = await client.auth.getSession();
@@ -298,9 +339,212 @@ export async function betterAuthResetLink(
   return reader.resetPasswordLink(email, redirectTo).catch(() => null);
 }
 
-/** Inscription publique : clé anon, sans toucher à la session de l'appelant. */
-export function signUpWithPassword(
+/**
+ * Inscription publique : clé anon, sans toucher à la session de l'appelant. Better Auth source :
+ * le compte naît non confirmé, avec son profil, et l'e-mail de confirmation part.
+ */
+export async function signUpWithPassword(
   ...args: Parameters<typeof supabaseAnonServer.auth.signUp>
 ) {
-  return supabaseAnonServer.auth.signUp(...args);
+  if (!betterAuthIsSource()) return supabaseAnonServer.auth.signUp(...args);
+  const credentials = args[0] as {
+    email: string;
+    password: string;
+    options?: { emailRedirectTo?: string; data?: Record<string, unknown> };
+  };
+  const reader = betterAuthReader();
+  if (!reader?.adminCreateUser) {
+    return { data: { user: null, session: null }, error: unavailableError() };
+  }
+  const metadata = credentials.options?.data ?? {};
+  const created = await reader.adminCreateUser({
+    email: credentials.email,
+    password: credentials.password,
+    emailVerified: false,
+    metadata,
+    name:
+      typeof metadata.display_name === 'string' ? metadata.display_name : '',
+  });
+  if ('error' in created) {
+    return {
+      data: { user: null, session: null },
+      error:
+        created.error === 'exists'
+          ? new AuthApiError(
+              'User already registered',
+              422,
+              'user_already_exists'
+            )
+          : unavailableError(),
+    };
+  }
+  await reader.sendVerificationEmail?.(
+    credentials.email,
+    credentials.options?.emailRedirectTo
+  );
+  const { data } = (await userResponseFromMirror(created.id)) ?? missingUser();
+  return { data: { user: data.user, session: null }, error: null };
+}
+
+/**
+ * Better Auth devient la source des comptes à la bascule (lot 8) : `IDENTITY_SOURCE=better-auth`.
+ * La porte lit alors le miroir seul, écrit par le lecteur de Better Auth, et ne reconnaît plus
+ * ni les jetons ni les cookies de Supabase.
+ */
+export function betterAuthIsSource(): boolean {
+  return process.env.IDENTITY_SOURCE === 'better-auth';
+}
+
+type AdminAttributes = {
+  email?: string;
+  password?: string;
+  email_confirm?: boolean;
+  user_metadata?: Record<string, unknown> | null;
+  ban_duration?: string;
+};
+
+function unavailableError(): AuthApiError {
+  return new AuthApiError(
+    'Better Auth indisponible',
+    503,
+    'unexpected_failure'
+  );
+}
+
+function missingUser(): UserResponse {
+  return refused('User not found', 404, 'user_not_found');
+}
+
+function missingSession(): UserResponse {
+  return refused('Auth session missing!', 400, 'session_missing');
+}
+
+/** Comme GoTrue : les clés données remplacent, `null` efface, les autres demeurent. */
+export function mergeUserMetadata(
+  current: Record<string, unknown>,
+  patch: Record<string, unknown>
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...current };
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === null) delete merged[key];
+    else merged[key] = value;
+  }
+  return merged;
+}
+
+/** `ban_duration` de GoTrue : « none » lève la suspension ; « 24h », « 30m », « 45s » la posent. */
+export function bannedUntilOf(
+  duration: string,
+  now: number = Date.now()
+): Date | null | undefined {
+  if (duration === 'none') return null;
+  const m = /^(\d+)(h|m|s)$/.exec(duration);
+  if (!m) return undefined;
+  const unit = m[2] === 'h' ? 3_600_000 : m[2] === 'm' ? 60_000 : 1_000;
+  return new Date(now + Number(m[1]) * unit);
+}
+
+async function betterAuthUpdateUser(
+  id: string,
+  attributes: AdminAttributes
+): Promise<UserResponse> {
+  const reader = betterAuthReader();
+  if (!reader?.adminUpdateUser)
+    return { data: { user: null }, error: unavailableError() };
+  const current = (await userResponseFromMirror(id))?.data.user;
+  if (!current) return missingUser();
+  const patch: Parameters<NonNullable<BetterAuthReader['adminUpdateUser']>>[1] =
+    {};
+  if (attributes.user_metadata) {
+    patch.metadata = mergeUserMetadata(
+      (current.user_metadata ?? {}) as Record<string, unknown>,
+      attributes.user_metadata
+    );
+  }
+  if (attributes.password) patch.password = attributes.password;
+  if (attributes.email) patch.email = attributes.email;
+  if (attributes.email_confirm !== undefined) {
+    patch.emailVerified = attributes.email_confirm;
+  }
+  if (attributes.ban_duration !== undefined) {
+    const until = bannedUntilOf(attributes.ban_duration);
+    if (until === undefined) {
+      return refused('Invalid ban duration', 400, 'validation_failed');
+    }
+    patch.bannedUntil = until;
+  }
+  if (!(await reader.adminUpdateUser(id, patch))) {
+    return { data: { user: null }, error: unavailableError() };
+  }
+  return (await userResponseFromMirror(id)) ?? missingUser();
+}
+
+async function betterAuthCreateUser(
+  attributes: AdminAttributes & { email: string }
+): Promise<UserResponse> {
+  const reader = betterAuthReader();
+  if (!reader?.adminCreateUser)
+    return { data: { user: null }, error: unavailableError() };
+  const metadata = attributes.user_metadata ?? {};
+  const created = await reader.adminCreateUser({
+    email: attributes.email,
+    password: attributes.password,
+    emailVerified: attributes.email_confirm === true,
+    metadata,
+    name:
+      typeof metadata.display_name === 'string' ? metadata.display_name : '',
+  });
+  if ('error' in created) {
+    return created.error === 'exists'
+      ? refused(
+          'A user with this email address has already been registered',
+          422,
+          'email_exists'
+        )
+      : { data: { user: null }, error: unavailableError() };
+  }
+  return (await userResponseFromMirror(created.id)) ?? missingUser();
+}
+
+async function betterAuthDeleteUser(id: string): Promise<UserResponse> {
+  const reader = betterAuthReader();
+  if (!reader?.adminDeleteUser)
+    return { data: { user: null }, error: unavailableError() };
+  const current = (await userResponseFromMirror(id))?.data.user ?? null;
+  if (!(await reader.adminDeleteUser(id))) {
+    return { data: { user: null }, error: unavailableError() };
+  }
+  return { data: { user: current as User }, error: null };
+}
+
+/** Les comptes du miroir, par pages, sous la forme de `listUsers` de Supabase. */
+async function betterAuthListUsers(params?: {
+  page?: number;
+  perPage?: number;
+}) {
+  const page = Math.max(1, params?.page ?? 1);
+  const perPage = Math.max(1, Math.min(1000, params?.perPage ?? 50));
+  const from = (page - 1) * perPage;
+  const { data, error, count } = await supabaseAdmin
+    .from('auth_user')
+    .select(MIRROR_SELECT, { count: 'exact' })
+    .order('created_at', { ascending: true })
+    .range(from, from + perPage - 1);
+  if (error) {
+    logger.warn('[identity] miroir illisible : %s', error.code ?? 'inconnu');
+    return { data: { users: [] as User[] }, error: unavailableError() };
+  }
+  const users = ((data ?? []) as unknown as MirrorRow[]).map(userOfMirrorRow);
+  const total = count ?? users.length;
+  const lastPage = Math.max(1, Math.ceil(total / perPage));
+  return {
+    data: {
+      users,
+      aud: 'authenticated',
+      nextPage: page < lastPage ? page + 1 : null,
+      lastPage,
+      total,
+    },
+    error: null,
+  };
 }
