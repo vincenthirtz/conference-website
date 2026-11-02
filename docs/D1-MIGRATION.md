@@ -30,7 +30,8 @@ Sources des chiffres :
     groupés atomiques (`batch()`) **[doc]**. Et il traite **une requête à la fois** par base **[doc]**.
 - **Durée : ~40 à 60 jours de travail pour D1.** Les 5 premiers lots sont invisibles et peuvent avancer entre deux journées
   de match. Comptez **~20 à 28 jours** pour garder Postgres ailleurs (voir « L'autre voie »).
-- **Le lot 1 sert aux deux voies** : on le fait d'abord, et le choix du moteur se prend à sa fin.
+- **Le lot 1 sert aux deux voies** ; il est fait. **Choix du 2026-11-02 : D1, en prenant le temps** (voir « Rythme
+  choisi »).
 
 ## Mesures
 
@@ -132,7 +133,7 @@ sauvegarde, la bascule un soir sans match, et le retour arrière prêt avant de 
 | Lot | Ce qu'il fait | Effet visible | Durée |
 |---|---|---|---|
 | **1. Une seule porte, un contrat** — **fait le 2026-11-02** | Commun aux deux voies, le choix du moteur se fait à sa fin. Détail sous le tableau. | Aucun | 4–6 j |
-| **2. Le schéma sur D1** | Relevé exact de la production (`pg_dump --schema-only`, dont les 12 tables sans migration). Traduction de 179 tables, 433 index, ~305 vérifications et 343 clés étrangères. Base D1 créée en juridiction `eu`, vide | Aucun | 4–6 j |
+| **2. Le schéma sur D1** | Relevé de la production (fait le 2026-11-02, à refaire avant la copie). Traduction de 179 tables, 433 index, ~305 vérifications et 343 clés étrangères. Base D1 créée en juridiction `eu`, vide | Aucun | 4–6 j |
 | **3. Le moteur D1 de la porte** | Détail sous le tableau. | Aucun | 10–15 j |
 | **4. La logique de la base dans le code** | Détail sous le tableau. | Aucun | 15–22 j |
 | **5. Copie et répétition** | Script Postgres → D1 (20 Mo), comparaison table par table (comptes et empreintes), répété sur la sauvegarde quotidienne (`db-restore-test`). Puis quelques jours de **lecture dans l'ombre** : les mêmes lectures sur D1, comparées à Supabase | Aucun | 4–6 j |
@@ -148,6 +149,21 @@ sauvegarde, la bascule un soir sans match, et le retour arrière prêt avant de 
   filtres) est **figé par un garde-fou**. C'est la liste exacte à fournir par le moteur suivant, et aucun nouvel usage
   difficile ne passe sans le savoir.
 - **Le site sous les mêmes règles.**
+
+**Lot 2 en détail.**
+
+- **Un traducteur, pas une traduction à la main.** Un script lit le relevé de production (`database/schema-prod.sql`)
+  et écrit le schéma D1. On le relance à chaque nouvelle migration pendant le chantier ; un garde-fou refuse un schéma D1
+  en retard sur le relevé.
+- **Les types** suivent la section 1 : uuid, dates, booléens, jsonb, tableaux, et les 7 `numeric` gardés exacts.
+- **Ce qui ne se traduit pas tout seul** sort dans une liste, chaque élément avec sa place prévue au lot 4 :
+  - les 16 regex ;
+  - les déclencheurs avant écriture ;
+  - les index GIN et trigrammes ;
+  - les index sans casse.
+- **Vérifié sur un vrai SQLite** dans les tests : chaque table, colonne, clé étrangère et index du relevé existe, clés
+  étrangères appliquées.
+- **La base D1 vide**, juridiction `eu`, créée sur le compte Cloudflare de l'association **après ton accord**.
 
 **Lot 3 en détail.** La façade supabase-js au-dessus de D1 :
 
@@ -176,6 +192,19 @@ Les tests des dépôts tournent aussi contre un vrai SQLite, en plus du faux Sup
 - la file unique les soirs de match ;
 - les accents dans les recherches ;
 - les 12 tables sans définition dans le dépôt.
+
+### Rythme choisi le 2026-11-02 : on prend le temps
+
+- **Un lot à la fois.** Chacun démarre sur ton feu vert et se termine (tests et CI verts) avant le suivant.
+- **Les lots 2 à 5 sont invisibles.** Ils avancent entre deux journées de match, jamais la veille ni le soir d'un match.
+- **Aucune date de bascule fixée d'avance.** Elle se pose quand la répétition (lot 5) a tourné sans écart.
+- **Ce que le temps permet d'ajouter :**
+  - **Tests différentiels des 36 fonctions.** La version Postgres actuelle (rejouée dans PGlite, comme aujourd'hui pour
+    le schéma) et la version réécrite reçoivent les mêmes opérations. Elles doivent laisser les mêmes soldes et les mêmes
+    lignes. C'est la parade au risque principal : de l'argent virtuel perdu ou doublé.
+  - **Deux semaines de lecture dans l'ombre** au lieu de quelques jours, avec si possible une soirée de match.
+  - **Une répétition complète** de la bascule et du retour arrière sur une copie, chronométrée.
+- **Durée** : toujours ~40 à 60 jours de travail, plus ~5 jours pour ces ajouts, étalés au rythme des feux verts.
 
 ### Lot 1 : fait le 2026-11-02
 
@@ -235,9 +264,8 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
 ## 5. Décisions pour la propriétaire
 
 1. **Lot 1** : décidé et **fait** le 2026-11-02.
-2. **Le moteur, à la fin du lot 1** : D1 (tout chez Cloudflare, aucun coût, ~40–60 j, logique transactionnelle à refaire)
-   ou Postgres ailleurs (~20–28 j, 5–19 $/mois). **Recommandation** : la voie Postgres si l'objectif premier est de
-   quitter Supabase vite et sans risque sur l'économie TCG/Bibliothèque ; D1 si tout réunir chez Cloudflare vaut deux à
-   trois mois de chantier.
+2. **Le moteur** : **D1, choisi le 2026-11-02**, sans se presser (voir « Rythme choisi »). La voie Postgres de la
+   section 4 reste décrite pour mémoire.
 3. **Un relevé `pg_dump --schema-only` de la production** : accordé et fait le 2026-11-02
-   (`database/schema-prod.sql` dans conference-api). À refaire avant de porter le schéma.
+   (`database/schema-prod.sql` dans conference-api). À refaire avant la copie (lot 5).
+4. **Lot 2** : à lancer sur ton feu vert. Il demandera ton accord pour créer la base D1 vide (juridiction `eu`, définitive).
