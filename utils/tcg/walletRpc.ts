@@ -23,6 +23,7 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { dbFunctions } from '@/utils/db/rpc';
 
 /** PostgREST coupe à 1000 lignes (`max_rows`) : le repli lit par pages. */
 const LEDGER_PAGE_SIZE = 1000;
@@ -62,7 +63,7 @@ export async function recomputeWalletBalance(
   if (!supabaseAdmin) return null;
 
   try {
-    const { data, error } = await supabaseAdmin.rpc(
+    const { data, error } = await dbFunctions(supabaseAdmin)(
       'tcg_refresh_wallet_balance',
       { p_tenant_id: tenantId, p_user_id: userId }
     );
@@ -182,11 +183,14 @@ export async function purchaseBoosterAtomic(input: {
 }): Promise<BoosterPurchaseOutcome> {
   if (!supabaseAdmin) return { kind: 'unavailable' };
   try {
-    const { data, error } = await supabaseAdmin.rpc('tcg_purchase_booster', {
-      p_tenant_id: input.tenantId,
-      p_user_id: input.userId,
-      p_price: input.price,
-    });
+    const { data, error } = await dbFunctions(supabaseAdmin)(
+      'tcg_purchase_booster',
+      {
+        p_tenant_id: input.tenantId,
+        p_user_id: input.userId,
+        p_price: input.price,
+      }
+    );
     if (error) {
       if (isMissingRpc(error)) {
         logger.error(
@@ -244,13 +248,16 @@ export async function adminDebitAtomic(input: {
 }): Promise<AdminDebitOutcome> {
   if (!supabaseAdmin) return { kind: 'unavailable' };
   try {
-    const { data, error } = await supabaseAdmin.rpc('tcg_admin_debit', {
-      p_tenant_id: input.tenantId,
-      p_user_id: input.userId,
-      p_cost: input.cost,
-      p_source_ref: input.sourceRef,
-      p_note: input.note,
-    });
+    const { data, error } = await dbFunctions(supabaseAdmin)(
+      'tcg_admin_debit',
+      {
+        p_tenant_id: input.tenantId,
+        p_user_id: input.userId,
+        p_cost: input.cost,
+        p_source_ref: input.sourceRef,
+        p_note: input.note,
+      }
+    );
     if (error) {
       if (isMissingRpc(error)) return { kind: 'unavailable' };
       if ((error as { code?: string }).code === '23505') {

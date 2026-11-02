@@ -13,6 +13,7 @@
 
 import { supabaseAdmin } from './supabase';
 import { logger } from './logger';
+import { dbFunctions } from './db/rpc';
 
 /** One row of the `admin_get_user_profiles` RPC contract. */
 export type AdminUserProfile = {
@@ -41,7 +42,7 @@ export async function fetchAdminUserProfiles(
   if (uniqueIds.length === 0) return map;
 
   try {
-    const { data, error } = await supabaseAdmin!.rpc(
+    const { data, error } = await dbFunctions(supabaseAdmin!)(
       'admin_get_user_profiles',
       {
         p_ids: uniqueIds,

@@ -55,6 +55,7 @@ import {
   type TradeResolutionReason,
   type TradeStatus,
 } from './tradeRules';
+import { dbFunctions } from '@/utils/db/rpc';
 
 /** La page des échanges : cible de tous les liens d'annonce. */
 export const TRADES_PAGE_PATH = '/player/tcg/echanges';
@@ -112,12 +113,15 @@ export async function readTradeEligibility(
   userId: string
 ): Promise<({ ok: true } & TradeEligibility) | { ok: false }> {
   if (!supabaseAdmin) return { ok: false };
-  const { data, error } = await supabaseAdmin.rpc('tcg_trade_eligibility', {
-    p_tenant_id: tenantId,
-    p_user_id: userId,
-    p_min_account_age_days: TRADE_MIN_ACCOUNT_AGE_DAYS,
-    p_min_collection_age_days: TRADE_MIN_COLLECTION_AGE_DAYS,
-  });
+  const { data, error } = await dbFunctions(supabaseAdmin)(
+    'tcg_trade_eligibility',
+    {
+      p_tenant_id: tenantId,
+      p_user_id: userId,
+      p_min_account_age_days: TRADE_MIN_ACCOUNT_AGE_DAYS,
+      p_min_collection_age_days: TRADE_MIN_COLLECTION_AGE_DAYS,
+    }
+  );
   if (error || !data || typeof data !== 'object') {
     logger.error(
       '[tcg/trades] éligibilité illisible: %s',
