@@ -30,6 +30,10 @@
 //
 // 6) IMAGES DE NOTRE DOMAINE en adresse complète : ramenées à leur chemin
 //    avant l'optimiseur, qui les refuserait (cf. selfImageRewrite).
+//
+// 7) SESSION BETTER AUTH du rendu serveur : un lecteur sur globalThis, que la porte
+//    (utils/identity.ts) interroge ; il demande à l'API par API_WORKER
+//    (cloudflare/identityReader.ts). Sans EDGE_PROXY_SECRET, pas de lecteur.
 
 import handler from '../.open-next/worker.js';
 import {
@@ -46,6 +50,7 @@ import {
   upstreamUnavailableResponse,
 } from '../utils/edgeApiProxy.ts';
 import { dueCronJobs, resolveCronApiBaseUrl, runCronJob } from './crons.ts';
+import { bindIdentityReader } from './identityReader.ts';
 import {
   browserCacheControl,
   canonicalRedirect,
@@ -153,6 +158,18 @@ export default {
     if (config && matchesProxyPrefix(url.pathname, config.prefixes)) {
       return relay(request, url, config, Boolean(secret), env);
     }
+
+    bindIdentityReader(
+      env.API_WORKER,
+      config && secret
+        ? {
+            origin: config.origin,
+            secret,
+            clientIp: request.headers.get('cf-connecting-ip') ?? undefined,
+            host: url.host,
+          }
+        : null
+    );
 
     const selfImage = selfImageRewrite(url);
     let response = await handler.fetch(
