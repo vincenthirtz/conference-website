@@ -462,7 +462,7 @@ Toute migration est écrite dans conference-api et appliquée par la propriétai
 | **5. Better Auth dans l'ombre** — **fait le 2026-11-02**, essayé en production avec un vrai compte, un vrai téléphone, de vrais e-mails et un vrai Discord (voir « Lot 5 : ce qui reste ») : déployé le 2026-11-01, route fermée (404 sans le secret `IDENTITY_SHADOW_KEY` et sa clé), inscriptions coupées, seuls les comptes de `IDENTITY_SHADOW_EMAILS` peuvent changer, Supabase reste la seule source des autres. Scénario sur un vrai Postgres, Discord simulé au réseau (PGlite, `identityAuth.test.ts`) : hachage repris, jeton ES256, `aal1` puis `aal2` sans reconnexion, limites, suspension, origine, e-mails, liaison et retrait. En production, à blanc : aller-retour Hyperdrive, refus de l'ombre, page d'essai. Restent : voir « Lot 5 : ce qui reste » | `/api/identity/*` sur le Worker, sans écran. Hyperdrive, bcrypt, jeton ES256, `aal`, limites, e-mails par Brevo, retour Discord ajouté à côté de l'ancien, relais et cache | Le scénario du banc, en production sur un compte de test : connexion, code, jeton, Discord, e-mails reçus ; un compte créé par Supabase avec un vrai hachage ; le vrai téléphone ; coût CPU réel | Retirer la route | 3–4 |
 | **6. L'API accepte les deux** — **fait le 2026-11-02** (API `96ad238`, `e30cf2d`, site `68a28721c`), interrupteur `IDENTITY_ACCEPTED` dans le `wrangler.jsonc` de l'API. La porte choisit par `iss`, l'enveloppe du Worker pose le lecteur (`worker/identityBackend.ts`) ; le site le demande à l'API (`GET /api/identity-session`, `cloudflare/identityReader.ts`). Vu en production avec le compte d'essai : routes joueuses à jeton 200, routes staff 403 « reconnu, pas staff » par jeton et par cookie, jeton forgé 401 partout, session fermée sans effet passé la minute des caches, `/admin` rendu par le site : connexion sans session, `/403` avec. Puis la propriétaire, connectée par Discord sans code (`aal1`) : `/api/admin/alerts-summary` 200, `/api/admin/circuit-partners` refusé `mfa_required`. Restent : l'exemption (même identifiant, non essayée) et l'ajout à `worker-routes-check` (il faudrait les identifiants d'essai dans la CI) | Porte serveur : jeton par `iss`, cookies `sb-*` ou Better Auth, `aal` des deux côtés. Rendu serveur par `API_WORKER` | Matrice de gardes (joueuse, staff, sensible) avec les deux jetons, **`aal1` refusé**, exemption, jeton forgé refusé, ajoutée à `worker-routes-check` | Réglage | 2 |
 | **7. Écrans derrière interrupteur** — **7a déployé et essayé le 2026-11-02** (site `9abb66b3f`, API `6bfdccc`) par la propriétaire avec `?auth=better-auth` : Discord jusqu'à l'administration, mot de passe du compte d'essai jusqu'à l'espace joueur, pages rendues par le site (6 lectures `/api/identity-session`), déconnexion, retour à Supabase ; 0 erreur serveur : `utils/authBackend.ts` (`NEXT_PUBLIC_AUTH_BACKEND`, `?auth=better-auth` gardé par le navigateur, une connexion traversant plusieurs pages), `utils/identityBrowserBetterAuth.ts` chargé à la demande, appels directs à `/api/identity` sans bibliothèque. Pris en charge : session, jeton de 5 min renouvelé, mot de passe avec code sur la page de connexion (le code vient avant la session chez Better Auth), Discord, déconnexion, niveau. La session porte `metadata` (l'ancien `user_metadata`). **7b déployé le 2026-11-02** (API `c357a63`, `71438dd`, site `d22861b92`) : mot de passe oublié et réinitialisation par Better Auth ; mot de passe changé avec l'ancien (`/verify-password`, `/change-password`), adresse par `/change-email` ; double authentification du staff activée et retirée avec le mot de passe, QR code fourni par l'API ; Battle.net : le mode traverse le state signé, le retour ouvre la session par un lien Better Auth à usage unique que l'API garde (`signInLink`) ; accès équipe et mot de passe oublié côté API passent à Better Auth avec `IDENTITY_LINKS=better-auth` (à poser au lot 8) ; liaison Discord : profil gardé dans `identity_data`. Essai automatique en production : 24 contrôles sur 24. Essayé à l'écran par la propriétaire : mot de passe oublié de bout en bout (e-mail, lien, nouveau mot de passe, connexion) et changement de mot de passe de l'espace joueur. Pas vu à l'écran : Battle.net (aucun compte d'essai lié), le panneau de double authentification (il faut un compte staff d'essai), la liaison Discord du profil. Le profil (`user_metadata`) ne s'écrit pas encore par Better Auth : il passera par l'API au lot 8 | `NEXT_PUBLIC_AUTH_BACKEND` et `?auth=` par page, comme `?realtime=`. Connexion, inscription, réinitialisation, `discord-member`, `team-access`, `battlenet`, `StaffMfaPanel`, profils, `DiscordLinkCard`, déconnexion, portail développeurs | Essai manuel de chaque parcours du § 2 avec `?auth=`, propriétaire et un caster. L'e2e était rouge depuis la séparation (pas d'API dans le job) : à vérifier, puis réparer ou assumer | Interrupteur | 3–5 |
-| **8. Bascule** | Soirée sans match, annonce. Copie finale, import des secrets, inscriptions coupées chez Supabase, interrupteur, l'API cesse d'accepter les jetons Supabase | 48 h de journaux : 5xx et 401 sur `/api/identity/*`, inscriptions, connexion du staff, MFA. Rejeu du contrôle de déploiement | Réglage en ~10 min, script de rejeu, voir § 5 | 1 + 2 de suivi |
+| **8. Bascule** — **faite le 2026-11-02 vers 13 h 50 UTC** (jour sans match), voir « Lot 8 : la bascule » | Soirée sans match, annonce. Copie finale, import des secrets, inscriptions coupées chez Supabase, interrupteur, l'API cesse d'accepter les jetons Supabase | 48 h de journaux : 5xx et 401 sur `/api/identity/*`, inscriptions, connexion du staff, MFA. Rejeu du contrôle de déploiement | Réglage en ~10 min, script de rejeu, voir § 5 | 1 + 2 de suivi |
 | **9. Nettoyage** (≥ 14 jours) | Retrait du miroir, du code Supabase Auth, de `@supabase/ssr`, de la branche Realtime et des 26 + 6 règles. Purge de `auth.*` selon décision 7. CSP allégée | Tests, poids du bundle (`bundle-budget`) | `git revert` ; la purge ne se défait que par sauvegarde | 2 |
 
 **Total : 22 à 32 jours**, selon la Library et l'accès à la base.
@@ -498,6 +498,60 @@ authentification Supabase d'un compte n'est pas encore connue de Better Auth : r
 - le coût de calcul en production n'est pas mesuré : le journal automatique est coupé. Temps vus de l'extérieur : 300 à 660 ms pour une connexion ratée, 60 ms pour une lecture de session sans cookie ;
 - `BETTER_AUTH_SECRET` n'existe que chez Cloudflare : à sauvegarder avant d'importer les secrets de double authentification, qu'il chiffrera ;
 - à la bascule : retirer la page d'essai, l'ombre et `disableImplicitSignUp`.
+
+### Lot 8 : la bascule
+
+Faite le 2026-11-02 vers 13 h 50 UTC, un jour sans match (aucun dans les 14 jours suivants).
+
+**Ordre suivi.**
+
+1. Code poussé interrupteurs coupés (API `faa815e`, site `05e444014`). Il comprend :
+   - la porte qui écrit dans Better Auth quand `IDENTITY_SOURCE=better-auth` ;
+   - la route ouverte par `IDENTITY_OPEN=1` ;
+   - la reprise des clés `POST /api/identity-import-totp` ;
+   - `NEXT_PUBLIC_AUTH_BACKEND` transmis au build du site.
+2. Reprise des clés de double authentification, sur accord explicite de la propriétaire. Elle a appliqué `add_totp_import_function.sql`, la reprise a tourné une fois, puis elle a appliqué son retrait (vérifié : fonction absente). 3 clés trouvées, 3 reprises, aucune en clair.
+3. Interrupteurs posés et déployés ensemble :
+   - API `b8859c2` : `IDENTITY_SOURCE`, `IDENTITY_LINKS`, `IDENTITY_OPEN` ;
+   - site `6e3cc5833` : `IDENTITY_SOURCE` dans `wrangler.jsonc`, plus `NEXT_PUBLIC_AUTH_BACKEND=better-auth` dans l'environnement `cloudflare-production`.
+4. La propriétaire a appliqué `stop_auth_mirror.sql` et `rewrite_supporter_role_to_auth_user.sql`. Vérifié : 0 déclencheur de miroir, la fonction de l'étiquette supportrice lit et écrit `auth_user` et reste branchée, 118 comptes de chaque côté.
+5. Inscriptions coupées chez Supabase (`disable_signup` vrai dans les réglages publics).
+6. Secrets d'essai `IDENTITY_SHADOW_KEY` et `IDENTITY_SHADOW_EMAILS` retirés, sur la phrase de la propriétaire. La route de reprise répond 404 depuis.
+
+**Écart avec l'étude : le miroir est ARRÊTÉ**, pas laissé en marche pendant 14 jours. Une fois Better Auth source, toute écriture restante dans `auth.users` écraserait `auth_user` (une connexion Supabase d'un vieil onglet, par exemple), et une suppression y effacerait en cascade les données de la personne. Retour arrière :
+
+- retirer les trois interrupteurs ;
+- `stop_auth_mirror_revert.sql`, puis `rewrite_supporter_role_to_auth_user_revert.sql` ;
+- vider `NEXT_PUBLIC_AUTH_BACKEND` et retirer `IDENTITY_SOURCE` du site.
+
+Le script de rejeu (Better Auth → Supabase) n'est pas encore écrit : d'ici là, ce qui change côté Better Auth reste dans `auth_user`, sans être recopié.
+
+**Vérifié en production après la bascule.**
+
+- Essai de bout en bout du compte d'essai : 24 contrôles sur 24.
+- Matrice des routes : jeton accepté, jeton forgé refusé ; session fermée refusée passé la minute du cache.
+- Rendu serveur du site par `/api/identity-session`.
+- Le compte d'essai passé admin, 27 contrôles sur 27 :
+  - refus `mfa_required` et renvoi vers `/admin/mfa` sans second facteur ;
+  - enrôlement, puis `aal2` ;
+  - liste des inscrits lue dans Better Auth (118) ;
+  - nom affiché changé et relu par la porte ;
+  - vraie connexion à l'écran (mot de passe puis code) jusqu'à `/admin` ;
+  - panneau de double authentification du staff vu pour la première fois ;
+  - aucune erreur de page.
+- Journaux : site sans erreur ni 5xx ; API sans autre erreur que le jeton forgé de l'essai.
+
+**Corrigé après la bascule.**
+
+- La dernière connexion n'était plus notée : Better Auth ne tenait pas `last_sign_in_at`, la liste des inscrits et les filtres « inactif » se seraient figés. Corrigé (API `bb02d93`) : notée à la création de chaque session, en SQL direct, pour ne pas renvoyer l'e-mail « second facteur ajouté ».
+- Page owner « Comptes et connexion » (`/admin/connexion`, API `aaa0134`, site `dc9514de8`) : chiffres, staff sans second facteur, réglages (inscriptions, Discord, lien e-mail, durée des sessions, table `auth_settings`, migration `add_auth_settings.sql` à appliquer), gestes sur un compte, déconnexion générale.
+
+**Restent.**
+
+- Le script de rejeu.
+- Les 48 h de journaux.
+- Une connexion de la propriétaire par Discord à l'écran.
+- Battle.net à l'écran.
 
 ### Ce qui peut cohabiter
 
