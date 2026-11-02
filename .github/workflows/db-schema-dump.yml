@@ -1,0 +1,53 @@
+# Relevé de la STRUCTURE de la base de production, sans aucune donnée
+# (docs/D1-MIGRATION.md, lot 2 ; accord de la propriétaire du 2026-11-02).
+#
+# Même outil et même secret que db-backup.yml. Le dépôt est PUBLIC : le relevé est chiffré pour
+# une clé publique (scripts/db-schema-dump-public-key.txt) avant de quitter le job, l'artefact ne vit qu'un
+# jour, et le résumé ne donne que des nombres. Lancé à la main seulement.
+name: db-schema-dump
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: cloudflare-production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.121.0
+
+      - name: Relevé de la structure (sans données)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo '::error::Secret SUPABASE_DB_URL absent (docs/SAUVEGARDES.md)'
+            exit 1
+          fi
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f schema.sql
+
+      - name: Chiffrement
+        run: |
+          set -euo pipefail
+          node scripts/db-schema-encrypt.mjs schema.sql schema.enc.json | tee -a "$GITHUB_STEP_SUMMARY"
+          rm -f schema.sql
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: schema-enc
+          path: schema.enc.json
+          retention-days: 1
+          if-no-files-found: error
