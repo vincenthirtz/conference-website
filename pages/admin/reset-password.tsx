@@ -35,7 +35,11 @@ export default function AdminResetPasswordPage() {
       // navigateur quand le lien est généré côté serveur (admin.generateLink).
       const tokenHash = router.query.token_hash as string | undefined;
       const code = router.query.code as string | undefined;
-      if (tokenHash) {
+      const betterAuthToken = router.query.token as string | undefined;
+      if (betterAuthToken && identityBrowser.usesBetterAuth()) {
+        // Pas de session à ouvrir : le jeton est vérifié à l'envoi du nouveau mot de passe.
+        established = true;
+      } else if (tokenHash) {
         const { data, error } = await identityBrowser.verifyOtp({
           type: 'recovery',
           token_hash: tokenHash,
@@ -93,7 +97,13 @@ export default function AdminResetPasswordPage() {
     }
 
     initSession();
-  }, [router.isReady, router.query.token_hash, router.query.code, t]);
+  }, [
+    router.isReady,
+    router.query.token_hash,
+    router.query.code,
+    router.query.token,
+    t,
+  ]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -115,9 +125,18 @@ export default function AdminResetPasswordPage() {
 
     setLoading(true);
     try {
-      const { error } = await identityBrowser.updateUser({
-        password: password.trim(),
-      });
+      // Better Auth (lot 7b) : le lien ramène `?token=…`, qui sert au changement lui-même.
+      const resetToken =
+        identityBrowser.usesBetterAuth() &&
+        typeof router.query.token === 'string'
+          ? router.query.token
+          : null;
+      const { error } = resetToken
+        ? await identityBrowser.betterAuth.resetPassword(
+            resetToken,
+            password.trim()
+          )
+        : await identityBrowser.updateUser({ password: password.trim() });
 
       if (error) {
         throw new Error(error.message || t.errorUpdateFailed);

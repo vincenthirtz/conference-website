@@ -229,9 +229,11 @@ const LoginPage = () => {
 
   const handleBattlenetLogin = () => {
     const next = safeNext(router.query.next) ?? '/player';
+    // Better Auth (lot 7b) : l'API ouvrira au retour une session de ce système-là.
+    const auth = identityBrowser.usesBetterAuth() ? '&auth=better-auth' : '';
     window.location.href = `/api/auth/battlenet/login-start?returnTo=${encodeURIComponent(
       next
-    )}`;
+    )}${auth}`;
   };
 
   const handleDiscordLogin = async () => {

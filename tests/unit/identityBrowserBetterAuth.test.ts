@@ -247,8 +247,8 @@ describe('la porte, côté Better Auth', () => {
     expect(factors.data?.totp?.[0]?.status).toBe('verified');
   });
 
-  it.each(['setSession', 'verifyOtp', 'updateUser'] as const)(
-    '%s : pas encore, une erreur claire',
+  it.each(['setSession', 'verifyOtp'] as const)(
+    '%s : mécanisme de Supabase, une erreur claire',
     async (name) => {
       const out = await (
         identityBrowser[name] as (
@@ -256,9 +256,97 @@ describe('la porte, côté Better Auth', () => {
         ) => Promise<{ error: { status?: number; message: string } | null }>
       )({});
       expect(out.error?.status).toBe(501);
-      expect(out.error?.message).toContain('lot 7b');
     }
   );
+
+  it('updateUser : l’adresse passe par Better Auth, le mot de passe et le profil non', async () => {
+    routes['/change-email'] = () => ({ json: { status: true } });
+    const email = await identityBrowser.updateUser({
+      email: 'neuve@example.com',
+    });
+    expect(email.error).toBeNull();
+    expect(calls.find((c) => c.path === '/change-email')?.body).toEqual({
+      newEmail: 'neuve@example.com',
+      callbackURL: `${window.location.origin}/player/profile`,
+    });
+    for (const attributes of [{ password: 'x' }, { data: { role: 'owner' } }]) {
+      const out = await identityBrowser.updateUser(attributes);
+      expect(out.error?.status).toBe(501);
+    }
+  });
+
+  it('mot de passe : vérifié sans nouvelle session, changé avec l’ancien', async () => {
+    routes['/verify-password'] = (body) => ({
+      status: (body as { password: string }).password === 'bon' ? 200 : 400,
+      json: { status: true },
+    });
+    expect(await identityBrowser.betterAuth.verifyPassword('bon')).toBe(true);
+    expect(await identityBrowser.betterAuth.verifyPassword('faux')).toBe(false);
+
+    routes['/change-password'] = () => ({ json: { token: null } });
+    const listener = vi.fn();
+    const { data: sub } = identityBrowser.onAuthStateChange(listener);
+    const { error } = await identityBrowser.betterAuth.changePassword(
+      'ancien',
+      'nouveau'
+    );
+    expect(error).toBeNull();
+    expect(calls.find((c) => c.path === '/change-password')?.body).toEqual({
+      currentPassword: 'ancien',
+      newPassword: 'nouveau',
+    });
+    expect(listener).toHaveBeenCalledWith('USER_UPDATED', expect.anything());
+    sub.subscription.unsubscribe();
+  });
+
+  it('mot de passe oublié : le lien, puis le nouveau mot de passe avec son jeton', async () => {
+    routes['/request-password-reset'] = () => ({ json: { status: true } });
+    routes['/reset-password'] = () => ({ json: { status: true } });
+    await identityBrowser.betterAuth.requestPasswordReset(
+      'essai@example.com',
+      'https://owwomenscup.fr/admin/reset-password'
+    );
+    await identityBrowser.betterAuth.resetPassword('le-jeton', 'nouveau');
+    expect(
+      calls.find((c) => c.path === '/request-password-reset')?.body
+    ).toEqual({
+      email: 'essai@example.com',
+      redirectTo: 'https://owwomenscup.fr/admin/reset-password',
+    });
+    expect(calls.find((c) => c.path === '/reset-password')?.body).toEqual({
+      token: 'le-jeton',
+      newPassword: 'nouveau',
+    });
+  });
+
+  it('double authentification : activée avec le mot de passe, le QR code et la clé', async () => {
+    routes['/two-factor/enable'] = () => ({
+      json: {
+        totpURI: 'otpauth://totp/OW:essai?secret=JBSWY3DPEHPK3PXP&issuer=OW',
+        backupCodes: ['a', 'b'],
+        qrCode: 'data:image/svg+xml;utf8,%3Csvg%3E',
+      },
+    });
+    const { data, error } =
+      await identityBrowser.betterAuth.enableTwoFactor('mot');
+    expect(error).toBeNull();
+    expect(data).toEqual({
+      qrCode: 'data:image/svg+xml;utf8,%3Csvg%3E',
+      secret: 'JBSWY3DPEHPK3PXP',
+      backupCodes: ['a', 'b'],
+    });
+    expect(calls.find((c) => c.path === '/two-factor/enable')?.body).toEqual({
+      password: 'mot',
+    });
+
+    routes['/two-factor/disable'] = () => ({
+      status: 400,
+      json: { message: 'Invalid password' },
+    });
+    expect(
+      (await identityBrowser.betterAuth.disableTwoFactor('faux')).error?.status
+    ).toBe(400);
+  });
 
   it('renouvelle le jeton avant sa fin, avec TOKEN_REFRESHED', async () => {
     vi.useFakeTimers();

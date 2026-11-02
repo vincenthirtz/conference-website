@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
+import { identityBrowser } from '@/utils/identityBrowser';
 import nsAdminForgotPassword from '@/lib/i18n/locales/admin-fr/adminForgotPassword';
 
 export default function AdminForgotPasswordPage() {
@@ -19,6 +20,16 @@ export default function AdminForgotPasswordPage() {
 
     try {
       if (!email.trim()) throw new Error(t.errorEmailRequired);
+      // Better Auth (lot 7b) envoie le lien lui-même ; il ramène sur la page de réinitialisation.
+      if (identityBrowser.usesBetterAuth()) {
+        const { error } = await identityBrowser.betterAuth.requestPasswordReset(
+          email.trim(),
+          `${window.location.origin}/admin/reset-password`
+        );
+        if (error) throw new Error(t.errorSendFailed);
+        addToast(t.successSent, 'success');
+        return;
+      }
 
       const res = await fetch('/api/auth/forgot-password', {
         method: 'POST',

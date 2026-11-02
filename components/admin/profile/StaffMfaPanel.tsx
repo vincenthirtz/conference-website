@@ -10,7 +10,7 @@
 // serveur relisent (utils/staffMfa.ts). Aucune route maison, aucun secret
 // stocké chez nous.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/Toast';
 import { useAdminT } from '@/lib/i18n/useAdminT';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
@@ -18,6 +18,7 @@ import Chip from '@/features/admin/_shared/ui/Chip';
 import { logger } from '@/utils/logger';
 import nsAdminProfile from '@/lib/i18n/locales/admin-fr/adminProfile';
 import { identityBrowser } from '@/utils/identityBrowser';
+import { useUsesBetterAuth } from '@/hooks/useUsesBetterAuth';
 
 type PanelState =
   | { kind: 'loading' }
@@ -47,6 +48,15 @@ export default function StaffMfaPanel({
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Better Auth (lot 7b) demande le mot de passe du compte pour activer ou retirer.
+  const usesBetterAuth = useUsesBetterAuth();
+  const accountPasswordRef = useRef<HTMLInputElement>(null);
+  /** Le mot de passe saisi ; sans lui, le champ reprend la main et rien ne part. */
+  const accountPassword = (): string | null => {
+    const value = accountPasswordRef.current?.value ?? '';
+    if (!value) accountPasswordRef.current?.focus();
+    return value || null;
+  };
 
   const load = useCallback(async () => {
     const [factors, aal] = await Promise.all([
@@ -78,6 +88,22 @@ export default function StaffMfaPanel({
     setBusy(true);
     setError(null);
     try {
+      if (usesBetterAuth) {
+        const password = accountPassword();
+        if (!password) return;
+        const { data, error: enableError } =
+          await identityBrowser.betterAuth.enableTwoFactor(password);
+        if (enableError || !data) throw enableError ?? new Error('enroll');
+        setCode('');
+        if (accountPasswordRef.current) accountPasswordRef.current.value = '';
+        setState({
+          kind: 'enrolling',
+          factorId: 'better-auth-totp',
+          qr: data.qrCode,
+          secret: data.secret,
+        });
+        return;
+      }
       // Un enrôlement abandonné laisse un facteur `unverified` : on le retire,
       // sinon il encombre la liste (et GoTrue en plafonne le nombre).
       const { data: list } = await identityBrowser.mfa.listFactors();
@@ -109,7 +135,8 @@ export default function StaffMfaPanel({
   const cancelEnroll = async (factorId: string) => {
     setBusy(true);
     try {
-      await identityBrowser.mfa.unenroll({ factorId });
+      // Better Auth : rien d'actif tant que le code n'est pas validé.
+      if (!usesBetterAuth) await identityBrowser.mfa.unenroll({ factorId });
     } catch (err: unknown) {
       logger.error('StaffMfaPanel: cancel enroll error', err);
     } finally {
@@ -149,9 +176,11 @@ export default function StaffMfaPanel({
     setBusy(true);
     setError(null);
     try {
-      const { error: unenrollError } = await identityBrowser.mfa.unenroll({
-        factorId,
-      });
+      const password = usesBetterAuth ? accountPassword() : null;
+      if (usesBetterAuth && !password) return;
+      const { error: unenrollError } = password
+        ? await identityBrowser.betterAuth.disableTwoFactor(password)
+        : await identityBrowser.mfa.unenroll({ factorId });
       if (unenrollError) throw unenrollError;
       addToast(t.toastMfaDisabled, 'success');
       await load();
@@ -197,6 +226,20 @@ export default function StaffMfaPanel({
     </form>
   );
 
+  const passwordField = usesBetterAuth ? (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-medium text-[var(--t2,#c7bfca)]">
+        {t.mfaPasswordLabel}
+      </span>
+      <input
+        className={inputClass}
+        type="password"
+        autoComplete="current-password"
+        ref={accountPasswordRef}
+      />
+    </label>
+  ) : null;
+
   const enrolled = state.kind === 'active' || state.kind === 'challenge';
 
   return (
@@ -224,6 +267,7 @@ export default function StaffMfaPanel({
       {state.kind === 'none' && (
         <>
           <p className={helpClass}>{t.mfaInvite}</p>
+          {passwordField}
           <AdminButton variant="primary" onClick={startEnroll} disabled={busy}>
             {t.mfaEnableBtn}
           </AdminButton>
@@ -271,6 +315,7 @@ export default function StaffMfaPanel({
       {state.kind === 'active' && (
         <div className="space-y-3">
           <p className={helpClass}>{t.mfaSessionVerified}</p>
+          {passwordField}
           <AdminButton
             variant="danger"
             size="sm"

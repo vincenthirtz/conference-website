@@ -29,6 +29,22 @@ const loadBetterAuth = (): Promise<BetterAuthBrowser> =>
 
 const usesBetterAuth = () => currentAuthBackend() === 'better-auth';
 
+type BetterAuthOnly =
+  typeof import('./identityBrowserBetterAuth')['betterAuthOnly'];
+
+const loadBetterAuthOnly = (): Promise<BetterAuthOnly> =>
+  import('./identityBrowserBetterAuth').then((m) => m.betterAuthOnly);
+
+/** Chaque fonction de Better Auth, chargée au premier appel. */
+function betterAuthOnly<K extends keyof BetterAuthOnly>(
+  name: K
+): BetterAuthOnly[K] {
+  return ((...args: unknown[]) =>
+    loadBetterAuthOnly().then((only) =>
+      (only[name] as AnyFunction)(...args)
+    )) as BetterAuthOnly[K];
+}
+
 /** Le type de Supabase tel quel, surcharges comprises, et le client relu à chaque appel. */
 function auth<K extends keyof Auth & keyof BetterAuthBrowser>(
   name: K
@@ -76,6 +92,8 @@ type TwoFactorResult = Awaited<
 >;
 
 export const identityBrowser = {
+  /** Vrai quand l'interrupteur envoie ce navigateur vers Better Auth (lot 7). */
+  usesBetterAuth,
   getSession: auth('getSession'),
   getUser: auth('getUser'),
   refreshSession: auth('refreshSession'),
@@ -91,6 +109,18 @@ export const identityBrowser = {
   /** Better Auth seulement : le code demandé après le mot de passe (`twoFactorRequired`). */
   verifyTwoFactorCode: async (code: string): Promise<TwoFactorResult> =>
     (await loadBetterAuth()).verifyTwoFactorCode(code),
+  /**
+   * Better Auth seulement : ce que Supabase fait autrement (mot de passe actuel pour en changer,
+   * mot de passe pour la double authentification, lien de réinitialisation qui ramène un jeton).
+   */
+  betterAuth: {
+    verifyPassword: betterAuthOnly('verifyPassword'),
+    changePassword: betterAuthOnly('changePassword'),
+    requestPasswordReset: betterAuthOnly('requestPasswordReset'),
+    resetPassword: betterAuthOnly('resetPassword'),
+    enableTwoFactor: betterAuthOnly('enableTwoFactor'),
+    disableTwoFactor: betterAuthOnly('disableTwoFactor'),
+  },
   mfa: {
     listFactors: mfa('listFactors'),
     getAuthenticatorAssuranceLevel: mfa('getAuthenticatorAssuranceLevel'),

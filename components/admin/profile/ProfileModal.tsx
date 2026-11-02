@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useToast } from '@/components/Toast';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
@@ -20,6 +20,7 @@ import { ErrorBanner, InfoTile } from './ProfileBits';
 import { logger } from '@/utils/logger';
 import nsAdminProfile from '@/lib/i18n/locales/admin-fr/adminProfile';
 import { identityBrowser } from '@/utils/identityBrowser';
+import { useUsesBetterAuth } from '@/hooks/useUsesBetterAuth';
 
 type StaffProfile = {
   id: string;
@@ -65,6 +66,9 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
 
   // Password change state
   const [newPassword, setNewPassword] = useState('');
+  // Better Auth (lot 7b) demande le mot de passe actuel pour en changer.
+  const usesBetterAuth = useUsesBetterAuth();
+  const currentPasswordRef = useRef<HTMLInputElement>(null);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordChanging, setPasswordChanging] = useState(false);
   const [passwordErrorMsg, setPasswordErrorMsg] = useState<string | null>(null);
@@ -157,15 +161,22 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
     setPasswordErrorMsg(null);
 
     try {
-      const { error } = await identityBrowser.updateUser({
-        password: newPassword,
-      });
+      const { error } = usesBetterAuth
+        ? await identityBrowser.betterAuth.changePassword(
+            currentPasswordRef.current?.value ?? '',
+            newPassword
+          )
+        : await identityBrowser.updateUser({ password: newPassword });
 
       if (error) {
+        if (usesBetterAuth && (error.status === 400 || error.status === 401)) {
+          throw new Error(t.errorCurrentPassword);
+        }
         throw error;
       }
 
       addToast(t.toastPasswordChanged, 'success');
+      if (currentPasswordRef.current) currentPasswordRef.current.value = '';
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: unknown) {
@@ -626,6 +637,21 @@ function ProfileModal({ open, onClose }: ProfileModalProps) {
             >
               {passwordErrorMsg && <ErrorBanner message={passwordErrorMsg} />}
               <form onSubmit={handlePasswordChange} className="space-y-4">
+                {usesBetterAuth && (
+                  <div>
+                    <label className={labelClass}>
+                      {t.currentPasswordLabel}
+                    </label>
+                    <input
+                      type="password"
+                      autoComplete="current-password"
+                      className={inputClass}
+                      ref={currentPasswordRef}
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+                )}
                 <div>
                   <label className={labelClass}>{t.newPasswordLabel}</label>
                   <input

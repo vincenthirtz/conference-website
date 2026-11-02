@@ -48,6 +48,13 @@ export class WrongCurrentPasswordError extends Error {
 }
 
 async function reauthenticate(email: string, password: string) {
+  // Better Auth vérifie le mot de passe de la session sans en ouvrir une autre.
+  if (identityBrowser.usesBetterAuth()) {
+    if (!(await identityBrowser.betterAuth.verifyPassword(password))) {
+      throw new WrongCurrentPasswordError();
+    }
+    return;
+  }
   const { error } = await identityBrowser.signInWithPassword({
     email,
     password,
@@ -76,6 +83,18 @@ export const accountAuth = {
     currentPassword: string,
     newPassword: string
   ) => {
+    // Better Auth vérifie lui-même l'ancien mot de passe en changeant le nouveau.
+    if (identityBrowser.usesBetterAuth()) {
+      const { error } = await identityBrowser.betterAuth.changePassword(
+        currentPassword,
+        newPassword
+      );
+      if (error?.status === 400 || error?.status === 401) {
+        throw new WrongCurrentPasswordError();
+      }
+      if (error) throw error;
+      return;
+    }
     await reauthenticate(currentEmail, currentPassword);
     const { error } = await identityBrowser.updateUser({
       password: newPassword,

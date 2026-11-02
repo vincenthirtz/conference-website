@@ -16,8 +16,11 @@
 // PENDANT L'OMBRE (lot 5), /api/identity ne répond qu'avec le cookie de la page d'essai : sans
 // lui, tout répond « pas de session ».
 //
-// PAS ENCORE (lot 7b) : setSession, verifyOtp, updateUser, l'enrôlement et le retrait de la
-// double authentification répondent une erreur explicite.
+// CE QUI DIFFÈRE DE SUPABASE (lot 7b) : Better Auth demande le mot de passe actuel pour en changer,
+// et le mot de passe pour activer ou retirer la double authentification. Ces parcours ont leurs
+// propres fonctions (`betterAuthOnly`), que les écrans appellent quand l'interrupteur est sur
+// Better Auth. `updateUser` ne prend que l'adresse. `setSession` et `verifyOtp` restent des
+// mécanismes de Supabase : leurs liens n'existent pas ici.
 
 import { AuthError, type Session, type User } from '@supabase/supabase-js';
 import { emitIdentityEvent, hasIdentityListeners } from './identityEvents';
@@ -175,7 +178,7 @@ async function openedSession(): Promise<Session | null> {
   return session;
 }
 
-const NOT_YET = 'Pas encore disponible avec Better Auth (lot 7b).';
+const NOT_YET = 'Pas disponible avec Better Auth.';
 
 const notYet = async () => ({
   data: { session: null, user: null },
@@ -311,7 +314,38 @@ export const betterAuthBrowser = {
 
   setSession: notYet,
   verifyOtp: notYet,
-  updateUser: notYet,
+
+  /** L'adresse seulement : le mot de passe passe par `betterAuthOnly.changePassword`. */
+  async updateUser(attributes: {
+    email?: string;
+    password?: string;
+    data?: object;
+  }) {
+    if (attributes.password !== undefined || attributes.data !== undefined) {
+      return {
+        data: { user: null },
+        error: failure(
+          'Better Auth : le mot de passe change avec l’ancien, le profil par l’API.',
+          501
+        ),
+      };
+    }
+    if (!attributes.email) {
+      return { data: { user: null }, error: failure('Rien à changer', 400) };
+    }
+    const res = await call('/change-email', {
+      newEmail: attributes.email,
+      callbackURL: `${window.location.origin}/player/profile`,
+    });
+    if (!res.ok) {
+      return {
+        data: { user: null },
+        error: failure(res.data?.message ?? 'Change email failed', res.status),
+      };
+    }
+    const session = await currentSession(false);
+    return { data: { user: session?.user ?? null }, error: null };
+  },
 
   mfa: {
     async listFactors() {
@@ -363,5 +397,82 @@ export const betterAuthBrowser = {
 
     enroll: async () => ({ data: null, error: failure(NOT_YET, 501) }),
     unenroll: async () => ({ data: null, error: failure(NOT_YET, 501) }),
+  },
+};
+
+/** Les parcours propres à Better Auth : les écrans les appellent quand l'interrupteur le dit. */
+export const betterAuthOnly = {
+  /** Vérifie le mot de passe de la session, sans en ouvrir une autre. */
+  async verifyPassword(password: string): Promise<boolean> {
+    const res = await call('/verify-password', { password });
+    return res.ok;
+  },
+
+  async changePassword(currentPassword: string, newPassword: string) {
+    const res = await call('/change-password', {
+      currentPassword,
+      newPassword,
+    });
+    if (!res.ok) {
+      return {
+        error: failure(
+          res.data?.message ?? 'Change password failed',
+          res.status
+        ),
+      };
+    }
+    token = null;
+    emitIdentityEvent('USER_UPDATED', await currentSession(true));
+    return { error: null };
+  },
+
+  /** Envoie le lien ; il ramène sur `redirectTo?token=…`. */
+  async requestPasswordReset(email: string, redirectTo: string) {
+    const res = await call('/request-password-reset', { email, redirectTo });
+    return res.ok
+      ? { error: null }
+      : {
+          error: failure(res.data?.message ?? 'Reset unavailable', res.status),
+        };
+  },
+
+  async resetPassword(token: string, newPassword: string) {
+    const res = await call('/reset-password', { token, newPassword });
+    return res.ok
+      ? { error: null }
+      : { error: failure(res.data?.message ?? 'Reset failed', res.status) };
+  },
+
+  /** Démarre l'enrôlement : le code reste à valider (`mfa.challengeAndVerify`). */
+  async enableTwoFactor(password: string) {
+    const res = await call('/two-factor/enable', { password });
+    const uri = res.data?.totpURI;
+    if (!res.ok || typeof uri !== 'string') {
+      return {
+        data: null,
+        error: failure(res.data?.message ?? 'Enable failed', res.status),
+      };
+    }
+    return {
+      data: {
+        qrCode: typeof res.data?.qrCode === 'string' ? res.data.qrCode : '',
+        secret: new URL(uri).searchParams.get('secret') ?? '',
+        backupCodes: Array.isArray(res.data?.backupCodes)
+          ? (res.data.backupCodes as string[])
+          : [],
+      },
+      error: null,
+    };
+  },
+
+  async disableTwoFactor(password: string) {
+    const res = await call('/two-factor/disable', { password });
+    if (!res.ok) {
+      return {
+        error: failure(res.data?.message ?? 'Disable failed', res.status),
+      };
+    }
+    emitIdentityEvent('USER_UPDATED', await currentSession(true));
+    return { error: null };
   },
 };
