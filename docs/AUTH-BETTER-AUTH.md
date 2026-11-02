@@ -96,7 +96,8 @@ Les constats de ce document portent leur source :
 | **[supposé]** | Déduit, pas prouvé. Voir « À prouver avant de démarrer » |
 
 **Essayé en production depuis le 2026-11-01 :** Hyperdrive et Postgres depuis le Worker, à travers le relais du site.
-**Pas encore :** un vrai Discord, un e-mail réel, un vrai compte, le coût de calcul.
+**Depuis le 2026-11-02 :** un vrai compte, un vrai téléphone, un essai de bout en bout. **Pas encore :** un retour Discord réel, la réception
+des e-mails, le coût de calcul.
 
 ### Tableau de bord Auth de Supabase (P4)
 
@@ -468,9 +469,22 @@ Toute migration est écrite dans conference-api et appliquée par la propriétai
 
 ### Lot 5 : ce qui reste
 
-**À faire avec la propriétaire, sur un compte d'essai créé par le vrai parcours Supabase :** connexion avec un vrai hachage, enrôlement avec le
-vrai téléphone, jeton `aal2`, e-mails reçus, retour Discord réel. Il faut pour cela le secret client Discord (Supabase le détient, ne jamais
-le régénérer chez Discord : ça couperait la connexion actuelle) et le retour `/api/identity/callback/discord` ajouté à l'application Discord.
+**Prouvé en production le 2026-11-02, sur un compte d'essai créé par le vrai parcours Supabase** (son adresse est dans le secret
+`IDENTITY_SHADOW_EMAILS`, hors de ce dépôt) : connexion avec un vrai hachage `$2a$10$`, enrôlement et code avec le vrai téléphone de la
+propriétaire, session et jeton `aal2` directement après le code. Puis un essai de bout en bout automatique, 21 contrôles sur 21 : jeton ES256
+vérifié par `/jwks`, `aal1` puis `aal2` sans reconnexion, mot de passe seul sans session, clé au format SHA-1 6 chiffres 30 s, code calculé par
+une implémentation indépendante de la RFC 6238, changement de mot de passe et désactivation en `aal2`, envois acceptés par Brevo sans
+erreur, aller vers Discord avec le bon retour. Aucun autre compte n'a bougé : adresses et hachages identiques à Supabase, aucun jeton Discord gardé.
+
+**Deux défauts trouvés par ces essais, corrigés et figés par des tests qui échouent sans la correction :**
+
+- une session sans code (lien, Discord) pouvait désactiver la double authentification, et sans rien d'autre pour un compte sans mot de
+  passe (`allowPasswordless`). Tout ce qui change un compte protégé demande maintenant `aal2`, comme chez Supabase (API `6ddf19b`) ;
+- changer de mot de passe en déconnectant les autres appareils ouvrait une session neuve à `aal1`. Elle garde maintenant le niveau de celle
+  qu'elle remplace (API `c4e4e40`).
+
+**Reste à voir :** les e-mails dans la boîte (envoi accepté, réception à confirmer par la propriétaire) et un retour Discord réel dans un
+navigateur. Le secret client Discord vient de Supabase : ne jamais le régénérer chez Discord, ça couperait la connexion actuelle.
 
 **À trancher ou à écrire avant la bascule, connu et assumé pour l'instant :**
 
