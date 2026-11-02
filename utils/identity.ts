@@ -74,7 +74,13 @@ function userOfMirrorRow(row: MirrorRow): User {
         identity_id: id,
         user_id: row.id,
         provider: credential ? 'email' : account.provider_id,
-        identity_data: account.identity_data ?? {},
+        // Une liaison faite par Better Auth avant qu'il garde le profil : au moins
+        // l'identifiant, que lit /api/auth/link-discord.
+        identity_data:
+          account.identity_data ??
+          (credential
+            ? {}
+            : { sub: account.account_id, provider_id: account.account_id }),
         created_at: account.created_at,
         updated_at: account.updated_at,
       };
