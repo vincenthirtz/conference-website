@@ -28,6 +28,7 @@ import { logger } from '../logger';
 import { absoluteSiteUrl } from '../siteUrl';
 import { effectiveTenantRole, isAdminOrOwnerRole } from '../staffRoles';
 import { oneRelation, type Relation } from '../supabase/relation';
+import { dbErrorMessage, isMissingColumn } from '../db/errors';
 
 export const FORFEIT_PROPOSAL_STATUSES = [
   'pending',
@@ -85,10 +86,8 @@ type ProposalRow = {
  * message qui nomme nos colonnes.
  */
 export function isForfeitProposalSchemaMissing(err: unknown): boolean {
-  if (!err || typeof err !== 'object') return false;
-  const e = err as { code?: string; message?: string };
-  if (e.code === '42703' || e.code === 'PGRST204') return true;
-  return typeof e.message === 'string' && e.message.includes('forfeit_propos');
+  if (isMissingColumn(err)) return true;
+  return dbErrorMessage(err).includes('forfeit_propos');
 }
 
 function isStatus(v: unknown): v is ForfeitProposalStatus {

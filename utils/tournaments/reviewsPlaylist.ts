@@ -15,18 +15,19 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { isValidPlaylistId } from '@/utils/youtube/playlist';
+import {
+  dbErrorMessage,
+  isMissingColumn,
+  saysColumnMissing,
+} from '@/utils/db/errors';
 
 /** Lue à part : une colonne absente (environnement non migré) ne casse que cette lecture. */
 const COLUMN: string = 'reviews_playlist_id';
 
 export function isMissingColumnError(err: unknown): boolean {
-  if (!err || typeof err !== 'object') return false;
-  const e = err as { code?: string; message?: string };
-  if (e.code === '42703' || e.code === 'PGRST204') return true;
-  const msg = (e.message || '').toLowerCase();
+  if (isMissingColumn(err)) return true;
   return (
-    msg.includes(COLUMN) ||
-    (msg.includes('column') && msg.includes('does not exist'))
+    dbErrorMessage(err).toLowerCase().includes(COLUMN) || saysColumnMissing(err)
   );
 }
 

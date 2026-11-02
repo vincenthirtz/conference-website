@@ -42,6 +42,11 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { refreshBalance } from './grantVictoryRewards';
+import {
+  isCheckViolation,
+  isForeignKeyViolation,
+  isUniqueViolation,
+} from '@/utils/db/errors';
 
 /**
  * Origines de paquet SANS match, dans le vocabulaire de `tcg_packs` (qui
@@ -110,12 +115,6 @@ export type CoinsThenPacksResult =
       reason: 'rejected' | 'failed' | 'conflict';
       message: string;
     };
-
-/** Codes Postgres d'un refus définitif, qu'un réessai ne changera pas. */
-const DEFINITIVE_REJECTION_CODES = new Set(['23514', '23503']);
-
-/** Violation d'unicité hors de la clé d'arbitrage du `ON CONFLICT`. */
-const UNIQUE_VIOLATION_CODE = '23505';
 
 /**
  * Crédite des pièces, puis accorde les paquets aux seules lignes insérées.
@@ -200,7 +199,8 @@ export async function grantCoinsThenPacks(input: {
       const code = (coinError as { code?: string }).code ?? '';
       const message =
         (coinError as { message?: string }).message ?? String(coinError);
-      if (code === UNIQUE_VIOLATION_CODE) {
+      // Violation d'unicité hors de la clé d'arbitrage du `ON CONFLICT`.
+      if (isUniqueViolation(coinError)) {
         // Pas `error` : pour la seule source concernée, c'est l'état normal
         // d'une seconde tentative. L'appelant décide de ce que ça veut dire.
         logger.warn(
@@ -210,9 +210,11 @@ export async function grantCoinsThenPacks(input: {
         );
         return { ok: false, reason: 'conflict', message };
       }
-      const reason = DEFINITIVE_REJECTION_CODES.has(code)
-        ? 'rejected'
-        : 'failed';
+      // CHECK ou clé étrangère : refus définitif, un réessai n'y changera rien.
+      const reason =
+        isCheckViolation(coinError) || isForeignKeyViolation(coinError)
+          ? 'rejected'
+          : 'failed';
       logger.error(
         '[tcg/coins-then-packs] pièces « %s » non créditées (%s): %s',
         walletSourceKind,

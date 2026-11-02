@@ -7,22 +7,15 @@
 // Les lectures retentent donc SANS le filtre, la suppression retombe sur
 // l'effacement d'avant, et la corbeille compte 0 actualité.
 
-type MaybePgError = { code?: unknown; message?: unknown } | null | undefined;
+import { isMissingColumn } from '@/utils/db/errors';
 
 /**
- * Vrai si l'erreur dit qu'une colonne n'existe pas : `42703` (Postgres,
- * filtre / select) ou `PGRST204` (PostgREST, colonne absente du cache de
- * schéma lors d'un update). Restreint à `column` quand il est fourni, pour
- * ne pas avaler une autre colonne réellement fautive.
+ * Vrai si l'erreur dit qu'une colonne n'existe pas (Postgres en filtre /
+ * select, PostgREST pour un update). Restreint à `column` quand il est
+ * fourni, pour ne pas avaler une autre colonne réellement fautive.
  */
 export function isMissingColumnError(error: unknown, column?: string): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const e = error as MaybePgError;
-  const code = typeof e?.code === 'string' ? e.code : '';
-  if (code !== '42703' && code !== 'PGRST204') return false;
-  if (!column) return true;
-  const message = typeof e?.message === 'string' ? e.message : '';
-  return message.includes(column);
+  return isMissingColumn(error, column);
 }
 
 /**

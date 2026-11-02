@@ -24,6 +24,11 @@
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
 import { dbFunctions } from '@/utils/db/rpc';
+import {
+  isLockContention,
+  isMissingFunction,
+  isUniqueViolation,
+} from '@/utils/db/errors';
 
 /** PostgREST coupe à 1000 lignes (`max_rows`) : le repli lit par pages. */
 const LEDGER_PAGE_SIZE = 1000;
@@ -32,14 +37,7 @@ type PgError = { code?: string; message?: string } | null | undefined;
 
 /** La fonction SQL n'existe pas (migration non appliquée). */
 export function isMissingRpc(error: PgError): boolean {
-  const code = error?.code ?? '';
-  return code === 'PGRST202' || code === '42883';
-}
-
-/** Verrou non obtenu ou transaction sérialisée perdue : réessayer est sûr. */
-function isContention(error: PgError): boolean {
-  const code = error?.code ?? '';
-  return code === '55P03' || code === '40001' || code === '40P01';
+  return isMissingFunction(error);
 }
 
 function asInt(value: unknown): number | null {
@@ -198,7 +196,7 @@ export async function purchaseBoosterAtomic(input: {
         );
         return { kind: 'unavailable' };
       }
-      if (isContention(error)) return { kind: 'contended' };
+      if (isLockContention(error)) return { kind: 'contended' };
       logger.error('[tcg/wallet] achat impossible: %s', error.message);
       return { kind: 'error' };
     }
@@ -260,10 +258,8 @@ export async function adminDebitAtomic(input: {
     );
     if (error) {
       if (isMissingRpc(error)) return { kind: 'unavailable' };
-      if ((error as { code?: string }).code === '23505') {
-        return { kind: 'duplicate' };
-      }
-      if (isContention(error)) return { kind: 'contended' };
+      if (isUniqueViolation(error)) return { kind: 'duplicate' };
+      if (isLockContention(error)) return { kind: 'contended' };
       return { kind: 'error', message: error.message ?? '?' };
     }
     const row = (data ?? null) as Record<string, unknown> | null;

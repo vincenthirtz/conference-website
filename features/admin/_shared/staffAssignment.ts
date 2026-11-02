@@ -23,6 +23,11 @@ import {
   NotFoundError,
   ServiceUnavailableError,
 } from '@/utils/admin/errors';
+import {
+  dbErrorMessage,
+  isUndefinedColumn,
+  saysMissing,
+} from '@/utils/db/errors';
 
 export const ASSIGNMENT_ACTIONS = ['claim', 'release'] as const;
 export type AssignmentAction = (typeof ASSIGNMENT_ACTIONS)[number];
@@ -47,19 +52,11 @@ export const ASSIGNMENT_COLUMNS = 'assigned_staff_id, assigned_at';
 export const ASSIGNMENT_MIGRATION_PENDING =
   'L’assignation n’est pas encore disponible : la migration add_staff_assignment_to_demandes_and_support_tickets n’est pas appliquée.';
 
-const PG_UNDEFINED_COLUMN = '42703';
-
 /** Colonne inconnue : migration pas encore appliquée. */
 export function isMissingColumnError(err: unknown): boolean {
-  if (!err || typeof err !== 'object') return false;
-  const e = err as { code?: string; message?: string };
-  if (e.code === PG_UNDEFINED_COLUMN) return true;
+  if (isUndefinedColumn(err)) return true;
   // PostgREST remonte parfois l'erreur en message (cache de schéma).
-  return (
-    typeof e.message === 'string' &&
-    /assigned_(staff_id|at)/.test(e.message) &&
-    /(does not exist|could not find|schema cache)/i.test(e.message)
-  );
+  return /assigned_(staff_id|at)/.test(dbErrorMessage(err)) && saysMissing(err);
 }
 
 export function parseAssignmentFilter(raw: unknown): AssignmentFilter | null {

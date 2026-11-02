@@ -17,6 +17,7 @@
 
 import { supabaseAdmin } from '@/utils/supabase';
 import { logger } from '@/utils/logger';
+import { isMissingColumn } from '@/utils/db/errors';
 
 export type TenantKind = 'organizer' | 'developer';
 
@@ -64,9 +65,8 @@ export async function getTenantKind(tenantId: string): Promise<TenantKind> {
     .maybeSingle();
 
   if (error) {
-    const code = (error as { code?: string }).code;
     // Colonne absente (migration non appliquée) → fail-safe silencieux.
-    if (code !== '42703' && code !== 'PGRST204') {
+    if (!isMissingColumn(error)) {
       logger.error('[tenantKind] getTenantKind error', error);
     }
     // On ne cache pas les erreurs (fail-open non figé).

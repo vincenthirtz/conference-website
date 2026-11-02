@@ -35,6 +35,7 @@ import { runInBackground } from './background';
 export { BOT_EVENT_NAMES } from './botEventNames';
 export type { BotEventName } from './botEventNames';
 import type { BotEventName } from './botEventNames';
+import { isUniqueViolation } from './db/errors';
 
 export type BotEventPayload = Record<string, unknown>;
 
@@ -164,8 +165,6 @@ type OutboxWrite =
 
 const OUTBOX_INSERT_ATTEMPTS = 2;
 const OUTBOX_RETRY_DELAY_MS = 250;
-/** Violation de contrainte unique (Postgres). */
-const PG_UNIQUE_VIOLATION = '23505';
 
 async function persistOutbox(params: {
   eventId: string;
@@ -196,7 +195,7 @@ async function persistOutbox(params: {
       return { ok: true, id: (data?.id as number | undefined) ?? null };
     }
 
-    if ((error as { code?: string }).code === PG_UNIQUE_VIOLATION) {
+    if (isUniqueViolation(error)) {
       // Dès la PREMIÈRE tentative : la ligne existait avant cet appel. Avec un
       // id aléatoire c'est impossible ; avec un id dérivé d'une
       // `idempotencyKey`, c'est un rappel du même événement → doublon.

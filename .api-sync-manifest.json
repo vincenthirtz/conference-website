@@ -1,6 +1,6 @@
 {
-  "apiCommit": "692607cb3c8510d601556dcc879162ccef7c914a",
-  "syncedAt": "2026-11-02T17:41:07.137Z",
+  "apiCommit": "7bc369ac1513b2faa6fb6ebd2f309750796c9cbc",
+  "syncedAt": "2026-11-02T19:10:38.135Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -151,6 +151,7 @@
     "utils/currentTournament.ts",
     "utils/customGamePresets.ts",
     "utils/dashboard/buildTournamentDashboard.ts",
+    "utils/db/errors.ts",
     "utils/db/rpc.ts",
     "utils/discord.ts",
     "utils/discord/channels.ts",
