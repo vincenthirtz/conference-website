@@ -1,6 +1,6 @@
 {
   "apiCommit": "aaa013431053d4d88e9d2f12c3da5d101ed1af51",
-  "syncedAt": "2026-11-02T15:39:17.351Z",
+  "syncedAt": "2026-11-02T15:51:34.622Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -37,6 +37,7 @@
     "features/admin/demandes/model.ts",
     "features/admin/diffusion/schemas.ts",
     "features/admin/free-players/schemas.ts",
+    "features/admin/identity/model.ts",
     "features/admin/library/accessModel.ts",
     "features/admin/library/accessSchemas.ts",
     "features/admin/library/chatModel.ts",

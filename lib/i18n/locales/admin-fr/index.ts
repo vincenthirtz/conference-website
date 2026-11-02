@@ -89,6 +89,7 @@ import nsAdminAdherentsNew from './adminAdherentsNew';
 import nsAdminAdherentDetail from './adminAdherentDetail';
 import nsAdminTenantsList from './adminTenantsList';
 import nsAdminTenantsUsage from './adminTenantsUsage';
+import nsAdminIdentity from './adminIdentity';
 import nsAdminTenantPlanCheckout from './adminTenantPlanCheckout';
 import nsAdminTenantsNew from './adminTenantsNew';
 import nsAdminBilling from './adminBilling';
@@ -288,6 +289,7 @@ export const frDict = {
   adminAdherentDetail: nsAdminAdherentDetail.fr,
   adminTenantsList: nsAdminTenantsList.fr,
   adminTenantsUsage: nsAdminTenantsUsage.fr,
+  adminIdentity: nsAdminIdentity.fr,
   adminTenantPlanCheckout: nsAdminTenantPlanCheckout.fr,
   adminTenantsNew: nsAdminTenantsNew.fr,
   adminBilling: nsAdminBilling.fr,

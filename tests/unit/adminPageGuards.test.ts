@@ -64,6 +64,10 @@ const ROLE_GATED_ON_PURPOSE = new Set([
   // Planning du staff : chacun consulte qui est là quel soir. L'écriture
   // (ajout, retrait, import) est gardée par `manage_staff` côté API.
   'staff-planning.tsx',
+  // Comptes et connexion (Better Auth) : OWNER GLOBAL (`staff.role`, portée
+  // plateforme), pas une permission — `manage_tenant` peut s'accorder à
+  // l'unité, et les comptes sont ceux de toute la plateforme.
+  'connexion.tsx',
 ]);
 
 describe('gardes des pages admin', () => {

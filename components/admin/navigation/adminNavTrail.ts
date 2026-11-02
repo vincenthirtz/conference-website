@@ -214,6 +214,10 @@ export const ADMIN_NAV_TRAILS: Record<string, NavCrumb[]> = {
     { label: 'Configuration', href: null },
     { label: 'Onboarding', href: '/admin/onboarding' },
   ],
+  '/admin/connexion': [
+    { label: 'Configuration', href: null },
+    { label: 'Comptes et connexion', href: '/admin/connexion' },
+  ],
   '/admin/discord/team-channels': [
     { label: 'Configuration', href: null },
     { label: 'Salons Discord', href: '/admin/discord/team-channels' },

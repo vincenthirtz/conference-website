@@ -337,6 +337,7 @@ const BY_TITLE: Record<string, AdminMenuIconKey> = {
   Réseau: 'network',
   Statistiques: 'chart',
   Onboarding: 'rocket',
+  'Comptes et connexion': 'shield',
   'Salons Discord': 'hash',
   Facturation: 'creditCard',
   Tâches: 'kanban',

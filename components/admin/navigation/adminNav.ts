@@ -606,6 +606,14 @@ export const ADMIN_NAV: AdminNavNode[] = [
         permission: 'manage_tenant',
         minRole: 'owner',
       },
+      {
+        // Comptes et connexion (Better Auth) : réglages, chiffres, gestes sur un
+        // compte, déconnexion générale. OWNER GLOBAL seul, comme la page et l'API.
+        id: 'identity',
+        topBarLabel: 'Comptes et connexion',
+        href: '/admin/connexion',
+        minRole: 'owner',
+      },
       // Salons Discord des équipes. Cette page EXISTE parce que le cron qui
       // gérait ces salons tout seul a été supprimé : il en a détruit, puis en a
       // recréé dont personne ne voulait. La gestion est redevenue un geste
