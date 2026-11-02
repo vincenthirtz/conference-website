@@ -185,6 +185,62 @@ type BetterAuthReader = {
   ): Promise<boolean>;
   adminDeleteUser?(id: string): Promise<boolean>;
   sendVerificationEmail?(email: string, callbackURL?: string): Promise<boolean>;
+  authSettings?(): Promise<IdentityAuthSettings>;
+  saveAuthSettings?(
+    patch: IdentityAuthSettingsPatch
+  ): Promise<IdentityAuthSettings | 'missing' | null>;
+  ownerOverview?(): Promise<IdentityOwnerOverview | null>;
+  findAccounts?(query: string): Promise<IdentityOwnerAccount[] | null>;
+  revokeSessions?(userId: string): Promise<number | null>;
+  removeTwoFactor?(
+    userId: string
+  ): Promise<{ email: string; hadTwoFactor: boolean } | 'unknown' | null>;
+  revokeAllSessions?(): Promise<number | null>;
+};
+
+/** Les réglages des comptes changés par l'owner (worker/identitySettings.ts côté API). */
+export type IdentityAuthSettings = {
+  signupOpen: boolean;
+  discordSignIn: boolean;
+  magicLink: boolean;
+  sessionDays: number;
+  updatedAt: string | null;
+};
+
+export type IdentityAuthSettingsPatch = Partial<
+  Omit<IdentityAuthSettings, 'updatedAt'>
+>;
+
+/** Les chiffres de la page owner (worker/identityOwner.ts côté API). */
+export type IdentityOwnerOverview = {
+  accounts: number;
+  unverified: number;
+  banned: number;
+  twoFactor: number;
+  withPassword: number;
+  withDiscord: number;
+  discordOnly: number;
+  activeSessions: number;
+  signedInPeople: number;
+  aal2Sessions: number;
+  sessions24h: number;
+  sessions7d: number;
+  signedIn7d: number;
+  throttled: number;
+};
+
+export type IdentityOwnerAccount = {
+  id: string;
+  email: string;
+  displayName: string | null;
+  role: string | null;
+  emailVerified: boolean;
+  twoFactorEnabled: boolean;
+  activeSessions: number;
+  providers: string[];
+  lastSignInAt: string | null;
+  bannedUntil: string | null;
+  createdAt: string;
 };
 
 function betterAuthReader(): BetterAuthReader | null {
@@ -356,6 +412,18 @@ export async function signUpWithPassword(
   if (!reader?.adminCreateUser) {
     return { data: { user: null, session: null }, error: unavailableError() };
   }
+  // Fermées par l'owner : la même réponse que Supabase, inscriptions coupées.
+  const settings = await reader.authSettings?.();
+  if (settings && !settings.signupOpen) {
+    return {
+      data: { user: null, session: null },
+      error: new AuthApiError(
+        'Signups not allowed for this instance',
+        422,
+        'signup_disabled'
+      ),
+    };
+  }
   const metadata = credentials.options?.data ?? {};
   const created = await reader.adminCreateUser({
     email: credentials.email,
@@ -394,6 +462,63 @@ export async function signUpWithPassword(
 export function betterAuthIsSource(): boolean {
   return process.env.IDENTITY_SOURCE === 'better-auth';
 }
+
+/**
+ * La page owner « Comptes et connexion » : Better Auth seulement (IDENTITY_SOURCE). `null` quand
+ * Supabase est encore la source ou que la base de Better Auth ne répond pas.
+ */
+export const identityOwner = {
+  available(): boolean {
+    return betterAuthIsSource() && Boolean(betterAuthReader()?.ownerOverview);
+  },
+  async settings(): Promise<IdentityAuthSettings | null> {
+    if (!betterAuthIsSource()) return null;
+    return (await betterAuthReader()?.authSettings?.()) ?? null;
+  },
+  async saveSettings(
+    patch: IdentityAuthSettingsPatch
+  ): Promise<IdentityAuthSettings | 'missing' | null> {
+    if (!betterAuthIsSource()) return null;
+    return (await betterAuthReader()?.saveAuthSettings?.(patch)) ?? null;
+  },
+  async overview(): Promise<IdentityOwnerOverview | null> {
+    if (!betterAuthIsSource()) return null;
+    return (await betterAuthReader()?.ownerOverview?.()) ?? null;
+  },
+  async findAccounts(query: string): Promise<IdentityOwnerAccount[] | null> {
+    if (!betterAuthIsSource()) return null;
+    return (await betterAuthReader()?.findAccounts?.(query)) ?? null;
+  },
+  async revokeSessions(userId: string): Promise<number | null> {
+    if (!betterAuthIsSource()) return null;
+    return (await betterAuthReader()?.revokeSessions?.(userId)) ?? null;
+  },
+  async removeTwoFactor(
+    userId: string
+  ): Promise<{ email: string; hadTwoFactor: boolean } | 'unknown' | null> {
+    if (!betterAuthIsSource()) return null;
+    return (await betterAuthReader()?.removeTwoFactor?.(userId)) ?? null;
+  },
+  async resendVerification(email: string): Promise<boolean> {
+    if (!betterAuthIsSource()) return false;
+    return (await betterAuthReader()?.sendVerificationEmail?.(email)) ?? false;
+  },
+  async revokeAllSessions(): Promise<number | null> {
+    if (!betterAuthIsSource()) return null;
+    return (await betterAuthReader()?.revokeAllSessions?.()) ?? null;
+  },
+  /** Parmi ces comptes, ceux qui ont la double authentification (staff à relancer). */
+  async withTwoFactor(userIds: string[]): Promise<Set<string> | null> {
+    if (userIds.length === 0) return new Set();
+    const { data, error } = await supabaseAdmin
+      .from('auth_user')
+      .select('id')
+      .in('id', userIds)
+      .eq('two_factor_enabled', true);
+    if (error) return null;
+    return new Set((data ?? []).map((row) => row.id));
+  },
+};
 
 type AdminAttributes = {
   email?: string;

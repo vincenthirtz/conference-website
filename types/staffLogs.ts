@@ -151,6 +151,12 @@ export type StaffLogAction =
   | 'suspend_user'
   | 'unsuspend_user'
   | 'toggle_pole_admin'
+  // Comptes et connexion (page owner, Better Auth)
+  | 'auth_settings_update'
+  | 'auth_revoke_sessions'
+  | 'auth_remove_two_factor'
+  | 'auth_resend_verification'
+  | 'auth_revoke_all_sessions'
   // --- Tenants / provisioning ---
   | 'create_tenant'
   | 'update_tenant'

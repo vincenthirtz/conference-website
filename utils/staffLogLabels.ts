@@ -141,6 +141,12 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   suspend_user: 'Suspension de compte',
   unsuspend_user: 'Levée de suspension',
   toggle_pole_admin: 'Bascule admin de pôle',
+  // Comptes et connexion
+  auth_settings_update: 'Réglages de connexion modifiés',
+  auth_revoke_sessions: "Sessions d'un compte fermées",
+  auth_remove_two_factor: "Double authentification d'un compte retirée",
+  auth_resend_verification: 'E-mail de vérification renvoyé',
+  auth_revoke_all_sessions: 'Tout le monde déconnecté',
   // Tenants / provisioning
   create_tenant: 'Création tenant',
   update_tenant: 'Modification tenant',
