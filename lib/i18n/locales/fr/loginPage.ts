@@ -27,6 +27,12 @@ export default ns('loginPage', {
   backToPublic: '← Retour au site public',
   errorInvalidCredentials: 'Email ou mot de passe incorrect.',
   errorNoSession: 'Impossible de récupérer la session.',
+  twoFactorLabel: 'Code de double authentification',
+  twoFactorHint:
+    "Ouvre ton application d'authentification et tape le code à 6 chiffres.",
+  twoFactorSubmit: 'Valider le code',
+  errorTwoFactorCode:
+    'Code incorrect ou expiré. Réessaie avec le code suivant.',
   errorUserNotFound: 'Utilisateur non trouvé après la connexion.',
   errorGeneric:
     'Une erreur est survenue pendant la connexion. Réessaie dans un instant.',

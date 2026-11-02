@@ -27,6 +27,11 @@ export default {
   backToPublic: '← Back to public site',
   errorInvalidCredentials: 'Incorrect email or password.',
   errorNoSession: 'Unable to retrieve the session.',
+  twoFactorLabel: 'Two-factor code',
+  twoFactorHint: 'Open your authenticator app and enter the 6-digit code.',
+  twoFactorSubmit: 'Verify code',
+  errorTwoFactorCode:
+    'Incorrect or expired code. Try again with the next code.',
   errorUserNotFound: 'User not found after signing in.',
   errorGeneric:
     'Something went wrong while signing in. Please try again in a moment.',

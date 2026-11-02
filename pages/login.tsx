@@ -56,6 +56,9 @@ const LoginPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Better Auth (lot 7) : le code d'un compte protégé se donne AVANT la session.
+  const [needCode, setNeedCode] = useState(false);
+  const [code, setCode] = useState('');
 
   // Connexion Battle.net : disponible seulement si l'intégration Blizzard est
   // configurée (sinon le bouton mènerait à un 503). Endpoint public dédié —
@@ -124,11 +127,18 @@ const LoginPage = () => {
     setIsSubmitting(true);
 
     try {
-      const { data, error: authError } =
-        await identityBrowser.signInWithPassword({ email, password });
+      const result = needCode
+        ? await identityBrowser.verifyTwoFactorCode(code)
+        : await identityBrowser.signInWithPassword({ email, password });
+      const { data, error: authError } = result;
 
       if (authError) {
-        setError(t.errorInvalidCredentials);
+        setError(needCode ? t.errorTwoFactorCode : t.errorInvalidCredentials);
+        return;
+      }
+
+      if ((result as { twoFactorRequired?: boolean }).twoFactorRequired) {
+        setNeedCode(true);
         return;
       }
 
@@ -365,6 +375,34 @@ const LoginPage = () => {
                     </Link>
                   </div>
 
+                  {needCode && (
+                    <div>
+                      <label
+                        htmlFor="two-factor-code"
+                        className="block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2"
+                      >
+                        {t.twoFactorLabel}
+                      </label>
+                      <input
+                        id="two-factor-code"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        pattern="[0-9]{6}"
+                        maxLength={6}
+                        required
+                        value={code}
+                        onChange={(e) =>
+                          setCode(e.target.value.replace(/D/g, ''))
+                        }
+                        className="w-full rounded-xl border border-white/15 bg-black/60 px-3 py-2 text-sm tracking-[0.3em] text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80 focus:border-purple-400/80 transition"
+                        placeholder="000000"
+                      />
+                      <p className="mt-2 text-xs text-gray-400">
+                        {t.twoFactorHint}
+                      </p>
+                    </div>
+                  )}
+
                   {error && (
                     <div
                       role="alert"
@@ -381,7 +419,11 @@ const LoginPage = () => {
                       className="w-full justify-center px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 border-0 shadow-lg shadow-purple-900/40"
                       disabled={isSubmitting || isCheckingSession}
                     >
-                      {isSubmitting ? t.submitting : t.submit}
+                      {isSubmitting
+                        ? t.submitting
+                        : needCode
+                          ? t.twoFactorSubmit
+                          : t.submit}
                     </Button>
                     <button
                       type="button"
