@@ -28,6 +28,25 @@ on:
         description: 'Répéter ensuite la copie vers un D1 jetable (lot 5 de docs/D1-MIGRATION.md) ; toujours faite le 5 du mois'
         type: boolean
         default: false
+      d1_photo:
+        description: 'Copier ensuite cette sauvegarde dans la VRAIE base D1 owwomenscup-db (lot 5b, photo de la nuit)'
+        type: boolean
+        default: false
+  # La photo de la nuit (db-d1-photo.yml) appelle ce workflow.
+  workflow_call:
+    inputs:
+      day:
+        type: string
+        required: false
+      auth_trial:
+        type: boolean
+        default: false
+      d1_copy:
+        type: boolean
+        default: false
+      d1_photo:
+        type: boolean
+        default: false
 
 concurrency:
   group: db-restore-test
@@ -85,6 +104,10 @@ jobs:
           mkdir -p dump
           tar -xzf backup.tar.gz -C dump
           rm backup.tar.gz
+          # L'heure de la photo (lot 5b de docs/D1-MIGRATION.md) : celle de la structure,
+          # écrite juste avant les données (tar garde l'heure des fichiers).
+          echo "PHOTO_DAY=$d" >> "$GITHUB_ENV"
+          echo "PHOTO_AT=$(date -u -d "@$(stat -c %Y dump/schema.sql)" +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
           # Tables VIDES retirées de l'import : elles n'apportent rien, et
           # certaines tables internes de Supabase (« vector buckets »,
           # partitions de realtime.messages) n'existent pas ou sont interdites
@@ -159,22 +182,32 @@ jobs:
       # Cloudflare, la clé est retirée de l'étape). Chaque table est relue et comparée valeur
       # par valeur ; le script n'affiche que des nombres et des noms de tables ou de colonnes.
       - uses: actions/checkout@v4
-        if: ${{ inputs.d1_copy || github.event_name == 'schedule' }}
+        if: ${{ inputs.d1_copy || inputs.d1_photo || github.event_name == 'schedule' }}
         with:
           repository: vincenthirtz/conference-api
           token: ${{ secrets.API_REPO_DISPATCH_TOKEN }}
           path: api-d1
 
+      - name: Dépendances de l'API
+        if: ${{ inputs.d1_copy || inputs.d1_photo || github.event_name == 'schedule' }}
+        working-directory: api-d1
+        run: npm ci --no-audit --no-fund > /dev/null
+
       - name: Copie vers D1 (répétition)
-        if: ${{ inputs.d1_copy || github.event_name == 'schedule' }}
+        if: ${{ inputs.d1_copy || (github.event_name == 'schedule' && !inputs.d1_photo) }}
         working-directory: api-d1
         env:
           CLOUDFLARE_API_TOKEN: ''
           CLOUDFLARE_ACCOUNT_ID: ''
-        run: |
-          set -euo pipefail
-          npm ci --no-audit --no-fund > /dev/null
-          npm run -s db:d1:copy -- --psql "$LOCAL_DB"
+        run: npm run -s db:d1:copy -- --psql "$LOCAL_DB"
+
+      # Lot 5b (accord de la propriétaire du 2026-11-03) : la photo de la nuit, dans la VRAIE
+      # base D1 de la lecture dans l'ombre. Vidée, rechargée sans les tables de secrets,
+      # vérifiée ; l'heure de la photo n'est posée que si la copie est identique.
+      - name: Photo de la nuit dans D1
+        if: ${{ inputs.d1_photo }}
+        working-directory: api-d1
+        run: npm run -s db:d1:copy -- --psql "$LOCAL_DB" --remote --photo-at "$PHOTO_AT" --photo-day "$PHOTO_DAY"
 
       - name: Nettoyage
         if: always()
