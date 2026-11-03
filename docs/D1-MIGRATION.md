@@ -342,9 +342,9 @@ charges est le contrat figé au lot 1 (`database/db-contract.json`).
 |---|---|---|
 | 3a | Valeurs (dates, vrai/faux, JSON…) et erreurs SQLite redites en codes Postgres | fait (API `e0fb54e`) |
 | 3b | Filtres : méthodes, mini-langage `or`/`not`/`filter`, chemins JSON, contenance | fait (API `18cf144`) |
-| 3c | Lectures : colonnes, tables liées, tri, pages, `single`, comptages | à faire |
-| 3d | Écritures : insérer, modifier, supprimer, `upsert` | à faire |
-| 3e | Le client complet ; garde-fou : chaque lecture réelle du code se traduit | à faire |
+| 3c | Lectures : colonnes, tables liées, tri, pages, `single`, comptages | fait (API `a01f1ef`) |
+| 3d | Écritures : insérer, modifier, supprimer, `upsert` | fait (API `cc306ad`) |
+| 3e | Le client complet ; garde-fou : chaque lecture réelle du code se traduit | fait (API `0a1e6d7`) |
 | 3f | Les lectures propres du site | à faire |
 | 3g | Colonnes sensibles (accord du 2026-11-03, voir plus bas) | à faire |
 
@@ -360,6 +360,23 @@ charges est le contrat figé au lot 1 (`database/db-contract.json`).
 - **Aucune lecture ne dépend des règles d'accès.** L'API comme les pages du site lisent avec l'accès de service, qui
   passe outre les règles. Les 100 règles de Supabase ne gardent qu'une porte : la clé publique utilisée directement
   contre Supabase. D1 n'a pas d'adresse publique, cette porte disparaît.
+- **Les tables liées se résolvent comme dans PostgREST**, par les clés étrangères de la carte : « plusieurs vers un »,
+  « un vers un », « un vers plusieurs », « plusieurs vers plusieurs », précision `!lien`, `!inner`. Une ambiguïté est
+  refusée avec le même code (`PGRST201`).
+- **Les écritures rendent leurs tables liées d'un seul coup** : SQLite accepte les sous-requêtes dans `RETURNING`.
+  Toutes les lignes d'une insertion partent en un seul paramètre JSON, sous la limite de 100 paramètres de D1.
+- **D1 compte trop après une cascade.** Après une suppression en cascade, il compte aussi les lignes effacées par
+  ricochet. La façade compte les lignes rendues, comme PostgREST.
+- **Le garde-fou des lectures** : les 2 063 lectures du code se traduisent sur le vrai schéma, à part deux vues
+  prévues au lot 4. Le contrat du lot 1 (méthodes, opérateurs, options) est tenu.
+- **Trois pannes de production trouvées et corrigées** (API `1ef0b30`, sur ton accord). Trois lectures embarquaient
+  une table sans lien, que PostgREST refuse (`PGRST200`), et le code avalait l'erreur. Conséquences :
+  - les classements FFA restaient vides ;
+  - la page d'une phase FFA répondait 500 ;
+  - le tableau de bord comptait toutes les équipes comme incomplètes avant le verrouillage des effectifs.
+
+  La production n'avait encore ni lobby FFA ni verrouillage à venir : pannes latentes, aucun utilisateur touché. Le
+  faux Supabase des tests ne vérifie pas les liens, d'où le silence jusqu'ici.
 - **3g, ajouté sur ton accord.** Les 21 colonnes que la clé publique ne voit pas aujourd'hui (7 tables : jetons de
   check-in, BattleTag, codes de lobby…) entrent dans la carte de D1. Un garde-fou interdit aux pages et routes
   publiques de les lire ou de demander « toutes les colonnes » de ces tables. La façade aura un mode « lecture
