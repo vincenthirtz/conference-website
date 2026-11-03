@@ -753,6 +753,58 @@ production, ni dans Supabase : ces fonctions y restent jusqu'à sa suppression (
     le faire lire D1 ;
   - le workflow `realtime.yml` du site (`realtime_set_config`) deviendra inutile.
 
+### Lot 5 : copie et répétition, lancé le 2026-11-03
+
+Feu vert : « go lot 5 ». Un sous-lot à la fois.
+
+| Sous-lot | Contenu | État |
+|---|---|---|
+| 5a | La copie, répétée sur la sauvegarde de la nuit, vers un D1 **jetable** | **fait** le 2026-11-03 (API `4d7d26e`, site `16d97588b`) |
+| 5b | La lecture dans l'ombre : les lectures de l'API refaites sur D1 et comparées | **attend deux accords** (voir plus bas) |
+| 5c | La répétition chronométrée de la bascule **et du retour arrière**, sur une copie | à faire |
+
+**5a, fait le 2026-11-03.** Rien n'est écrit sur Cloudflare, aucune donnée ne passe par un ordinateur.
+
+- **La méthode.** Sur la machine jetable de GitHub, après la restauration de la sauvegarde (workflow
+  `db-restore-test`) :
+  1. chaque table est lue en JSON, la forme que l'API reçoit de Supabase ;
+  2. chaque valeur est convertie par les règles mêmes de la façade (dates, vrai/faux, JSON…) ;
+  3. tout est chargé dans un D1 jetable, sans les déclencheurs : ce que Postgres a calculé est déjà dans les
+     lignes. Les déclencheurs sont posés après ;
+  4. chaque table est relue et comparée **valeur par valeur**.
+
+  Le rapport ne contient que des nombres et des noms de tables ou de colonnes : les journaux de GitHub sont publics.
+- **L'ordre de chargement** suit les liens entre tables : une table après celles qu'elle désigne. Les scrims et
+  leurs plannings se désignent mutuellement : ils sont chargés ensemble, liens vérifiés à la fin.
+- **Premier résultat, sur la sauvegarde du 2026-11-03** : **186 tables, 14 631 lignes, copie identique**. Aucun
+  écart, aucune clé orpheline, aucune table inconnue. Les vraies données passent donc tous les contrôles de D1
+  (types, règles, liens). **Durée totale : environ 13 secondes** (lecture 9 s, chargement 1,7 s, vérification
+  1,3 s) : la copie finale du soir de bascule tiendra largement dans le gel de quelques minutes prévu.
+- **Répétée automatiquement** le 5 de chaque mois avec le test de restauration, et à la demande (option `d1_copy`).
+- **Les tests** : le schéma de production dans PGlite, les 14 genres de colonnes, la boucle des scrims, des matchs
+  qui se désignent entre eux, des textes piégeux (apostrophes, guillemets, antislash, retours à la ligne, émojis).
+  Une valeur changée, une valeur refusée, une colonne inconnue se voient, sans qu'aucune valeur n'apparaisse dans le
+  rapport. Contre-épreuve : 6 détails cassés exprès, 6 détectés.
+
+**5b, la lecture dans l'ombre : la proposition.** Elle seule montre D1 sous le vrai trafic, avec ses vraies
+lenteurs, pendant deux semaines (avec si possible un soir de match). Trois façons de faire :
+
+| Façon | Principe | Pour | Contre |
+|---|---|---|---|
+| **A. Photo de la nuit** (recommandée) | Chaque nuit, la sauvegarde est copiée dans la vraie base D1. Le jour, l'API refait une partie de ses lectures sur D1, **après** avoir répondu, et compare | Simple ; rien ne change pour les joueuses ; mesure la vraie latence de D1 | Une donnée modifiée dans la journée crée un faux écart : on le reconnaît (la ligne a changé depuis la photo) et on le met à part |
+| B. Double écriture | Chaque écriture refaite aussi dans D1, en continu | Comparaison exacte ; fait aussi tourner les fonctions réécrites | Lourde, dans le chemin de chaque écriture ; identifiants tirés différemment des deux côtés |
+| C. Rejeu en CI | Rejouer dans la CI des lectures enregistrées en production | Rien en production | Il faudrait enregistrer les paramètres des lectures, donc des données personnelles |
+
+**La façon A demande deux accords explicites**, parce qu'elle touche la production :
+
+1. **Copier chaque nuit les données de production dans la base D1 `owwomenscup-db`.** C'est la base vide créée au
+   lot 2, en juridiction européenne, sur le compte de l'association. Les données y vivraient en double, comme dans
+   les sauvegardes R2. La copie partirait de la CI. Il faudra peut-être une clé Cloudflare avec le droit d'écrire
+   dans D1 (à vérifier sur la clé actuelle).
+2. **Brancher cette base sur l'API, en lecture seule, pour la comparaison.** C'est un changement de configuration
+   du Worker de l'API. Aucune écriture, aucune réponse aux joueuses ne passerait par D1. Une panne de D1 ne
+   ferait que manquer une comparaison.
+
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
 Quitter Supabase fait perdre PostgREST, donc supabase-js, **quelle que soit la base d'arrivée** **[doc]**. La façade du
@@ -792,5 +844,6 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
    un (4f coupé en deux sur ton accord : TCG, puis Women's Library), ainsi que la correction de la façade (`ilike`
    sur une table embarquée). Les 36 fonctions que l'API appelle sont réécrites et comparées à Postgres, les 15
    autres tranchées, les déclencheurs repris.
-8. **Lot 5, copie et répétition** : attend ton feu vert. La lecture dans l'ombre demandera de brancher la base D1
-   sur l'API : un changement sur Cloudflare, fait seulement sur ta phrase explicite.
+8. **Lot 5, copie et répétition** : lancé le 2026-11-03 (« go lot 5 »). 5a fait le même jour : copie identique sur
+   la sauvegarde (186 tables, 14 631 lignes, environ 13 s). **5b attend deux accords** (section « Lot 5 ») :
+   copier chaque nuit les données dans la base D1, puis la brancher sur l'API en lecture seule.
