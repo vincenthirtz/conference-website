@@ -333,7 +333,7 @@ Dix requêtes envoyées d'un seul coup (`batch`) coûtent autant qu'une seule : 
   Francfort (`placement.region: "aws:eu-central-1"`).
 - **Écarté** : placer l'API actuelle près de l'Irlande pour accélérer Supabase. Supabase va disparaître.
 
-### Lot 3 : la façade, en cours (lancé le 2026-11-03)
+### Lot 3 : la façade, faite le 2026-11-03
 
 La façade vit dans conference-api `utils/db/d1/`. Elle ne sera branchée nulle part avant la bascule. Son cahier des
 charges est le contrat figé au lot 1 (`database/db-contract.json`).
@@ -345,8 +345,18 @@ charges est le contrat figé au lot 1 (`database/db-contract.json`).
 | 3c | Lectures : colonnes, tables liées, tri, pages, `single`, comptages | fait (API `a01f1ef`) |
 | 3d | Écritures : insérer, modifier, supprimer, `upsert` | fait (API `cc306ad`) |
 | 3e | Le client complet ; garde-fou : chaque lecture réelle du code se traduit | fait (API `0a1e6d7`) |
-| 3f | Les lectures propres du site | à faire |
-| 3g | Colonnes sensibles (accord du 2026-11-03, voir plus bas) | à faire |
+| 3f | Les lectures propres du site | fait (API `04dfea8`) |
+| 3g | Colonnes sensibles (accord du 2026-11-03, voir plus bas) | fait (API `26f44be`) |
+
+Rien n'est branché : ni l'API ni le site n'utilisent la façade avant la bascule.
+
+**Écart au plan.** Le plan prévoyait de faire tourner aussi les ~520 fichiers de tests existants contre un vrai SQLite.
+Ce n'est pas fait : leurs données de test ne respectent pas le schéma (identifiants `team-1` au lieu d'uuid, liens
+absents), et les réécrire serait un chantier en soi. À la place :
+
+- la façade a ses propres tests, sur le moteur D1 local ;
+- chacune des 2 063 lectures du code est traduite sur le vrai schéma par le garde-fou ;
+- la comparaison sur de vraies données se fera au lot 5 (lecture dans l'ombre).
 
 **Trouvé en route :**
 
@@ -377,10 +387,25 @@ charges est le contrat figé au lot 1 (`database/db-contract.json`).
 
   La production n'avait encore ni lobby FFA ni verrouillage à venir : pannes latentes, aucun utilisateur touché. Le
   faux Supabase des tests ne vérifie pas les liens, d'où le silence jusqu'ici.
-- **3g, ajouté sur ton accord.** Les 21 colonnes que la clé publique ne voit pas aujourd'hui (7 tables : jetons de
-  check-in, BattleTag, codes de lobby…) entrent dans la carte de D1. Un garde-fou interdit aux pages et routes
-  publiques de les lire ou de demander « toutes les colonnes » de ces tables. La façade aura un mode « lecture
-  publique » qui les refuse.
+- **3g, colonnes sensibles (ajouté sur ton accord).** Les 21 colonnes que la clé publique ne voit pas aujourd'hui
+  (7 tables) entrent dans la carte de D1. Le traducteur les lit dans les droits réels de la production. Exemples :
+  jetons de check-in, code de lobby, BattleTag, identifiants de comptes, motifs de litige.
+  - **Mode « lecture publique » de la façade.** Ces colonnes y sont refusées, avec le code de Postgres (`42501`),
+    qu'on les demande par leur nom, par `*`, dans une table liée, en filtre ou en tri. Toute écriture y est refusée.
+  - **Garde-fou côté API.** Chaque lecture de la couche publique (`pages/api/public`, `utils/public`) passe en mode
+    public. Aucune ne lit de colonne sensible.
+  - **Plan corrigé en route.** Imposer ce mode à toutes les routes publiques de l'API aurait cassé du code légitime :
+    le vote MVP public lit le BattleTag pour en garder une copie. Le refus ne sert donc que là où la ligne part
+    telle quelle vers le navigateur.
+  - **Relevé : aucune fuite aujourd'hui par une route publique.** Le classement MVP public montre le BattleTag des
+    MVP par une copie (`winner_battle_tag`) que la clé publique lit déjà.
+- **3f, les pages publiques du site.** Leurs 147 lectures propres se traduisent toutes. Elles ne lisent que deux des
+  21 colonnes, à dessein :
+  - `team_members.user_id`, qui est l'identifiant du profil public `/player/[userId]` ;
+  - `team_members.battle_tag`, masqué (sans le numéro après « # ») avant d'atteindre la page.
+
+  Le mode public accepte ces deux exceptions nommées, avec leur raison. `*` sur `team_members` reste refusé. Ce
+  contrôle lit le clone voisin du site ; il tourne sur ce PC et se met de côté dans la CI de l'API, comme au lot 1d.
 
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
@@ -415,4 +440,8 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
    (`database/schema-prod.sql` dans conference-api). À refaire avant la copie (lot 5).
 4. **Lot 2** : fait le 2026-11-03, base `owwomenscup-db` créée en juridiction `eu` (Europe de l'Est) sur ton accord.
 5. **Latence** : mesurée le 2026-11-03 (section « Mesure de latence »). Francfort `eu` gardée, Londres supprimée.
-6. **Lot 3, la façade** : lancé le 2026-11-03 (« Go lot 3 »), avec 3g (colonnes sensibles) accordé le même jour.
+6. **Lot 3, la façade** : fait le 2026-11-03 (« Go lot 3 »), avec 3g (colonnes sensibles) et la correction de trois
+   pannes de production accordées le même jour.
+7. **Lot 4, la logique de la base dans le code** : à lancer sur ton feu vert. C'est le lot le plus long (15–22 j) et le
+   plus risqué : les 36 fonctions (argent virtuel du TCG et de la Bibliothèque compris), les 64 déclencheurs, les
+   vues.
