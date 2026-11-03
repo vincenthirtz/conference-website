@@ -21,6 +21,7 @@ export const DB_ERROR_CODES = {
   invalidDatetimeFormat: '22007',
   numericOutOfRange: '22003',
   connectionFailure: '08006',
+  programLimitExceeded: '54000',
   undefinedColumn: '42703',
   undefinedTable: '42P01',
   undefinedFunction: '42883',
@@ -30,6 +31,7 @@ export const DB_ERROR_CODES = {
   noDataFound: 'P0002',
   // PostgREST : l'objet manque à son cache de schéma (migration pas appliquée, ou cache pas
   // encore rechargé).
+  invalidQuery: 'PGRST100',
   singleRowExpected: 'PGRST116',
   unknownRelationship: 'PGRST200',
   ambiguousRelationship: 'PGRST201',
