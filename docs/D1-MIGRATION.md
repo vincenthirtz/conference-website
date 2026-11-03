@@ -238,7 +238,7 @@ Rien de visible, tests et CI verts.
 - Il lit les listes de colonnes en constantes.
 - Résultat : 2 048 selects analysés au lieu de 1 151, 2,3 % d'angles morts, aucune colonne fautive.
 
-### Lot 2 : traducteur fait le 2026-11-03, base D1 vide en attente
+### Lot 2 : fait le 2026-11-03
 
 Rien de visible. Tout est dans conference-api : `npm run db:d1` rejoue le relevé de production dans PGlite, lit la
 structure dans le catalogue de Postgres et écrit trois fichiers.
@@ -291,7 +291,17 @@ l'identique pendant le test, installation locale) et `d1Translate` (traductions 
 - Les déclencheurs : 45 posent seulement la date de modification, 6 publient le temps réel, 13 portent de la logique.
 - 15 fonctions de la base ne sont appelées ni par l'API ni par un déclencheur : à vérifier au lot 4, peut-être mortes.
 
-**Reste du lot 2 :** créer la base D1 vide en juridiction `eu` et y installer le schéma, sur ton accord.
+**Base D1 créée** le 2026-11-03 sur ton accord (« Je t'autorise à créer la base D1 vide en Europe et à y installer le
+schéma ») :
+
+- `owwomenscup-db`, compte de l'association, juridiction `eu`, réplication en lecture coupée ;
+- schéma installé en 8 envois (702 instructions, tous acceptés) ;
+- vérifié sur place : 186 tables toutes `STRICT`, 516 index, aucune clé étrangère orpheline, 4,5 Mo à vide ;
+- branchée nulle part : ni le site ni l'API ne la voient.
+
+**Point ouvert, la latence.** Avec la juridiction `eu`, Cloudflare choisit seul la région : la base est en Europe de
+l'Est (`EEUR`), alors que Supabase est en Irlande et que les Workers répondent depuis Paris. Chaque requête fait
+l'aller-retour, et une page en enchaîne plusieurs. À mesurer avant le lot 3 (voir la section 5).
 
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
@@ -324,5 +334,6 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
    section 4 reste décrite pour mémoire.
 3. **Un relevé `pg_dump --schema-only` de la production** : accordé et fait le 2026-11-02
    (`database/schema-prod.sql` dans conference-api). À refaire avant la copie (lot 5).
-4. **Lot 2** : lancé le 2026-11-03 (« reprendre la migration lente vers D1 »), traducteur fait. Reste ton accord pour
-   créer la base D1 vide (juridiction `eu`, définitive pour cette base, mais une base vide se supprime et se recrée).
+4. **Lot 2** : fait le 2026-11-03, base `owwomenscup-db` créée en juridiction `eu` (Europe de l'Est) sur ton accord.
+5. **Latence** (proposée par toi le 2026-11-03) : mesurer avant le lot 3 l'Europe de l'Est contre une base d'essai en
+   Europe de l'Ouest, depuis un Worker. Demande ton accord (voir la réponse du 2026-11-03).
