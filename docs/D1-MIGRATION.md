@@ -333,6 +333,38 @@ Dix requêtes envoyées d'un seul coup (`batch`) coûtent autant qu'une seule : 
   Francfort (`placement.region: "aws:eu-central-1"`).
 - **Écarté** : placer l'API actuelle près de l'Irlande pour accélérer Supabase. Supabase va disparaître.
 
+### Lot 3 : la façade, en cours (lancé le 2026-11-03)
+
+La façade vit dans conference-api `utils/db/d1/`. Elle ne sera branchée nulle part avant la bascule. Son cahier des
+charges est le contrat figé au lot 1 (`database/db-contract.json`).
+
+| Morceau | Contenu | État |
+|---|---|---|
+| 3a | Valeurs (dates, vrai/faux, JSON…) et erreurs SQLite redites en codes Postgres | fait (API `e0fb54e`) |
+| 3b | Filtres : méthodes, mini-langage `or`/`not`/`filter`, chemins JSON, contenance | fait (API `18cf144`) |
+| 3c | Lectures : colonnes, tables liées, tri, pages, `single`, comptages | à faire |
+| 3d | Écritures : insérer, modifier, supprimer, `upsert` | à faire |
+| 3e | Le client complet ; garde-fou : chaque lecture réelle du code se traduit | à faire |
+| 3f | Les lectures propres du site | à faire |
+| 3g | Colonnes sensibles (accord du 2026-11-03, voir plus bas) | à faire |
+
+**Trouvé en route :**
+
+- **L'ordre du texte.** La base de production trie avec ICU `en-US` : sans casse ni accents au premier niveau. SQLite
+  ne connaît que l'ordre des octets, et D1 ne permet pas d'ajouter une collation. Sans correction, toutes les listes
+  triées par nom auraient changé d'ordre, et les prénoms accentués seraient partis en fin de liste. La façade calcule
+  en SQL une clé de tri pour les lettres latines. Sur dix noms piégés, l'ordre obtenu est exactement celui de la
+  production.
+- **`ilike` et les accents.** Avec la même méthode, « élodie » trouve « Élodie » comme en Postgres, et « elodie » ne la
+  trouve pas, comme en Postgres.
+- **Aucune lecture ne dépend des règles d'accès.** L'API comme les pages du site lisent avec l'accès de service, qui
+  passe outre les règles. Les 100 règles de Supabase ne gardent qu'une porte : la clé publique utilisée directement
+  contre Supabase. D1 n'a pas d'adresse publique, cette porte disparaît.
+- **3g, ajouté sur ton accord.** Les 21 colonnes que la clé publique ne voit pas aujourd'hui (7 tables : jetons de
+  check-in, BattleTag, codes de lobby…) entrent dans la carte de D1. Un garde-fou interdit aux pages et routes
+  publiques de les lire ou de demander « toutes les colonnes » de ces tables. La façade aura un mode « lecture
+  publique » qui les refuse.
+
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
 Quitter Supabase fait perdre PostgREST, donc supabase-js, **quelle que soit la base d'arrivée** **[doc]**. La façade du
@@ -366,4 +398,4 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
    (`database/schema-prod.sql` dans conference-api). À refaire avant la copie (lot 5).
 4. **Lot 2** : fait le 2026-11-03, base `owwomenscup-db` créée en juridiction `eu` (Europe de l'Est) sur ton accord.
 5. **Latence** : mesurée le 2026-11-03 (section « Mesure de latence »). Francfort `eu` gardée, Londres supprimée.
-6. **Lot 3, la façade** : à lancer sur ton feu vert.
+6. **Lot 3, la façade** : lancé le 2026-11-03 (« Go lot 3 »), avec 3g (colonnes sensibles) accordé le même jour.
