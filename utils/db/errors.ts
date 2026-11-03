@@ -17,6 +17,7 @@ export const DB_ERROR_CODES = {
   checkViolation: '23514',
   // Rendus aussi par la façade D1 (utils/db/d1/errors.ts), qui parle comme Postgres.
   notNullViolation: '23502',
+  invalidParameterValue: '22023',
   invalidTextRepresentation: '22P02',
   invalidDatetimeFormat: '22007',
   numericOutOfRange: '22003',
