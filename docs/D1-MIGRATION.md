@@ -422,7 +422,7 @@ suivant.
 | 4a | La mécanique : dates de modification, casse, vérifications écrites à la main, vues, index, codes d'erreur | **fait** le 2026-11-03 (API `591f2bd`) |
 | 4b | Les 13 déclencheurs métier | **fait** le 2026-11-03 (API `5266a38`) |
 | 4c | Le temps réel publié par la façade (6 déclencheurs) | **fait** le 2026-11-03 (API `f78178f`) |
-| 4d | Les 10 fonctions simples (lectures de compte, utilitaires) | à faire |
+| 4d | Les 10 fonctions simples (lectures de compte, utilitaires) | **fait** le 2026-11-03 (API `8419f91`) |
 | 4e | Équipes et vivier (12 fonctions) | à faire |
 | 4f | TCG et Bibliothèque (14 fonctions), comparées à Postgres sur les mêmes données | à faire |
 | 4g | Les fonctions que rien n'appelle : vérifier, puis abandonner | à faire |
@@ -553,6 +553,45 @@ Contre-épreuve : l'ancienne façade y échoue sur 4 cas.
   seules les écritures de l'API préviennent les écrans : une modification faite dans la console D1 ne les met pas à
   jour.
 
+**4d, fait le 2026-11-03** (« go »). Rien ne change en production.
+
+- **La façade répond à `rpc(nom, arguments)`** avec une version TypeScript de la fonction
+  (`utils/db/d1/functions/`). Le code de l'API passe déjà par une seule porte (`dbFunctions`, lot 1) : il n'a rien
+  à changer. Une fonction pas encore réécrite répond toujours « fonction inconnue », comme PostgREST.
+- **11 fonctions réécrites**, les 10 prévues plus le secret des tickets :
+  - **les 6 lectures de comptes** :
+    - la liste des comptes de l'admin : recherche, rôle, 8 filtres, 5 tris, pages, total ;
+    - la recherche de comptes ;
+    - les profils ;
+    - la recherche de joueuses TCG ;
+    - l'identifiant par e-mail ;
+    - le nombre de comptes confirmés.
+  - **les utilitaires** : quotas d'API, limite de débit, verrous des tâches planifiées (prendre et rendre) ;
+  - **le secret des tickets du temps réel** : une variable du Worker, à la place de Supabase Vault. À poser à la
+    bascule, avec celui de 4c.
+- **Les mêmes règles que Postgres :**
+  - les arguments sont lus comme PostgREST : un nom inconnu donne « fonction inconnue », une uuid illisible la même
+    erreur qu'aujourd'hui ;
+  - les jokers `%` et `_` des recherches restent actifs ;
+  - « il y a 6 mois » est calculé comme Postgres (31 août → 28 février, quand SQLite donnerait le 3 mars) ;
+  - les écritures partent en un seul envoi, tout ou rien. Postgres savait si un verrou était neuf ou repris grâce à
+    un détail interne (`xmax`) ; la façade lit la ligne dans le même envoi.
+- **La comparaison.** Chaque fonction est appelée dans Postgres (la vraie fonction, schéma de production) et dans D1,
+  sur les mêmes données. Les données visent les cas sensibles :
+  - majuscules dans un e-mail ;
+  - joker dans une recherche ;
+  - accents ;
+  - compte sans rôle, compte suspendu, compte inactif depuis plus de 6 mois ;
+  - BattleTag différent du compte Battle.net ;
+  - joueuse rattachée à deux équipes.
+
+  Résultats et erreurs sont identiques sur 17 tests. Contre-épreuve : 8 détails cassés exprès, 8 détectés.
+- **Un socle commun pour 4e et 4f** : lecture des arguments, envoi groupé atomique (qui vide aussi la boîte du
+  temps réel), décodage des lignes.
+- **Une limite de la vérification.** Les tris de texte suivent l'ordre « façon production » de la façade (lot 3),
+  mais le Postgres de test ne trie pas comme la production. Les comparaisons de tris portent donc sur des noms sans
+  accent ; l'ordre avec accents a été vérifié contre la production au lot 3.
+
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
 Quitter Supabase fait perdre PostgREST, donc supabase-js, **quelle que soit la base d'arrivée** **[doc]**. La façade du
@@ -588,7 +627,7 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
 5. **Latence** : mesurée le 2026-11-03 (section « Mesure de latence »). Francfort `eu` gardée, Londres supprimée.
 6. **Lot 3, la façade** : fait le 2026-11-03 (« Go lot 3 »), avec 3g (colonnes sensibles) et la correction de trois
    pannes de production accordées le même jour.
-7. **Lot 4, la logique de la base dans le code** : lancé le 2026-11-03 (« go lot 4 »), sous-lots 4a, 4b et 4c
-   faits le même jour, ainsi que la correction de la façade (`ilike` sur une table embarquée).
+7. **Lot 4, la logique de la base dans le code** : lancé le 2026-11-03 (« go lot 4 »), sous-lots 4a à 4d faits le
+   même jour, ainsi que la correction de la façade (`ilike` sur une table embarquée).
    C'est le lot le plus long (15–22 j) et le plus risqué : les 36 fonctions (argent virtuel du TCG et de la
    Bibliothèque compris) et les 64 déclencheurs. Un sous-lot à la fois.
