@@ -423,7 +423,7 @@ suivant.
 | 4b | Les 13 déclencheurs métier | **fait** le 2026-11-03 (API `5266a38`) |
 | 4c | Le temps réel publié par la façade (6 déclencheurs) | **fait** le 2026-11-03 (API `f78178f`) |
 | 4d | Les 10 fonctions simples (lectures de compte, utilitaires) | **fait** le 2026-11-03 (API `8419f91`) |
-| 4e | Équipes et vivier (12 fonctions) | à faire |
+| 4e | Équipes et vivier (12 fonctions) | **fait** le 2026-11-03 (API `2d0c543`) |
 | 4f | TCG et Bibliothèque (14 fonctions), comparées à Postgres sur les mêmes données | à faire |
 | 4g | Les fonctions que rien n'appelle : vérifier, puis abandonner | à faire |
 
@@ -592,6 +592,37 @@ Contre-épreuve : l'ancienne façade y échoue sur 4 cas.
   mais le Postgres de test ne trie pas comme la production. Les comparaisons de tris portent donc sur des noms sans
   accent ; l'ordre avec accents a été vérifié contre la production au lot 3.
 
+**4e, fait le 2026-11-03** (« gérer »). Rien ne change en production.
+
+- **12 fonctions réécrites :**
+  - les équipes : accepter une invitation, approuver une adhésion ou un transfert, passer le capitanat (par la
+    capitaine ou par le staff) ;
+  - le vivier des joueuses sans équipe : inscription, placement, retrait de placement, déplacement, retrait,
+    dissolution d'une équipe, ajout d'une équipe au tournoi ;
+  - et leur appui commun : « l'équipe sort du tournoi si plus personne n'y est ».
+- **Les verrous de Postgres, autrement.** En production, ces fonctions posent des verrous pour que deux demandes
+  simultanées ne se mêlent pas. Avec D1, chaque fonction tient en **un seul envoi**. D1 n'en traite qu'un à la fois
+  et l'annule entièrement en cas d'erreur : même garantie, sans verrou.
+- **Dans l'envoi, l'ordre exact de Postgres :**
+  - les refus d'abord, chacun avec son code, son message et son indice (« demande introuvable », « équipe
+    complète »…), que le code de l'API lit pour choisir sa réponse ;
+  - puis les écritures, dans le même ordre ;
+  - les règles automatiques de 4b et 4c jouent d'elles-mêmes : limite de joueuses, BattleTag vérifié, meubles
+    rendus, temps réel des demandes.
+
+  Deux petites tables internes servent à cela. La première annule l'envoi avec l'erreur voulue (le « RAISE
+  EXCEPTION » de Postgres). La seconde garde une valeur intermédiaire le temps de l'envoi, par exemple l'ancienne
+  équipe avant un déplacement ; elle est vidée à la fin.
+- **La comparaison.** Le même scénario est joué pas à pas dans Postgres (vraies fonctions, déclencheurs actifs) et
+  dans D1. Après chaque appel, il compare la réponse, l'erreur (code, message, indice) et l'état des tables
+  touchées : effectifs, demandes, capitaines, vivier, équipes inscrites au tournoi et à ses phases. Il couvre
+  chaque refus, le rôle ramené à « player », le BattleTag gardé lors d'un transfert, la joueuse déjà dans une
+  équipe (`23505`), l'équipe d'origine qui entre seule une fois au complet, et l'équipe vide qui sort du tournoi.
+  11 tests identiques. Contre-épreuve : 11 détails cassés exprès, 11 détectés, dont l'**ordre** de deux refus.
+- **Un cas limite, sans effet aujourd'hui.** Si une joueuse avait deux rattachements dans le même espace (manager
+  d'une équipe, joueuse d'une autre), Postgres prenait « le premier venu » pour un transfert, D1 le premier
+  enregistré. Le code ne crée pas ce cas.
+
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
 Quitter Supabase fait perdre PostgREST, donc supabase-js, **quelle que soit la base d'arrivée** **[doc]**. La façade du
@@ -627,7 +658,7 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
 5. **Latence** : mesurée le 2026-11-03 (section « Mesure de latence »). Francfort `eu` gardée, Londres supprimée.
 6. **Lot 3, la façade** : fait le 2026-11-03 (« Go lot 3 »), avec 3g (colonnes sensibles) et la correction de trois
    pannes de production accordées le même jour.
-7. **Lot 4, la logique de la base dans le code** : lancé le 2026-11-03 (« go lot 4 »), sous-lots 4a à 4d faits le
+7. **Lot 4, la logique de la base dans le code** : lancé le 2026-11-03 (« go lot 4 »), sous-lots 4a à 4e faits le
    même jour, ainsi que la correction de la façade (`ilike` sur une table embarquée).
    C'est le lot le plus long (15–22 j) et le plus risqué : les 36 fonctions (argent virtuel du TCG et de la
    Bibliothèque compris) et les 64 déclencheurs. Un sous-lot à la fois.
