@@ -328,10 +328,10 @@ Dix requêtes envoyées d'un seul coup (`batch`) coûtent autant qu'une seule : 
   rares que les lectures.
 - **Londres est hors de l'Union européenne, et sans juridiction la place n'est qu'une préférence**, sans garantie sur
   l'endroit où dorment les données et leurs sauvegardes. Francfort a la garantie `eu`.
-- **Recommandation** : garder Francfort (`owwomenscup-db`) et supprimer la base de Londres. Les deux sont vides et
-  gratuites en attendant ta décision.
-- **Trouvé en passant** : l'API actuelle, non placée, paie ~40 ms par lecture Supabase. La placer près de l'Irlande
-  dès aujourd'hui accélérerait le site avant même D1 (à essayer sur ton accord, sans lien avec le chantier D1).
+- **Décidé le 2026-11-03** : on garde Francfort (`owwomenscup-db`, garantie `eu`). La base de Londres est supprimée sur
+  ton accord (« Je t'autorise à supprimer la base D1 de Londres »). À la bascule, le Worker de l'API sera placé près de
+  Francfort (`placement.region: "aws:eu-central-1"`).
+- **Écarté** : placer l'API actuelle près de l'Irlande pour accélérer Supabase. Supabase va disparaître.
 
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
@@ -365,5 +365,5 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
 3. **Un relevé `pg_dump --schema-only` de la production** : accordé et fait le 2026-11-02
    (`database/schema-prod.sql` dans conference-api). À refaire avant la copie (lot 5).
 4. **Lot 2** : fait le 2026-11-03, base `owwomenscup-db` créée en juridiction `eu` (Europe de l'Est) sur ton accord.
-5. **Latence** : mesurée le 2026-11-03 (section « Mesure de latence »). À décider : garder Francfort `eu`
-   (recommandé) ou Londres, puis supprimer l'autre base vide.
+5. **Latence** : mesurée le 2026-11-03 (section « Mesure de latence »). Francfort `eu` gardée, Londres supprimée.
+6. **Lot 3, la façade** : à lancer sur ton feu vert.
