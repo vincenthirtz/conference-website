@@ -680,6 +680,9 @@ export async function fetchDashboardData(
     // même qui décide quels matchs une dispute bloque en aval.
     const matches = (matchesRes.data || []) as DashboardMatchRow[];
     const tournamentTeams = tournamentTeamsRes.data || [];
+    const registeredTeamIds = tournamentTeams
+      .map((tt) => tt.team_id)
+      .filter((x): x is string => !!x);
 
     // Stage teams counts
     const stageTeamCounts = new Map<string, number>();
@@ -899,12 +902,17 @@ export async function fetchDashboardData(
       // Mémorisé entre deux écritures de scrutin, comme pour le badge
       // (utils/mvp/pollMemo.ts) : les deux chemins lisent la même valeur.
       countUnresolvedMvpPolls(tenantId, tournamentId),
-      tournament.min_players && tournament.roster_locked_at
+      // Les membres des équipes inscrites. team_members et tournament_teams ne
+      // sont liées que par teams : l'ancien `tournament_teams!inner(…)`
+      // répondait PGRST200, et toutes les équipes passaient pour incomplètes.
+      tournament.min_players &&
+      tournament.roster_locked_at &&
+      registeredTeamIds.length > 0
         ? supabaseAdmin
             .from('team_members')
-            .select('team_id, tournament_teams!inner(tournament_id)')
+            .select('team_id')
             .eq('tenant_id', tenantId)
-            .eq('tournament_teams.tournament_id', tournamentId)
+            .in('team_id', registeredTeamIds)
         : Promise.resolve({ data: null }),
       // Recent staff activity for this tournament (last 10 entries)
       supabaseAdmin
@@ -1093,9 +1101,7 @@ export async function fetchDashboardData(
       rosterLockedAt: tournament.roster_locked_at ?? null,
       minPlayers: tournament.min_players ?? null,
       nowMs: NOW_MS,
-      registeredTeamIds: tournamentTeams
-        .map((tt) => tt.team_id)
-        .filter((x): x is string => !!x),
+      registeredTeamIds,
       memberRows: (teamMembersCountRes.data ?? []) as { team_id: string }[],
     });
 

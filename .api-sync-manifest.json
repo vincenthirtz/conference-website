@@ -1,6 +1,6 @@
 {
-  "apiCommit": "cc306ad65f1c9f90d61bb8975ced6fc664b56d37",
-  "syncedAt": "2026-11-03T07:43:43.839Z",
+  "apiCommit": "1ef0b30fb02bf31669f69d6fd3d440e3baf7eabf",
+  "syncedAt": "2026-11-03T07:57:25.554Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
