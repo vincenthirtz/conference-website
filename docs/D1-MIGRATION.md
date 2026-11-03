@@ -424,7 +424,8 @@ suivant.
 | 4c | Le temps réel publié par la façade (6 déclencheurs) | **fait** le 2026-11-03 (API `f78178f`) |
 | 4d | Les 10 fonctions simples (lectures de compte, utilitaires) | **fait** le 2026-11-03 (API `8419f91`) |
 | 4e | Équipes et vivier (12 fonctions) | **fait** le 2026-11-03 (API `2d0c543`) |
-| 4f | TCG et Bibliothèque (14 fonctions), comparées à Postgres sur les mêmes données | à faire |
+| 4f-1 | TCG : argent virtuel et échanges (8 fonctions) | **fait** le 2026-11-03 (API, voir plus bas) |
+| 4f-2 | Women's Library (5 fonctions) | à faire |
 | 4g | Les fonctions que rien n'appelle : vérifier, puis abandonner | à faire |
 
 **4a, fait le 2026-11-03.** Rien ne change en production : la façade n'est toujours branchée sur rien.
@@ -623,6 +624,58 @@ Contre-épreuve : l'ancienne façade y échoue sur 4 cas.
   d'une équipe, joueuse d'une autre), Postgres prenait « le premier venu » pour un transfert, D1 le premier
   enregistré. Le code ne crée pas ce cas.
 
+**4f, coupé en deux le 2026-11-03** (« Ok coupes en deux ») : d'abord le TCG, puis la Women's Library, chacun sur son
+feu vert.
+
+**4f-1, le TCG, fait le 2026-11-03.** Rien ne change en production.
+
+- **8 fonctions réécrites** : rafraîchir le solde, acheter un booster, retrait par le staff, acheter un cosmétique,
+  forger une carte, éligibilité aux échanges, proposer un échange, l'accepter.
+- **Le principe de l'argent virtuel, inchangé.** Le registre des pièces (`tcg_wallet_entries`) fait foi : le solde
+  est la somme de ses lignes. Le portefeuille (`tcg_wallets`) n'en est qu'un résumé, borné entre 0 et le plafond des
+  entiers, comme en production.
+- **Deux méthodes, selon la fonction :**
+  - **argent et forge : un seul envoi avec gardes**, comme en 4e. L'heure est prise une seule fois par envoi, comme
+    le `now()` de Postgres : tous les horodatages d'une même opération sont identiques ;
+  - **échanges : photo, décision, écriture vérifiée.** Leur logique est trop riche pour un seul envoi : choix carte
+    par carte, une douzaine de réponses possibles. La fonction lit tout d'un coup (une photo cohérente), décide en
+    TypeScript exactement comme Postgres, puis écrit en un envoi qui **revérifie** d'abord que rien n'a bougé :
+    - mêmes cartes encore valables ;
+    - même compteur par joueuse. Ce compteur remplace leur verrou Postgres : chaque échange validé l'avance.
+
+    Si quelque chose a bougé, elle recommence depuis la photo. Postgres faisait attendre le second appel ; D1 le fait
+    rejouer, 5 fois au plus, puis rend une erreur `40001` sans rien écrire.
+- **La comparaison avec Postgres** : 12 tests pas à pas. Après chaque appel, elle vérifie les soldes, le registre,
+  les paquets, les cartes (qui changent de propriétaire), les propositions et leurs cartes. Elle couvre :
+  - **pour le porte-monnaie** : fonds insuffisants, débit refusé puis accepté, débit en double, registre en négatif,
+    cosmétique déjà acquis ;
+  - **pour la forge** : réussie, refusée parce qu'elle viderait un sujet, carte d'une autre joueuse, fonds
+    insuffisants ;
+  - **pour les propositions** : chaque refus (blocage, refus récent, paire déjà en cours, consentements, ancienneté,
+    objets invalides, carte absente) ;
+  - **pour les acceptations** : plafond du jour, préférence pour un exemplaire non promis, annulation en cascade,
+    proposition échue, proposition devenue caduque.
+- **La concurrence, testée exprès.** 4 tests glissent une écriture concurrente entre la photo et l'écriture :
+  - une dépense juste avant l'achat d'un booster : la fonction recommence et refuse, **pas de découvert** ;
+  - la carte choisie, promise ailleurs entre-temps : la fonction en propose une autre, **jamais deux fois la même** ;
+  - la carte demandée, recyclée entre-temps : l'acceptation prend l'exemplaire suivant ;
+  - un conflit à chaque essai : abandon propre, rien d'écrit.
+- **Contre-épreuve** : 9 détails cassés exprès, 9 détectés, dont la revérification elle-même. Deux trous du
+  scénario, révélés par la contre-épreuve, ont été comblés : un registre en négatif, et une destinataire qui a un
+  exemplaire promis et un autre libre.
+- **Deux défauts trouvés en route et corrigés :**
+  - la fonction SQLite qui compte les lignes modifiées (`changes()`) ne survit pas dans un envoi D1 : la forge compte
+    désormais les cartes réservables juste avant de les réserver ;
+  - la table des variables range tout en texte, et SQLite tient `'1'` pour différent de `1` : les nombres sont
+    reconvertis avant comparaison.
+- **Trois écarts, sans effet :**
+  - quand un débit viole deux règles d'unicité à la fois, Postgres et SQLite ne nomment pas la même. Le code
+    d'erreur (`23505`, « doublon ») est le même, et le code de l'API ne lit que lui ;
+  - quand deux opérations se croisent, Postgres faisait attendre ; D1 recommence. Après 5 conflits d'affilée, il
+    rend une erreur au lieu d'attendre plus longtemps, une situation quasi impossible au volume actuel ;
+  - dans ce même croisement, l'achat d'un booster pouvait rafraîchir le résumé du solde avant de répondre « fonds
+    insuffisants ». D1 répond sans ce rafraîchissement, qui se refait à l'opération suivante.
+
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
 Quitter Supabase fait perdre PostgREST, donc supabase-js, **quelle que soit la base d'arrivée** **[doc]**. La façade du
@@ -658,7 +711,8 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
 5. **Latence** : mesurée le 2026-11-03 (section « Mesure de latence »). Francfort `eu` gardée, Londres supprimée.
 6. **Lot 3, la façade** : fait le 2026-11-03 (« Go lot 3 »), avec 3g (colonnes sensibles) et la correction de trois
    pannes de production accordées le même jour.
-7. **Lot 4, la logique de la base dans le code** : lancé le 2026-11-03 (« go lot 4 »), sous-lots 4a à 4e faits le
-   même jour, ainsi que la correction de la façade (`ilike` sur une table embarquée).
+7. **Lot 4, la logique de la base dans le code** : lancé le 2026-11-03 (« go lot 4 »), sous-lots 4a à 4e et 4f-1
+   (TCG) faits le même jour, ainsi que la correction de la façade (`ilike` sur une table embarquée). 4f coupé en deux
+   sur ton accord ; 4f-2 (Women's Library) et 4g (fonctions inutilisées) attendent ton feu vert.
    C'est le lot le plus long (15–22 j) et le plus risqué : les 36 fonctions (argent virtuel du TCG et de la
    Bibliothèque compris) et les 64 déclencheurs. Un sous-lot à la fois.
