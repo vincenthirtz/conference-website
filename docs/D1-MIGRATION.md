@@ -299,9 +299,39 @@ schéma ») :
 - vérifié sur place : 186 tables toutes `STRICT`, 516 index, aucune clé étrangère orpheline, 4,5 Mo à vide ;
 - branchée nulle part : ni le site ni l'API ne la voient.
 
-**Point ouvert, la latence.** Avec la juridiction `eu`, Cloudflare choisit seul la région : la base est en Europe de
-l'Est (`EEUR`), alors que Supabase est en Irlande et que les Workers répondent depuis Paris. Chaque requête fait
-l'aller-retour, et une page en enchaîne plusieurs. À mesurer avant le lot 3 (voir la section 5).
+### Mesure de latence du 2026-11-03
+
+Ta question : la base « Europe de l'Est » n'est-elle pas trop loin ? Mesuré sur ton accord avec une 2e base vide
+(`owwomenscup-db-weur`, préférence Europe de l'Ouest, sans juridiction) et un Worker de mesure temporaire, supprimé
+ensuite.
+
+**Où sont les bases.** Malgré les étiquettes, la base `eu` (« Europe de l'Est ») est servie depuis **Francfort**, et
+la base « Europe de l'Ouest » depuis **Londres**. D1 ne propose pas Paris : on choisit une grande région, pas une ville.
+
+Temps médian d'une requête, vu par le Worker (25 essais par série, plusieurs séries) :
+
+| Worker | Francfort `eu` : lecture / écriture | Londres : lecture / écriture | Supabase Irlande : lecture |
+|---|---|---|---|
+| Là où arrive la visite (Marseille pour ce PC) | 27–30 / 41 ms | 26–28 / 32–35 ms | ~40 ms |
+| Placé près de Francfort | **10 / 26 ms** | 25 / 33 ms | ~42 ms |
+| Placé près de Londres | 22 / 36 ms | **8–9 / 16–19 ms** | 22–26 ms |
+
+Dix requêtes envoyées d'un seul coup (`batch`) coûtent autant qu'une seule : ~28 ms sans placement, ~10 ms avec.
+
+**Ce que ça veut dire :**
+
+- **D1 est déjà plus rapide que Supabase aujourd'hui**, d'où qu'il soit : ~28 ms contre ~40 ms par requête.
+- **Le gros gain vient du placement**, pas du choix de ville. Le Worker de l'API placé à côté de la base (option
+  `placement.region` de Cloudflare) divise le temps par trois : ~10 ms par lecture, un seul trajet long par visite. À
+  faire à la bascule.
+- **Francfort et Londres font jeu égal en lecture.** Londres gagne ~9 ms par écriture, et les écritures sont bien plus
+  rares que les lectures.
+- **Londres est hors de l'Union européenne, et sans juridiction la place n'est qu'une préférence**, sans garantie sur
+  l'endroit où dorment les données et leurs sauvegardes. Francfort a la garantie `eu`.
+- **Recommandation** : garder Francfort (`owwomenscup-db`) et supprimer la base de Londres. Les deux sont vides et
+  gratuites en attendant ta décision.
+- **Trouvé en passant** : l'API actuelle, non placée, paie ~40 ms par lecture Supabase. La placer près de l'Irlande
+  dès aujourd'hui accélérerait le site avant même D1 (à essayer sur ton accord, sans lien avec le chantier D1).
 
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
@@ -335,5 +365,5 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
 3. **Un relevé `pg_dump --schema-only` de la production** : accordé et fait le 2026-11-02
    (`database/schema-prod.sql` dans conference-api). À refaire avant la copie (lot 5).
 4. **Lot 2** : fait le 2026-11-03, base `owwomenscup-db` créée en juridiction `eu` (Europe de l'Est) sur ton accord.
-5. **Latence** (proposée par toi le 2026-11-03) : mesurer avant le lot 3 l'Europe de l'Est contre une base d'essai en
-   Europe de l'Ouest, depuis un Worker. Demande ton accord (voir la réponse du 2026-11-03).
+5. **Latence** : mesurée le 2026-11-03 (section « Mesure de latence »). À décider : garder Francfort `eu`
+   (recommandé) ou Londres, puis supprimer l'autre base vide.
