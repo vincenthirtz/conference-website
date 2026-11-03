@@ -155,7 +155,8 @@ sauvegarde, la bascule un soir sans match, et le retour arrière prêt avant de 
 - **Un traducteur, pas une traduction à la main.** Un script lit le relevé de production (`database/schema-prod.sql`)
   et écrit le schéma D1. On le relance à chaque nouvelle migration pendant le chantier ; un garde-fou refuse un schéma D1
   en retard sur le relevé.
-- **Les types** suivent la section 1 : uuid, dates, booléens, jsonb, tableaux, et les 7 `numeric` gardés exacts.
+- **Les types** suivent la section 1 : uuid, dates, booléens, jsonb, tableaux. Les 7 `numeric` deviennent des nombres à
+  virgule, comme le code les reçoit déjà ; les montants gardent leurs 2 décimales par une vérification.
 - **Ce qui ne se traduit pas tout seul** sort dans une liste, chaque élément avec sa place prévue au lot 4 :
   - les 16 regex ;
   - les déclencheurs avant écriture ;
@@ -237,6 +238,61 @@ Rien de visible, tests et CI verts.
 - Il lit les listes de colonnes en constantes.
 - Résultat : 2 048 selects analysés au lieu de 1 151, 2,3 % d'angles morts, aucune colonne fautive.
 
+### Lot 2 : traducteur fait le 2026-11-03, base D1 vide en attente
+
+Rien de visible. Tout est dans conference-api : `npm run db:d1` rejoue le relevé de production dans PGlite, lit la
+structure dans le catalogue de Postgres et écrit trois fichiers.
+
+- `database/d1/schema.sql` : le schéma D1.
+- `database/d1/catalog.json` : la carte des colonnes, clés et liens, pour la façade du lot 3.
+- `database/d1/a-reprendre.md` : tout ce qui n'est pas traduit, avec sa place au lot 4.
+
+| Élément | Traduit | À reprendre |
+|---|---|---|
+| Tables (toutes `STRICT`) | 186 | 0 |
+| Colonnes | 2 069, dont 1 328 avec une garde de type | 0 |
+| Clés étrangères | 346 | 0 |
+| Vérifications | 309 | 6 : 4 expressions régulières complexes, 2 sur le contenu de tableaux |
+| Index | 516 | 6 GIN (tableaux, trigrammes de la liste noire) |
+| Valeurs par défaut | toutes, dont 9 compteurs | 0 |
+| Déclencheurs, fonctions, vues | listés | 64, 104, 3 (lot 4) |
+
+**Conventions de stockage** (la façade du lot 3 s'y conformera) :
+
+- uuid en minuscules ;
+- dates et heures en texte de largeur fixe, UTC, à la microseconde (`2026-11-03T10:00:00.123456+00:00`) : l'ordre du
+  texte est l'ordre du temps ;
+- booléens 0/1 ;
+- JSON et tableaux en texte JSON.
+
+Chaque colonne porte une **garde de type** : la base refuse ce que le type Postgres refusait (date impossible, uuid mal
+formé, JSON invalide, montant à 3 décimales…). Une donnée mal formée échouera donc à la copie ou dans la façade, au lieu
+d'entrer en silence.
+
+**Vérifié sur le moteur D1 local** (wrangler, le même SQLite et les mêmes refus que D1, sans rien créer chez
+Cloudflare) :
+
+- les 702 instructions s'installent, toutes les clés étrangères trouvent leur clé parente ;
+- une mini-base de test refuse ce que Postgres refusait, pose les mêmes valeurs par défaut, applique les cascades.
+
+Garde-fous : `d1SchemaGuard` (chaque migration rangée dans `database/d1/migrations.json`, fichiers régénérés à
+l'identique pendant le test, installation locale) et `d1Translate` (traductions et mini-base).
+
+**Trouvé en route :**
+
+- D1 refuse les motifs `LIKE`/`GLOB` de plus de 50 octets. Une garde de date écrite naïvement était refusée ; elle
+  passe par les fonctions de date de SQLite.
+- Une vérification qui vaut « vide » laisse passer la ligne, en SQLite comme en Postgres. Les gardes comparent donc
+  avec `IS`, sinon `2026-13-01` passait.
+- 11 des 15 expressions régulières sont simples et restent dans la base, traduites sans perte.
+- 10 index uniques sans casse (`lower(email)`…) ne replient que la casse ASCII sur SQLite : `É` et `é` restent distincts.
+- 2 unicités « différées » (ordre des segments et des vagues d'un événement) deviennent immédiates : un réordonnancement
+  passera par des valeurs temporaires (lot 4).
+- Les déclencheurs : 45 posent seulement la date de modification, 6 publient le temps réel, 13 portent de la logique.
+- 15 fonctions de la base ne sont appelées ni par l'API ni par un déclencheur : à vérifier au lot 4, peut-être mortes.
+
+**Reste du lot 2 :** créer la base D1 vide en juridiction `eu` et y installer le schéma, sur ton accord.
+
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
 Quitter Supabase fait perdre PostgREST, donc supabase-js, **quelle que soit la base d'arrivée** **[doc]**. La façade du
@@ -268,4 +324,5 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
    section 4 reste décrite pour mémoire.
 3. **Un relevé `pg_dump --schema-only` de la production** : accordé et fait le 2026-11-02
    (`database/schema-prod.sql` dans conference-api). À refaire avant la copie (lot 5).
-4. **Lot 2** : à lancer sur ton feu vert. Il demandera ton accord pour créer la base D1 vide (juridiction `eu`, définitive).
+4. **Lot 2** : lancé le 2026-11-03 (« reprendre la migration lente vers D1 »), traducteur fait. Reste ton accord pour
+   créer la base D1 vide (juridiction `eu`, définitive pour cette base, mais une base vide se supprime et se recrée).
