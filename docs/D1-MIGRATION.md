@@ -397,8 +397,13 @@ absents), et les réécrire serait un chantier en soi. À la place :
   - **Plan corrigé en route.** Imposer ce mode à toutes les routes publiques de l'API aurait cassé du code légitime :
     le vote MVP public lit le BattleTag pour en garder une copie. Le refus ne sert donc que là où la ligne part
     telle quelle vers le navigateur.
-  - **Relevé : aucune fuite aujourd'hui par une route publique.** Le classement MVP public montre le BattleTag des
-    MVP par une copie (`winner_battle_tag`) que la clé publique lit déjà.
+  - **Une fuite trouvée et corrigée (API `60ed43e`, sur ton accord).** La route publique
+    `/api/tournaments/[id]/mvp-leaderboard` rendait le BattleTag complet des MVP : 40 BattleTags avec leur numéro pour
+    la Cup 2026, alors que la page du site les masque. Ils sont maintenant masqués dans la réponse, et la production
+    l'a confirmé : 0 numéro après le déploiement. L'audit des routes publiques n'a rien trouvé d'autre : classements,
+    profils (dont `public/v1`), images de partage, cartes TCG et overlays masquaient déjà, GraphQL n'en expose pas. Un
+    garde-fou (`publicBattleTagGuard`) exige désormais qu'une route qui lit un BattleTag demande une connexion ou le
+    masque.
 - **3f, les pages publiques du site.** Leurs 147 lectures propres se traduisent toutes. Elles ne lisent que deux des
   21 colonnes, à dessein :
   - `team_members.user_id`, qui est l'identifiant du profil public `/player/[userId]` ;
