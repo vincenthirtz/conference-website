@@ -24,6 +24,7 @@ export const DB_ERROR_CODES = {
   programLimitExceeded: '54000',
   undefinedColumn: '42703',
   undefinedTable: '42P01',
+  invalidColumnReference: '42P10',
   undefinedFunction: '42883',
   lockNotAvailable: '55P03',
   serializationFailure: '40001',
