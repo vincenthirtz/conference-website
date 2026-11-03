@@ -426,7 +426,7 @@ suivant.
 | 4e | Équipes et vivier (12 fonctions) | **fait** le 2026-11-03 (API `2d0c543`) |
 | 4f-1 | TCG : argent virtuel et échanges (8 fonctions) | **fait** le 2026-11-03 (API, voir plus bas) |
 | 4f-2 | Women's Library (5 fonctions) | **fait** le 2026-11-03 (API, voir plus bas) |
-| 4g | Les fonctions que rien n'appelle : vérifier, puis abandonner | à faire |
+| 4g | Les fonctions que rien n'appelle : vérifier, puis abandonner | **fait** le 2026-11-03 (API `845133f`, voir plus bas) |
 
 **4a, fait le 2026-11-03.** Rien ne change en production : la façade n'est toujours branchée sur rien.
 
@@ -725,6 +725,34 @@ fonctions que l'API appelle sont toutes réécrites** ; un test l'exige désorma
   - un nombre écrit `3.0` dans la liste des meubles : Postgres le refusait, D1 l'accepte (JavaScript ne distingue
     pas `3.0` de `3`). L'API n'envoie que des entiers.
 
+**4g, les fonctions que rien n'appelle, fait le 2026-11-03** (« gérer »). **Le lot 4 est terminé.** Rien ne change en
+production, ni dans Supabase : ces fonctions y restent jusqu'à sa suppression (lot 7).
+
+- **15 fonctions vérifiées une à une** :
+  - dans le code de l'API, du site et du bot ;
+  - en production, en lecture seule : déclencheurs de tous les schémas, règles d'accès, autres fonctions, vues,
+    valeurs par défaut, vérifications, index.
+
+  Aucune n'est réécrite :
+
+  | Verdict | Fonctions |
+  |---|---|
+  | **reprise** avec la fonction qui l'appelait, déjà réécrite (6) | `pool_release_team` (4e), `realtime_notify` (4c), `slugify_text` (4b), `tcg_pack_source_tradeable`, `tcg_rarity_rank`, `tcg_trade_lock_key` (4f-1) |
+  | **sans objet sur D1** (3) | `introspect_foreign_keys` (relevé du schéma Postgres), `library_can_join` (accès aux canaux Supabase Realtime de la Library ; côté Cloudflare, les tickets de l'API font la même vérification), `realtime_set_config` (range les secrets du temps réel dans Vault ; sur D1, ce sont des variables du Worker) |
+  | **morte** (6) | les 4 `auth_mirror_*` (miroir de Supabase Auth, branchées sur aucun déclencheur), `designate_captain` (seuls des commentaires la citent), `update_contact_submissions_updated_at` (branchée sur rien, citée nulle part) |
+- **Un garde-fou** : le traducteur du schéma tient la décision et sa raison pour chaque fonction. Le test refuse :
+  - toute fonction restée « à vérifier » ;
+  - une décision qui viserait une fonction disparue de Postgres, ou de nouveau appelée.
+
+  Contre-épreuve : 3 erreurs glissées exprès, 3 détectées.
+- **À reprendre au lot 7 (nettoyage)**, trouvé en route :
+  - la Library envoie encore chaque message aux deux temps réels, Supabase et Cloudflare. Elle se connecte à
+    Cloudflare par défaut ; Supabase ne sert plus que de secours (`?realtime=supabase`). Il faudra retirer ce double
+    envoi, ce secours et les règles d'accès de `realtime.messages` ;
+  - le script `refresh-schema-snapshot.mjs` lit le schéma Postgres (dont `introspect_foreign_keys`) : il faudra
+    le faire lire D1 ;
+  - le workflow `realtime.yml` du site (`realtime_set_config`) deviendra inutile.
+
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
 Quitter Supabase fait perdre PostgREST, donc supabase-js, **quelle que soit la base d'arrivée** **[doc]**. La façade du
@@ -760,9 +788,9 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
 5. **Latence** : mesurée le 2026-11-03 (section « Mesure de latence »). Francfort `eu` gardée, Londres supprimée.
 6. **Lot 3, la façade** : fait le 2026-11-03 (« Go lot 3 »), avec 3g (colonnes sensibles) et la correction de trois
    pannes de production accordées le même jour.
-7. **Lot 4, la logique de la base dans le code** : lancé le 2026-11-03 (« go lot 4 »), sous-lots 4a à 4f faits le
-   même jour (4f coupé en deux sur ton accord : TCG, puis Women's Library), ainsi que la correction de la façade
-   (`ilike` sur une table embarquée). Les 36 fonctions que l'API appelle sont réécrites ; 4g (fonctions que rien
-   n'appelle) attend ton feu vert.
-   C'est le lot le plus long (15–22 j) et le plus risqué : les 36 fonctions (argent virtuel du TCG et de la
-   Bibliothèque compris) et les 64 déclencheurs. Un sous-lot à la fois.
+7. **Lot 4, la logique de la base dans le code** : **fait le 2026-11-03** (« go lot 4 »), sous-lots 4a à 4g un par
+   un (4f coupé en deux sur ton accord : TCG, puis Women's Library), ainsi que la correction de la façade (`ilike`
+   sur une table embarquée). Les 36 fonctions que l'API appelle sont réécrites et comparées à Postgres, les 15
+   autres tranchées, les déclencheurs repris.
+8. **Lot 5, copie et répétition** : attend ton feu vert. La lecture dans l'ombre demandera de brancher la base D1
+   sur l'API : un changement sur Cloudflare, fait seulement sur ta phrase explicite.
