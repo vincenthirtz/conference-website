@@ -420,7 +420,7 @@ suivant.
 | Sous-lot | Contenu | État |
 |---|---|---|
 | 4a | La mécanique : dates de modification, casse, vérifications écrites à la main, vues, index, codes d'erreur | **fait** le 2026-11-03 (API `591f2bd`) |
-| 4b | Les 13 déclencheurs métier | à faire |
+| 4b | Les 13 déclencheurs métier | **fait** le 2026-11-03 (API `5266a38`) |
 | 4c | Le temps réel publié par la façade (6 déclencheurs) | à faire |
 | 4d | Les 10 fonctions simples (lectures de compte, utilitaires) | à faire |
 | 4e | Équipes et vivier (12 fonctions) | à faire |
@@ -459,6 +459,54 @@ suivant.
   maintenant à zéro. Plus aucune table lue par le code ne manque au schéma D1. Restent les 64 déclencheurs et les
   fonctions, objets des sous-lots suivants.
 
+**4b, fait le 2026-11-03** (« gérer »). Rien ne change en production.
+
+- **Les 13 déclencheurs métier sont des déclencheurs SQLite**, installés dans le schéma. Toute écriture en
+  profite : la façade comme les fonctions réécrites aux sous-lots 4d à 4f. Ils se rangent en trois familles :
+  - **les refus** :
+    - un caster doit être du staff (`23503`) ;
+    - un effectif ne doit pas dépasser le `max_players` de ses tournois (`23514`) ;
+    - un pronostic n'est accepté que sur un match ouvert (`prediction_locked`…).
+
+    Les codes et les messages sont ceux que le code de l'API lit aujourd'hui.
+  - **les effets sur d'autres tables** :
+    - la voix d'un caster est détachée quand il quitte le staff ;
+    - les réglages d'échange TCG sont ouverts à la première pochette ;
+    - les meubles prêtés au QG reviennent quand une joueuse quitte l'équipe ou que l'équipe est dissoute ;
+    - l'étiquette « supporter » d'un compte devient joueuse ou manager.
+  - **les valeurs calculées sur la ligne même** : slug d'équipe, numéro d'adhérent, BattleTag vérifié, état
+    actif d'un espace, dates d'un pronostic. SQLite ne sait pas modifier une ligne *avant* de l'écrire : il la
+    complète juste après, dans la même instruction. La façade relit alors ces lignes pour que la réponse montre
+    les bonnes valeurs. C'est une lecture de plus, seulement sur ces 5 tables, et seulement quand le code
+    demande la réponse.
+- **Le slug d'équipe** (`slugify_text`) est refait caractère par caractère, sans expression régulière, avec une
+  table « sans accent » **relevée en production** (lecture seule) : 1 262 caractères. Le Postgres de test
+  (PGlite) a une règle plus récente (2 661 caractères contre 1 650), et le slug aurait parfois changé. Contrôles :
+  - l'empreinte md5 calculée par la production prouve que la copie est exacte ;
+  - sur 1 373 noms d'essai et 18 noms réels, D1 donne exactement le slug de la production.
+
+  Ce relevé est à refaire avant la copie (lot 5), avec celui du schéma.
+- **La comparaison.** Un test fait les mêmes écritures d'un côté dans Postgres (schéma de production,
+  déclencheurs actifs), de l'autre dans D1 par la façade. Il compare les réponses, les tables touchées et les
+  erreurs : 21 scénarios, dont l'upsert réel des pronostics. Contre-épreuve : 11 déclencheurs cassés exprès,
+  11 détectés.
+- **Trois écarts, documentés** dans `a-reprendre.md` :
+  - un pronostic qui arriverait avec un résultat mais sans date de règlement est refusé (`23514`) au lieu d'être
+    nettoyé : SQLite vérifie la règle avant le déclencheur. Le code n'envoie jamais ces champs ;
+  - un BattleTag cyrillique ou grec qui ne diffère que par la casse n'est pas reconnu comme vérifié (les lettres
+    latines le sont, comme en production) ;
+  - un espace déjà incohérent (état et case « actif » en désaccord) ne serait pas corrigé par une écriture de la
+    case seule. Il n'y en a aucun en production (0 sur 3), et ces déclencheurs n'en laissent pas apparaître.
+- **Trouvé en route : D1 plafonne la profondeur d'une expression à 100 niveaux**, et une sous-requête compte
+  double. Deux fonctions de la façade du lot 3 empilent beaucoup de niveaux : la comparaison sans casse
+  (`foldCase`, ~46) et le tri façon Postgres (`sortKey`, ~92). D'où les vérifications suivantes :
+  - les 2 063 lectures du code s'exécutent toutes sur le moteur D1 local, pas seulement compilées ;
+  - une seule forme dépasse : `ilike` sur une colonne d'une table embarquée en `!inner`. Le code ne l'emploie
+    nulle part ;
+  - le tri dans une table embarquée était déjà refusé par la façade.
+
+  Le déclencheur du BattleTag contourne ce plafond en calculant ses comparaisons dans une table dérivée.
+
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
 Quitter Supabase fait perdre PostgREST, donc supabase-js, **quelle que soit la base d'arrivée** **[doc]**. La façade du
@@ -494,6 +542,7 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
 5. **Latence** : mesurée le 2026-11-03 (section « Mesure de latence »). Francfort `eu` gardée, Londres supprimée.
 6. **Lot 3, la façade** : fait le 2026-11-03 (« Go lot 3 »), avec 3g (colonnes sensibles) et la correction de trois
    pannes de production accordées le même jour.
-7. **Lot 4, la logique de la base dans le code** : lancé le 2026-11-03 (« go lot 4 »), sous-lot 4a fait le même jour.
+7. **Lot 4, la logique de la base dans le code** : lancé le 2026-11-03 (« go lot 4 »), sous-lots 4a et 4b faits le
+   même jour.
    C'est le lot le plus long (15–22 j) et le plus risqué : les 36 fonctions (argent virtuel du TCG et de la
    Bibliothèque compris) et les 64 déclencheurs. Un sous-lot à la fois.
