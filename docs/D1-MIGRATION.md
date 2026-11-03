@@ -421,7 +421,7 @@ suivant.
 |---|---|---|
 | 4a | La mécanique : dates de modification, casse, vérifications écrites à la main, vues, index, codes d'erreur | **fait** le 2026-11-03 (API `591f2bd`) |
 | 4b | Les 13 déclencheurs métier | **fait** le 2026-11-03 (API `5266a38`) |
-| 4c | Le temps réel publié par la façade (6 déclencheurs) | à faire |
+| 4c | Le temps réel publié par la façade (6 déclencheurs) | **fait** le 2026-11-03 (API `f78178f`) |
 | 4d | Les 10 fonctions simples (lectures de compte, utilitaires) | à faire |
 | 4e | Équipes et vivier (12 fonctions) | à faire |
 | 4f | TCG et Bibliothèque (14 fonctions), comparées à Postgres sur les mêmes données | à faire |
@@ -507,6 +507,52 @@ suivant.
 
   Le déclencheur du BattleTag contourne ce plafond en calculant ses comparaisons dans une table dérivée.
 
+**Correction de la façade, faite le 2026-11-03 sur ton accord** (API `08a5cfb`). Plutôt que refuser `ilike` sur
+une table embarquée, comme proposé, la façade le fait maintenant fonctionner, avec le même procédé de table dérivée,
+pour un niveau de table liée. Au-delà (deux niveaux de `!inner` filtrés sans casse, forme que le code n'emploie
+pas), elle rend une erreur claire (`54000`, avec un indice) au lieu de l'erreur obscure de D1. Un nouveau garde-fou
+**exécute** chacune des 2 063 lectures du code sur le moteur D1 local, au lieu de seulement les compiler.
+Contre-épreuve : l'ancienne façade y échoue sur 4 cas.
+
+**4c, fait le 2026-11-03** (« gérer »). Rien ne change en production : le temps réel reste envoyé par Postgres.
+
+- **Le principe.** Aujourd'hui, un déclencheur Postgres prévient le Worker temps réel par `pg_net` : un message
+  signé « la table X, ligne Y, a changé » vers `/notify`. D1 n'a pas d'appel réseau. Il fait donc en deux temps :
+  - ses déclencheurs notent les salles à prévenir dans une boîte d'envoi interne (`_d1_realtime`), dans la même
+    instruction que l'écriture ;
+  - la façade vide cette boîte **dans le même envoi** (tout ou rien) : une écriture refusée n'annonce rien, comme
+    aujourd'hui.
+
+  Le notificateur envoie ensuite les messages, sans jamais faire échouer l'écriture.
+- **Les salles sont celles de Postgres.** Les 18 déclencheurs SQLite (6 tables × insertion, mise à jour,
+  suppression) sont générés à partir des arguments mêmes des déclencheurs Postgres :
+  - `matches:tournament:<id>` ;
+  - `draft:<id>` ;
+  - `demandes:team:<id>` ;
+  - `caster:scenes`, `caster:scene:<id>` ;
+  - `caster:themes`.
+
+  L'ancienne salle est prévenue aussi quand la ligne change de tournoi, d'équipe ou de draft. Les suppressions en
+  cascade sont vues.
+- **Le message est celui de Postgres, au caractère près**, avec la même signature. Le vecteur de test du Worker
+  temps réel, figé côté site, donne la même signature côté API : le Worker n'a rien à changer.
+- **Vérifications.** Un test garde la vraie fonction Postgres qui choisit les salles, et ne remplace que l'envoi
+  réseau par une table témoin. Mêmes écritures des deux côtés : mêmes salles, même ordre. Cela couvre :
+  - matchs, drafts et étapes, demandes, scènes et thèmes ;
+  - un changement de tournoi ;
+  - une écriture refusée ;
+  - une cascade tournoi → matchs → drafts → étapes.
+
+  Contre-épreuve : 5 déclencheurs cassés exprès, 5 détectés.
+- **À brancher à la bascule** (pas maintenant) :
+  - donner au Worker de l'API l'adresse `/notify` et le secret `REALTIME_NOTIFY_SECRET`, aujourd'hui rangés
+    dans Supabase Vault et dans le Worker temps réel ;
+  - passer le notificateur à la façade ;
+  - faire vider la boîte d'envoi, de la même façon, aux fonctions réécrites des sous-lots 4d à 4f.
+- **Une différence.** Postgres voyait aussi les écritures faites à la main dans l'éditeur SQL de Supabase. Dans D1,
+  seules les écritures de l'API préviennent les écrans : une modification faite dans la console D1 ne les met pas à
+  jour.
+
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
 Quitter Supabase fait perdre PostgREST, donc supabase-js, **quelle que soit la base d'arrivée** **[doc]**. La façade du
@@ -542,7 +588,7 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
 5. **Latence** : mesurée le 2026-11-03 (section « Mesure de latence »). Francfort `eu` gardée, Londres supprimée.
 6. **Lot 3, la façade** : fait le 2026-11-03 (« Go lot 3 »), avec 3g (colonnes sensibles) et la correction de trois
    pannes de production accordées le même jour.
-7. **Lot 4, la logique de la base dans le code** : lancé le 2026-11-03 (« go lot 4 »), sous-lots 4a et 4b faits le
-   même jour.
+7. **Lot 4, la logique de la base dans le code** : lancé le 2026-11-03 (« go lot 4 »), sous-lots 4a, 4b et 4c
+   faits le même jour, ainsi que la correction de la façade (`ilike` sur une table embarquée).
    C'est le lot le plus long (15–22 j) et le plus risqué : les 36 fonctions (argent virtuel du TCG et de la
    Bibliothèque compris) et les 64 déclencheurs. Un sous-lot à la fois.
