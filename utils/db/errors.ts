@@ -31,6 +31,7 @@ export const DB_ERROR_CODES = {
   serializationFailure: '40001',
   deadlockDetected: '40P01',
   noDataFound: 'P0002',
+  raiseException: 'P0001',
   // PostgREST : l'objet manque à son cache de schéma (migration pas appliquée, ou cache pas
   // encore rechargé).
   invalidQuery: 'PGRST100',
