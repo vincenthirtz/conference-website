@@ -15,6 +15,12 @@ export const DB_ERROR_CODES = {
   uniqueViolation: '23505',
   foreignKeyViolation: '23503',
   checkViolation: '23514',
+  // Rendus aussi par la façade D1 (utils/db/d1/errors.ts), qui parle comme Postgres.
+  notNullViolation: '23502',
+  invalidTextRepresentation: '22P02',
+  invalidDatetimeFormat: '22007',
+  numericOutOfRange: '22003',
+  connectionFailure: '08006',
   undefinedColumn: '42703',
   undefinedTable: '42P01',
   undefinedFunction: '42883',
@@ -24,7 +30,9 @@ export const DB_ERROR_CODES = {
   noDataFound: 'P0002',
   // PostgREST : l'objet manque à son cache de schéma (migration pas appliquée, ou cache pas
   // encore rechargé).
+  singleRowExpected: 'PGRST116',
   unknownRelationship: 'PGRST200',
+  ambiguousRelationship: 'PGRST201',
   unknownFunction: 'PGRST202',
   unknownColumn: 'PGRST204',
   unknownTable: 'PGRST205',
