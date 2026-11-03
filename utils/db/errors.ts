@@ -22,6 +22,7 @@ export const DB_ERROR_CODES = {
   numericOutOfRange: '22003',
   connectionFailure: '08006',
   programLimitExceeded: '54000',
+  insufficientPrivilege: '42501',
   undefinedColumn: '42703',
   undefinedTable: '42P01',
   invalidColumnReference: '42P10',
