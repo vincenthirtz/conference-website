@@ -663,11 +663,17 @@ feu vert.
 - **Contre-épreuve** : 9 détails cassés exprès, 9 détectés, dont la revérification elle-même. Deux trous du
   scénario, révélés par la contre-épreuve, ont été comblés : un registre en négatif, et une destinataire qui a un
   exemplaire promis et un autre libre.
-- **Deux défauts trouvés en route et corrigés :**
+- **Trois défauts trouvés en route et corrigés :**
   - la fonction SQLite qui compte les lignes modifiées (`changes()`) ne survit pas dans un envoi D1 : la forge compte
     désormais les cartes réservables juste avant de les réserver ;
   - la table des variables range tout en texte, et SQLite tient `'1'` pour différent de `1` : les nombres sont
-    reconvertis avant comparaison.
+    reconvertis avant comparaison ;
+  - **un défaut du sous-lot 4d, révélé par la CI de 4f-1** : D1 transmet tout nombre comme un nombre à virgule.
+    La limite de débit divisait l'heure par `3600.0` au lieu de `3600`, et sa « fenêtre d'une heure » devenait la
+    seconde courante : le compteur repartait à zéro chaque seconde. Le test ne le voyait que lorsque ses trois appels
+    chevauchaient deux secondes : c'était l'échec isolé, inexpliqué, noté en 4d. Corrigé (API `207c98a`). Le test
+    compare désormais le début de fenêtre enregistré des deux côtés : il échoue à chaque fois sans le correctif.
+    C'était la seule division de ce type dans la façade.
 - **Trois écarts, sans effet :**
   - quand un débit viole deux règles d'unicité à la fois, Postgres et SQLite ne nomment pas la même. Le code
     d'erreur (`23505`, « doublon ») est le même, et le code de l'API ne lit que lui ;
