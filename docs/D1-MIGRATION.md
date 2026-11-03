@@ -412,6 +412,53 @@ absents), et les réécrire serait un chantier en soi. À la place :
   Le mode public accepte ces deux exceptions nommées, avec leur raison. `*` sur `team_members` reste refusé. Ce
   contrôle lit le clone voisin du site ; il tourne sur ce PC et se met de côté dans la CI de l'API, comme au lot 1d.
 
+### Lot 4 : la logique de la base dans le code, lancé le 2026-11-03
+
+Lancé sur ton feu vert (« go lot 4 »). Sept sous-lots, dans l'ordre. Chacun se termine (tests et CI verts) avant le
+suivant.
+
+| Sous-lot | Contenu | État |
+|---|---|---|
+| 4a | La mécanique : dates de modification, casse, vérifications écrites à la main, vues, index, codes d'erreur | **fait** le 2026-11-03 (API `591f2bd`) |
+| 4b | Les 13 déclencheurs métier | à faire |
+| 4c | Le temps réel publié par la façade (6 déclencheurs) | à faire |
+| 4d | Les 10 fonctions simples (lectures de compte, utilitaires) | à faire |
+| 4e | Équipes et vivier (12 fonctions) | à faire |
+| 4f | TCG et Bibliothèque (14 fonctions), comparées à Postgres sur les mêmes données | à faire |
+| 4g | Les fonctions que rien n'appelle : vérifier, puis abandonner | à faire |
+
+**4a, fait le 2026-11-03.** Rien ne change en production : la façade n'est toujours branchée sur rien.
+
+- **Dates de modification.** 45 tables avaient un déclencheur Postgres qui remet `updated_at` à l'heure à chaque mise
+  à jour. La façade le fait maintenant elle-même, upsert compris.
+- **Majuscules et accents dans les unicités.** Le `lower()` de Postgres est reproduit pour les lettres latines :
+  « Été » et « ÉTÉ » sont bien refusés comme doublons. Les autres alphabets (grec, cyrillique…) ne changent de casse
+  qu'en ASCII. Aucune conséquence pour ce que ces index protègent : adresses e-mail, domaines, slugs, pseudos.
+- **Les 6 vérifications à expressions régulières** sont écrites à la main pour SQLite. Chacune est comparée à
+  l'expression d'origine sur des exemples :
+  - semaine ISO de l'arène ;
+  - slug des fan-arts ;
+  - format du BattleTag ;
+  - empreintes d'interdiction de la Bibliothèque ;
+  - clés de deck ;
+  - préférences de héros (un héros ne peut pas être à la fois choisi et banni).
+
+  Il reste un écart, documenté : SQLite ne sait pas dire si un caractère non latin est une lettre. Un BattleTag comme
+  « Zo★#123 » passerait donc la base, mais le code de l'API le refuse déjà avant, avec la même règle que Postgres.
+- **Les 3 vues** (statistiques par équipe, par carte, par équipe et carte) sont réécrites pour SQLite. Un test met les
+  mêmes données dans Postgres et dans D1, en visant les cas où une réécriture dérive : match nul, match terminé sans
+  manche, exempt, match supprimé, scores vides, manche sans carte, deuxième espace. Les trois vues rendent les mêmes
+  lignes. Contre-épreuve : trois erreurs glissées exprès dans les vues SQLite font échouer le test.
+- **Les 6 index de recherche (GIN)** n'ont pas d'équivalent SQLite. Leurs tables sont minuscules : 0 à 23 lignes
+  relevées le 2026-11-03. Pas d'index, donc ; lire la table entière ne coûte rien. À revoir si l'une dépasse quelques
+  milliers de lignes.
+- **Codes d'erreur.** Une vérification écrite à la main renvoie le code de Postgres (`23514`). La garde des envois
+  groupés renvoie `P0001`, comme une fonction plpgsql qui lève une erreur. Cette garde servira aux sous-lots 4d à 4f :
+  une écriture conditionnelle qui échoue annule tout l'envoi. Le code qui lit ces erreurs n'a pas à changer.
+- **Garde-fous.** Dans `a-reprendre.md`, plus aucune vérification ni aucun index à reprendre, et le plafond est
+  maintenant à zéro. Plus aucune table lue par le code ne manque au schéma D1. Restent les 64 déclencheurs et les
+  fonctions, objets des sous-lots suivants.
+
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
 Quitter Supabase fait perdre PostgREST, donc supabase-js, **quelle que soit la base d'arrivée** **[doc]**. La façade du
@@ -447,6 +494,6 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
 5. **Latence** : mesurée le 2026-11-03 (section « Mesure de latence »). Francfort `eu` gardée, Londres supprimée.
 6. **Lot 3, la façade** : fait le 2026-11-03 (« Go lot 3 »), avec 3g (colonnes sensibles) et la correction de trois
    pannes de production accordées le même jour.
-7. **Lot 4, la logique de la base dans le code** : à lancer sur ton feu vert. C'est le lot le plus long (15–22 j) et le
-   plus risqué : les 36 fonctions (argent virtuel du TCG et de la Bibliothèque compris), les 64 déclencheurs, les
-   vues.
+7. **Lot 4, la logique de la base dans le code** : lancé le 2026-11-03 (« go lot 4 »), sous-lot 4a fait le même jour.
+   C'est le lot le plus long (15–22 j) et le plus risqué : les 36 fonctions (argent virtuel du TCG et de la
+   Bibliothèque compris) et les 64 déclencheurs. Un sous-lot à la fois.
