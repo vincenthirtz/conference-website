@@ -425,7 +425,7 @@ suivant.
 | 4d | Les 10 fonctions simples (lectures de compte, utilitaires) | **fait** le 2026-11-03 (API `8419f91`) |
 | 4e | Équipes et vivier (12 fonctions) | **fait** le 2026-11-03 (API `2d0c543`) |
 | 4f-1 | TCG : argent virtuel et échanges (8 fonctions) | **fait** le 2026-11-03 (API, voir plus bas) |
-| 4f-2 | Women's Library (5 fonctions) | à faire |
+| 4f-2 | Women's Library (5 fonctions) | **fait** le 2026-11-03 (API, voir plus bas) |
 | 4g | Les fonctions que rien n'appelle : vérifier, puis abandonner | à faire |
 
 **4a, fait le 2026-11-03.** Rien ne change en production : la façade n'est toujours branchée sur rien.
@@ -682,6 +682,49 @@ feu vert.
   - dans ce même croisement, l'achat d'un booster pouvait rafraîchir le résumé du solde avant de répondre « fonds
     insuffisants ». D1 répond sans ce rafraîchissement, qui se refait à l'opération suivante.
 
+**4f-2, la Women's Library, fait le 2026-11-03** (« go »). Rien ne change en production. **Avec lui, les 36
+fonctions que l'API appelle sont toutes réécrites** ; un test l'exige désormais.
+
+- **5 fonctions réécrites** : acheter un meuble, aménager son appartement, prêter un meuble au QG d'équipe, le
+  rendre, réclamer le paquet hebdomadaire de l'arène.
+- **Une méthode plus simple que celle des échanges : un seul envoi qui rend son verdict.** Ces fonctions répondent par
+  un statut (« introuvable », « conflit de version », « déjà posé ailleurs », « fonds insuffisants », « ok »…).
+  L'envoi lit l'état, rend son verdict, et n'écrit que si le verdict est « ok ». D1 exécute un envoi à la fois : rien
+  ne peut se glisser entre le jugement et l'écriture, **il n'y a jamais à recommencer**.
+- **L'arène, seule exception.** Sa semaine se calcule à l'heure de Paris, ce que SQLite ne sait pas faire. La fonction
+  lit d'abord la fin du duel, calcule la semaine en TypeScript (avec le module de l'API qui affiche déjà « paquet de
+  la semaine gagné »), puis écrit en revérifiant que le duel n'a pas bougé.
+- **La comparaison avec Postgres** : 5 tests pas à pas, plus de 60 appels. Après chaque appel, elle vérifie le
+  porte-monnaie, le registre, les paquets, l'inventaire, la version des salles, les meubles posés et les duels.
+  Elle couvre :
+  - **pour l'achat** : arguments refusés (dont une référence de 200 émojis, acceptée car Postgres compte des
+    caractères), fonds insuffisants, registre en négatif, achat, rejeu, porte-monnaie créé au premier achat ;
+  - **pour l'appartement** : forme de la liste (la conversion de toute la liste passe avant la recherche d'un
+    champ manquant, comme Postgres), salle d'une autre, conflit de version, doublon, meuble d'une autre, meuble posé
+    au QG, remplacement complet (un meuble absent de la liste est rangé) ;
+  - **pour le QG** : salle qui n'est pas un QG, invitée pas encore acceptée, équipe dissoute, capitaine sans
+    adhésion, conflit, meuble d'une autre, meuble posé chez soi, prêt puis déplacement ;
+  - **pour le retour** : pas prêté, joueuse non autorisée, manager pas encore acceptée, retour par la propriétaire,
+    par la capitaine, par une manager ;
+  - **pour l'arène** : duel d'une autre, perdu, en cours, paquet donné puis rejoué, semaine déjà payée, un duel
+    fini le dimanche à 23 h 30 UTC (lundi 0 h 30 à Paris : semaine 44, pas 43), et une récompense incohérente
+    déjà enregistrée pour ce duel.
+- **La concurrence, testée exprès** (6 tests) :
+  - une dépense glissée juste avant un achat est vue : refus, **pas de découvert**, rien à recommencer ;
+  - deux achats simultanés de la même référence : un achat, un rejeu, **un seul débit** ;
+  - deux achats simultanés, des fonds pour un seul : un achat, un refus ;
+  - deux enregistrements simultanés de la même version d'appartement : **un seul passe** ;
+  - une réclamation jumelle glissée entre la lecture et l'écriture de l'arène : la fonction recommence et rend le
+    paquet déjà donné, **jamais un second** ;
+  - la même semaine payée par un autre duel entre-temps : « semaine déjà payée », sans recommencer.
+- **Contre-épreuve** : 21 détails cassés exprès, 21 détectés. Exemples : la semaine calculée en heure UTC, la
+  revérification du duel retirée, la capitaine refusée, un porte-monnaie créé même quand l'achat est refusé.
+- **Deux écarts, sans effet :**
+  - quand plusieurs meubles d'une liste sont fautifs, Postgres en nomme un sans ordre garanti ; D1 nomme le premier
+    de la liste. L'API ne fait qu'afficher ce meuble ;
+  - un nombre écrit `3.0` dans la liste des meubles : Postgres le refusait, D1 l'accepte (JavaScript ne distingue
+    pas `3.0` de `3`). L'API n'envoie que des entiers.
+
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
 Quitter Supabase fait perdre PostgREST, donc supabase-js, **quelle que soit la base d'arrivée** **[doc]**. La façade du
@@ -717,8 +760,9 @@ La contrepartie : un fournisseur de plus, et 5 à 19 $ par mois.
 5. **Latence** : mesurée le 2026-11-03 (section « Mesure de latence »). Francfort `eu` gardée, Londres supprimée.
 6. **Lot 3, la façade** : fait le 2026-11-03 (« Go lot 3 »), avec 3g (colonnes sensibles) et la correction de trois
    pannes de production accordées le même jour.
-7. **Lot 4, la logique de la base dans le code** : lancé le 2026-11-03 (« go lot 4 »), sous-lots 4a à 4e et 4f-1
-   (TCG) faits le même jour, ainsi que la correction de la façade (`ilike` sur une table embarquée). 4f coupé en deux
-   sur ton accord ; 4f-2 (Women's Library) et 4g (fonctions inutilisées) attendent ton feu vert.
+7. **Lot 4, la logique de la base dans le code** : lancé le 2026-11-03 (« go lot 4 »), sous-lots 4a à 4f faits le
+   même jour (4f coupé en deux sur ton accord : TCG, puis Women's Library), ainsi que la correction de la façade
+   (`ilike` sur une table embarquée). Les 36 fonctions que l'API appelle sont réécrites ; 4g (fonctions que rien
+   n'appelle) attend ton feu vert.
    C'est le lot le plus long (15–22 j) et le plus risqué : les 36 fonctions (argent virtuel du TCG et de la
    Bibliothèque compris) et les 64 déclencheurs. Un sous-lot à la fois.
