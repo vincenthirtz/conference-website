@@ -6,6 +6,7 @@
 # selon la procédure officielle de Supabase, puis comparaison table par table
 # du nombre de lignes avec la sauvegarde (scripts/db-restore-verify.mjs).
 # Tout disparaît avec la machine ; le résumé ne contient que des nombres.
+# Ensuite, la répétition de la copie vers un D1 jetable (lot 5 de docs/D1-MIGRATION.md).
 #
 # Le 5 de chaque mois, et à la main (choix de la date possible).
 
@@ -21,6 +22,10 @@ on:
         required: false
       auth_trial:
         description: 'Essayer ensuite les migrations du lot 4 de Better Auth (scripts/db-auth-trial.mjs)'
+        type: boolean
+        default: false
+      d1_copy:
+        description: 'Répéter ensuite la copie vers un D1 jetable (lot 5 de docs/D1-MIGRATION.md) ; toujours faite le 5 du mois'
         type: boolean
         default: false
 
@@ -149,8 +154,30 @@ jobs:
         if: ${{ inputs.auth_trial }}
         run: node scripts/db-auth-trial.mjs "$LOCAL_DB" api-repo/database/migrations
 
+      # Lot 5 de docs/D1-MIGRATION.md : la copie vers D1, répétée sur cette sauvegarde, dans un
+      # D1 JETABLE (moteur local de wrangler, sur cette machine : rien n'est écrit sur
+      # Cloudflare, la clé est retirée de l'étape). Chaque table est relue et comparée valeur
+      # par valeur ; le script n'affiche que des nombres et des noms de tables ou de colonnes.
+      - uses: actions/checkout@v4
+        if: ${{ inputs.d1_copy || github.event_name == 'schedule' }}
+        with:
+          repository: vincenthirtz/conference-api
+          token: ${{ secrets.API_REPO_DISPATCH_TOKEN }}
+          path: api-d1
+
+      - name: Copie vers D1 (répétition)
+        if: ${{ inputs.d1_copy || github.event_name == 'schedule' }}
+        working-directory: api-d1
+        env:
+          CLOUDFLARE_API_TOKEN: ''
+          CLOUDFLARE_ACCOUNT_ID: ''
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund > /dev/null
+          npm run -s db:d1:copy -- --psql "$LOCAL_DB"
+
       - name: Nettoyage
         if: always()
         run: |
-          rm -rf dump api-repo
+          rm -rf dump api-repo api-d1
           (cd restore && supabase stop --no-backup) || true
