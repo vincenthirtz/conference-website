@@ -1,0 +1,179 @@
+# La bascule de la base vers D1 — lot 6 de docs/D1-MIGRATION.md, marche à suivre :
+# docs/D1-SWITCH.md. Lancé À LA MAIN seulement, jamais par un horaire ni par un push.
+#
+# Trois modes :
+#   secrets    Les deux secrets du temps réel (REALTIME_NOTIFY_SECRET, REALTIME_TICKET_SECRET,
+#              ceux de realtime.yml) posés sur le Worker de l'API, qui préviendra les écrans
+#              quand D1 sera la base. Sans effet tant que DB_BACKEND vaut « supabase » : à faire
+#              un jour avant la bascule.
+#   repetition La copie finale chronométrée : la base EN SERVICE lue en une transaction en
+#              lecture seule (rien n'y est écrit), chargée dans un D1 JETABLE sur la machine de
+#              GitHub, vérifiée. Ni gel ni écriture nulle part.
+#   finale     Le soir de la bascule, écritures de l'API gelées (DB_WRITES_FROZEN = « 1 » en
+#              ligne, vérifié ici avant tout) : la photo de la nuit est mise en pause, puis la
+#              base en service est copiée dans la VRAIE base D1 owwomenscup-db, toutes les
+#              tables, vérifiée, et marquée « base principale » si tout est identique. Ensuite,
+#              plus rien ne peut vider cette base (ni la photo, ni une nouvelle copie).
+#
+# Secret SUPABASE_DB_URL : le même que db-backup.yml (environnement « cloudflare-production »).
+# DÉPÔT PUBLIC, journaux publics : le script n'écrit que des nombres et des noms de tables.
+
+name: db-d1-switch
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'secrets, repetition ou finale (docs/D1-SWITCH.md)'
+        type: choice
+        options: [repetition, secrets, finale]
+        default: repetition
+      confirmation:
+        description: 'Pour « finale » seulement : écrire BASCULE'
+        required: false
+
+# Jamais en même temps qu'une photo de la nuit ou un essai de restauration (même groupe).
+concurrency:
+  group: db-restore-test
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  # Mettre en pause la photo de la nuit (mode « finale »).
+  actions: write
+
+jobs:
+  switch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: cloudflare-production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      MODE: ${{ inputs.mode }}
+      API_URL: https://api.owwomenscup.fr
+    steps:
+      - name: Confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "$MODE" = 'finale' ] && [ "$CONFIRMATION" != 'BASCULE' ]; then
+            echo '::error::Mode « finale » : écrire BASCULE dans le champ de confirmation.'
+            exit 1
+          fi
+          echo "- Mode : $MODE" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      # Les deux secrets, depuis leur seule source (realtime.yml les lit au même endroit). Les
+      # noms vont au résumé, jamais les valeurs. Le Worker de l'API garde ses secrets d'un
+      # déploiement à l'autre.
+      - name: Secrets du temps réel sur le Worker de l'API
+        if: ${{ inputs.mode == 'secrets' }}
+        env:
+          REALTIME_NOTIFY_SECRET: ${{ secrets.REALTIME_NOTIFY_SECRET }}
+          REALTIME_TICKET_SECRET: ${{ secrets.REALTIME_TICKET_SECRET }}
+        run: |
+          npm ci --no-audit --no-fund > /dev/null
+          node -e "
+            const names = ['REALTIME_NOTIFY_SECRET', 'REALTIME_TICKET_SECRET'];
+            const s = Object.fromEntries(names.filter((n) => process.env[n]).map((n) => [n, process.env[n]]));
+            require('fs').writeFileSync('secrets.json', JSON.stringify(s));
+            const missing = names.filter((n) => !s[n]);
+            const lines = ['## Secrets du temps réel (Worker owwomenscup-api)', '', 'Posés : ' + (Object.keys(s).join(', ') || 'aucun'), '', 'Absents : ' + (missing.join(', ') || 'aucun'), ''];
+            require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+            console.log(lines.join(' | '));
+            if (missing.length) process.exit(1);
+          "
+          npx wrangler secret bulk secrets.json --name owwomenscup-api
+          rm -f secrets.json
+
+      # Le gel doit être EN LIGNE : une requête d'écriture vers une adresse qui n'existe pas
+      # reçoit 503 « writes_frozen » du Worker gelé (404 sinon, sans rien écrire). Et la base
+      # en service doit encore être Supabase.
+      - name: Écritures gelées, Supabase encore en service
+        if: ${{ inputs.mode == 'finale' }}
+        run: |
+          set -euo pipefail
+          code="$(curl -s -o probe.json -w '%{http_code}' -X POST "$API_URL/api/d1-switch/freeze-probe" -H 'content-type: application/json' -d '{}')"
+          if [ "$code" != '503' ] || ! grep -q '"writes_frozen"' probe.json; then
+            echo "::error::Les écritures de l'API ne sont pas gelées (réponse $code) : poser DB_WRITES_FROZEN = « 1 » et déployer l'API d'abord."
+            exit 1
+          fi
+          health="$(curl -s "$API_URL/api/health")"
+          if ! printf '%s' "$health" | grep -q '"dbBackend":"supabase"'; then
+            echo '::error::L’API ne dit pas « dbBackend: supabase » : la bascule semble déjà faite, rien n’est copié.'
+            exit 1
+          fi
+          rm -f probe.json
+          echo '- Écritures gelées (503 writes_frozen), Supabase encore en service' >> "$GITHUB_STEP_SUMMARY"
+
+      # Une photo de la nuit viderait la base pendant la copie : mise en pause, et aucune en cours.
+      - name: Photo de la nuit en pause
+        if: ${{ inputs.mode == 'finale' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow disable db-d1-photo.yml --repo "$GITHUB_REPOSITORY"
+          running="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow db-d1-photo.yml --status in_progress --json databaseId --jq 'length')"
+          if [ "$running" != '0' ]; then
+            echo '::error::Une photo de la nuit est en cours : attendre sa fin, puis relancer.'
+            exit 1
+          fi
+          echo '- Photo de la nuit (db-d1-photo) mise en pause' >> "$GITHUB_STEP_SUMMARY"
+
+      # Le script de copie vit dans le dépôt privé de l'API (comme pour db-restore-test).
+      - uses: actions/checkout@v4
+        if: ${{ inputs.mode != 'secrets' }}
+        with:
+          repository: vincenthirtz/conference-api
+          token: ${{ secrets.API_REPO_DISPATCH_TOKEN }}
+          path: api-d1
+
+      - name: Dépendances de l'API
+        if: ${{ inputs.mode != 'secrets' }}
+        working-directory: api-d1
+        run: npm ci --no-audit --no-fund > /dev/null
+
+      - name: psql
+        if: ${{ inputs.mode != 'secrets' }}
+        run: psql --version
+
+      # Vers un D1 jetable : la clé Cloudflare est retirée de l'étape, rien n'est écrit chez
+      # Cloudflare ; la base en service n'est que lue (une transaction en lecture seule).
+      - name: Copie finale (répétition, D1 jetable)
+        if: ${{ inputs.mode == 'repetition' }}
+        working-directory: api-d1
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          CLOUDFLARE_API_TOKEN: ''
+          CLOUDFLARE_ACCOUNT_ID: ''
+        run: npm run -s db:d1:copy -- --psql "$SUPABASE_DB_URL" --final
+
+      - name: Copie finale (vraie base D1)
+        if: ${{ inputs.mode == 'finale' }}
+        working-directory: api-d1
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: npm run -s db:d1:copy -- --psql "$SUPABASE_DB_URL" --final --writes-frozen --remote
+
+      - name: Suite
+        if: ${{ success() && inputs.mode == 'finale' }}
+        run: |
+          {
+            echo ''
+            echo '### Suite (docs/D1-SWITCH.md)'
+            echo ''
+            echo '- Poser DB_BACKEND = « d1 » sur l’API et sur le site, déployer, contrôler, puis dégeler.'
+            echo '- La photo de la nuit reste en pause : la base D1 est désormais la base principale.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Nettoyage
+        if: always()
+        run: rm -rf api-d1 secrets.json probe.json

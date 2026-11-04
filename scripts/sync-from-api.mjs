@@ -40,7 +40,17 @@ if (!fs.existsSync(path.join(api, 'pages', 'api'))) {
 // Dossiers de code de l'API : un fichier du site qui y a un homonyme est à
 // elle. `pages/api` n'en fait pas partie : le site ne l'importe plus
 // (tests/unit/apiTypeImportsGuard.test.ts) et ne le recopie pas.
-const API_DIRS = ['utils', 'lib', 'features', 'config', 'types', 'components'];
+// `database/d1` : la carte du schéma D1 (catalog.json), que lit la façade D1 du rendu serveur
+// (utils/db/d1/, lot 6 de docs/D1-MIGRATION.md) ; rien d'autre de `database/` n'est importé.
+const API_DIRS = [
+  'utils',
+  'lib',
+  'features',
+  'config',
+  'types',
+  'components',
+  'database/d1',
+];
 // Points d'entrée du site : tout ce qui n'est pas l'API. Pas les tests : ceux
 // qui exercent des routes sont partis avec elles, et ceux du code partagé
 // n'atteignent rien que les pages n'atteignent pas.

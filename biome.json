@@ -14,7 +14,9 @@
       "!**/public",
       "!**/next-env.d.ts",
       "!docs/openapi/inferred-responses.json",
-      "!types/database.generated.ts"
+      "!types/database.generated.ts",
+      "!utils/db/d1",
+      "!database/d1"
     ]
   },
   "formatter": {
