@@ -47,7 +47,11 @@ const USER = {
   metadata: { role: 'player', battle_tag: 'Essai#1234' },
 };
 
-type Route = (body: unknown) => { status?: number; json: unknown };
+type Route = (body: unknown) => {
+  status?: number;
+  json: unknown;
+  headers?: Record<string, string>;
+};
 let routes: Record<string, Route>;
 let calls: { path: string; method: string; body: unknown }[];
 
@@ -61,8 +65,8 @@ function serve() {
       calls.push({ path, method: init?.method ?? 'GET', body });
       const route = routes[path];
       if (!route) return new Response('null', { status: 404 });
-      const { status = 200, json } = route(body);
-      return new Response(JSON.stringify(json), { status });
+      const { status = 200, json, headers } = route(body);
+      return new Response(JSON.stringify(json), { status, headers });
     })
   );
 }
@@ -358,6 +362,62 @@ describe('la porte, côté Better Auth', () => {
       'TOKEN_REFRESHED',
       expect.objectContaining({ access_token: expect.any(String) })
     );
+    sub.subscription.unsubscribe();
+  });
+
+  it('des écrans qui lisent la session ensemble : une seule demande de jeton', async () => {
+    await Promise.all(
+      Array.from({ length: 5 }, () => identityBrowser.getSession())
+    );
+    expect(calls.filter((c) => c.path === '/token')).toHaveLength(1);
+  });
+
+  it('un 429 : le jeton gardé tant qu’il vaut, puis rien avant le délai de l’API', async () => {
+    vi.useFakeTimers();
+    // Un jeton dans sa dernière minute : la lecture suivante en redemande un.
+    routes['/token'] = () => ({ json: { token: jwt(exp() - 250) } });
+    const first = await identityBrowser.getSession();
+    routes['/token'] = () => ({
+      status: 429,
+      json: { message: 'Too many requests.' },
+      headers: { 'X-Retry-After': '30' },
+    });
+    const limited = await identityBrowser.getSession();
+    expect(limited.data.session?.access_token).toBe(
+      first.data.session?.access_token
+    );
+    await identityBrowser.getSession();
+    await identityBrowser.getSession();
+    expect(calls.filter((c) => c.path === '/token')).toHaveLength(2);
+
+    routes['/token'] = () => ({ json: { token: jwt(exp()) } });
+    await vi.advanceTimersByTimeAsync(31_000);
+    await identityBrowser.getSession();
+    expect(calls.filter((c) => c.path === '/token')).toHaveLength(3);
+  });
+
+  it('un 429 au renouvellement n’est pas une déconnexion : nouvel essai au délai', async () => {
+    vi.useFakeTimers();
+    const listener = vi.fn();
+    const { data: sub } = identityBrowser.onAuthStateChange(listener);
+    await identityBrowser.refreshSession();
+    routes['/token'] = () => ({
+      status: 429,
+      json: { message: 'Too many requests.' },
+      headers: { 'X-Retry-After': '120' },
+    });
+    // Renouvellement à 240 s refusé, puis à 360 s encore refusé, jeton expiré entre-temps.
+    await vi.advanceTimersByTimeAsync(400_000);
+    expect(listener).not.toHaveBeenCalledWith('SIGNED_OUT', null);
+
+    routes['/token'] = () => ({ json: { token: jwt(exp()) } });
+    listener.mockClear();
+    await vi.advanceTimersByTimeAsync(90_000);
+    expect(listener).toHaveBeenCalledWith(
+      'TOKEN_REFRESHED',
+      expect.objectContaining({ access_token: expect.any(String) })
+    );
+    expect(listener).not.toHaveBeenCalledWith('SIGNED_OUT', null);
     sub.subscription.unsubscribe();
   });
 });

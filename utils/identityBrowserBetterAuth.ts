@@ -7,7 +7,9 @@
 //
 // LE JETON. L'API attend `Authorization: Bearer`. On demande un jeton de 5 minutes à
 // /api/identity/token, gardé jusqu'à une minute de sa fin et renouvelé avant, avec l'événement
-// TOKEN_REFRESHED, comme Supabase le fait pour le sien.
+// TOKEN_REFRESHED, comme Supabase le fait pour le sien. Les écrans qui lisent la session
+// ensemble partagent une seule demande, et un refus « trop de demandes » (429) fait attendre
+// le délai que l'API indique, avec le jeton gardé tant qu'il vaut encore.
 //
 // LA DOUBLE AUTHENTIFICATION se donne AVANT la session chez Better Auth : la connexion par mot
 // de passe d'un compte protégé rend `twoFactorRequired`, puis `verifyTwoFactorCode` ouvre la
@@ -48,6 +50,12 @@ type Token = { value: string; exp: number };
 
 let token: Token | null = null;
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+/** La demande de jeton en cours, que les lectures simultanées rejoignent. */
+let pendingToken: Promise<Token | null> | null = null;
+/** Après un 429 : pas de nouvelle demande de jeton avant cette heure (secondes). */
+let tokenRetryAt = 0;
+/** Sans indication de l'API après un 429 : la fenêtre de sa limite sur /token. */
+const DEFAULT_RETRY_S = 60;
 
 const now = () => Math.floor(Date.now() / 1000);
 
@@ -70,6 +78,8 @@ async function call(
   ok: boolean;
   status: number;
   data: Record<string, unknown> | null;
+  /** Secondes d'attente demandées par un 429 (`X-Retry-After`), 0 sinon. */
+  retryAfter: number;
 }> {
   try {
     const res = await fetch(`${BASE}${path}`, {
@@ -83,9 +93,16 @@ async function call(
       string,
       unknown
     > | null;
-    return { ok: res.ok, status: res.status, data };
+    const retryAfter = Number(res.headers.get('x-retry-after'));
+    return {
+      ok: res.ok,
+      status: res.status,
+      data,
+      retryAfter:
+        Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 0,
+    };
   } catch {
-    return { ok: false, status: 0, data: null };
+    return { ok: false, status: 0, data: null, retryAfter: 0 };
   }
 }
 
@@ -132,7 +149,28 @@ async function fetchSession(): Promise<BetterAuthSession | null> {
 
 async function accessToken(force: boolean): Promise<Token | null> {
   if (!force && token && token.exp - now() > REFRESH_MARGIN_S) return token;
-  const { ok, data } = await call('/token');
+  if (!force && pendingToken) return pendingToken;
+  if (!force && now() < tokenRetryAt) return stillValid();
+  const request = requestToken();
+  pendingToken = request;
+  void request.finally(() => {
+    if (pendingToken === request) pendingToken = null;
+  });
+  return request;
+}
+
+/** Le jeton gardé, même dans sa dernière minute, tant qu'il n'a pas expiré. */
+function stillValid(): Token | null {
+  return token && token.exp > now() ? token : null;
+}
+
+async function requestToken(): Promise<Token | null> {
+  const { ok, status, data, retryAfter } = await call('/token');
+  if (status === 429) {
+    tokenRetryAt = now() + (retryAfter || DEFAULT_RETRY_S);
+    scheduleRefresh();
+    return stillValid();
+  }
   const value = data?.token;
   if (!ok || typeof value !== 'string') {
     token = null;
@@ -151,10 +189,13 @@ function stopRefresh(): void {
 function scheduleRefresh(): void {
   stopRefresh();
   if (!token || !hasIdentityListeners()) return;
-  const delay = Math.max(5, token.exp - now() - REFRESH_MARGIN_S) * 1000;
+  const at = Math.max(token.exp - REFRESH_MARGIN_S, tokenRetryAt);
+  const delay = Math.max(5, at - now()) * 1000;
   refreshTimer = setTimeout(() => {
     void currentSession(true).then((session) => {
-      emitIdentityEvent(session ? 'TOKEN_REFRESHED' : 'SIGNED_OUT', session);
+      if (session) emitIdentityEvent('TOKEN_REFRESHED', session);
+      // Un 429 n'est pas une déconnexion : le renouvellement est déjà reprogrammé.
+      else if (now() >= tokenRetryAt) emitIdentityEvent('SIGNED_OUT', null);
     });
   }, delay);
 }
@@ -306,6 +347,7 @@ export const betterAuthBrowser = {
     if (options?.scope !== 'others') {
       await call('/sign-out', {});
       token = null;
+      tokenRetryAt = 0;
       stopRefresh();
       emitIdentityEvent('SIGNED_OUT', null);
     }
