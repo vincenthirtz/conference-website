@@ -46,26 +46,28 @@ const NO_ROLE = 'Choisis au moins un poste recherché.';
  */
 export const TeamOpeningUpsertBody = z
   .object({
-  // Au moins un poste : une annonce sans poste n'aide aucune joueuse à savoir
-  // si elle est concernée (même règle que le formulaire public). Depuis le
-  // mercato, `positions` suffit (les rôles historiques en sont déduits).
-  roles: z
-    .array(z.enum(TEAM_OPENING_ROLES), { error: NO_ROLE })
-    .max(TEAM_OPENING_ROLES.length)
-    .optional(),
-  level: z.enum(TEAM_OPENING_LEVELS, { error: 'Niveau invalide.' }).optional(),
-  availability: z
-    .string()
-    .trim()
-    .max(TEAM_OPENING_LIMITS.availability)
-    .nullish(),
-  note: z.string().trim().max(TEAM_OPENING_LIMITS.note).nullish(),
-  contactDiscord: z
-    .string()
-    .trim()
-    .max(TEAM_OPENING_LIMITS.contactDiscord)
-    .nullish(),
-  ...teamMercatoShape,
+    // Au moins un poste : une annonce sans poste n'aide aucune joueuse à savoir
+    // si elle est concernée (même règle que le formulaire public). Depuis le
+    // mercato, `positions` suffit (les rôles historiques en sont déduits).
+    roles: z
+      .array(z.enum(TEAM_OPENING_ROLES), { error: NO_ROLE })
+      .max(TEAM_OPENING_ROLES.length)
+      .optional(),
+    level: z
+      .enum(TEAM_OPENING_LEVELS, { error: 'Niveau invalide.' })
+      .optional(),
+    availability: z
+      .string()
+      .trim()
+      .max(TEAM_OPENING_LIMITS.availability)
+      .nullish(),
+    note: z.string().trim().max(TEAM_OPENING_LIMITS.note).nullish(),
+    contactDiscord: z
+      .string()
+      .trim()
+      .max(TEAM_OPENING_LIMITS.contactDiscord)
+      .nullish(),
+    ...teamMercatoShape,
   })
   .refine(hasAnyPosition, { message: NO_ROLE, path: ['roles'] })
   .refine((v) => rankRangeIsOrdered(v.rankMin, v.rankMax), {

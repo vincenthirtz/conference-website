@@ -81,7 +81,12 @@ export type DisclosedGender = (typeof DISCLOSED_GENDERS)[number];
  * et personnes non-binaires » est le cas courant du circuit) ; `mixed` dit
  * « équipe mixte, tout le monde est bienvenu ».
  */
-export const SOUGHT_GENDERS = ['female', 'male', 'non_binary', 'mixed'] as const;
+export const SOUGHT_GENDERS = [
+  'female',
+  'male',
+  'non_binary',
+  'mixed',
+] as const;
 export type SoughtGender = (typeof SOUGHT_GENDERS)[number];
 
 export const MERCATO_PLATFORMS = ['pc', 'console'] as const;
@@ -129,14 +134,17 @@ function includes<T extends string>(
   list: readonly T[],
   value: unknown
 ): value is T {
-  return typeof value === 'string' && (list as readonly string[]).includes(value);
+  return (
+    typeof value === 'string' && (list as readonly string[]).includes(value)
+  );
 }
 
 export const isMercatoPosition = (v: unknown): v is MercatoPosition =>
   includes(MERCATO_POSITIONS, v);
 export const isPlayerGender = (v: unknown): v is PlayerGender =>
   includes(PLAYER_GENDERS, v);
-export const isRankTier = (v: unknown): v is RankTier => includes(RANK_TIERS, v);
+export const isRankTier = (v: unknown): v is RankTier =>
+  includes(RANK_TIERS, v);
 export const isRankDivision = (v: unknown): v is RankDivision =>
   typeof v === 'number' && (RANK_DIVISIONS as readonly number[]).includes(v);
 
