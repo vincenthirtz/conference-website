@@ -4968,6 +4968,62 @@
           "pg": "text",
           "nullable": true,
           "default": null
+        },
+        {
+          "name": "gender",
+          "type": "text",
+          "pg": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "rank_division",
+          "type": "smallint",
+          "pg": "smallint",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "platforms",
+          "type": "array",
+          "pg": "text[]",
+          "nullable": false,
+          "default": "'[]'"
+        },
+        {
+          "name": "inputs",
+          "type": "array",
+          "pg": "text[]",
+          "nullable": false,
+          "default": "'[]'"
+        },
+        {
+          "name": "main_role",
+          "type": "text",
+          "pg": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "positions",
+          "type": "array",
+          "pg": "text[]",
+          "nullable": false,
+          "default": "'[]'"
+        },
+        {
+          "name": "past_teams",
+          "type": "text",
+          "pg": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "goals",
+          "type": "text",
+          "pg": "text",
+          "nullable": true,
+          "default": null
         }
       ],
       "primaryKey": [
@@ -17493,6 +17549,48 @@
           "pg": "timestamp with time zone",
           "nullable": true,
           "default": null
+        },
+        {
+          "name": "sought_genders",
+          "type": "array",
+          "pg": "text[]",
+          "nullable": false,
+          "default": "'[]'"
+        },
+        {
+          "name": "rank_min",
+          "type": "text",
+          "pg": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "rank_max",
+          "type": "text",
+          "pg": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "platforms",
+          "type": "array",
+          "pg": "text[]",
+          "nullable": false,
+          "default": "'[]'"
+        },
+        {
+          "name": "inputs",
+          "type": "array",
+          "pg": "text[]",
+          "nullable": false,
+          "default": "'[]'"
+        },
+        {
+          "name": "positions",
+          "type": "array",
+          "pg": "text[]",
+          "nullable": false,
+          "default": "'[]'"
         }
       ],
       "primaryKey": [
