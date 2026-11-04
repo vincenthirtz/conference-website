@@ -122,7 +122,7 @@ function ProlongerPage() {
         <div className={card} role="alert">
           <h1 className="text-xl font-bold">{t.removeInvalidTitle}</h1>
           <p className="mt-3 text-sm text-gray-300">{t.renewInvalidBody}</p>
-          <Link href="/rejoindre" className={linkBtn}>
+          <Link href="/mercato?onglet=joueuses" className={linkBtn}>
             {t.removeBackCta}
           </Link>
         </div>
@@ -134,7 +134,7 @@ function ProlongerPage() {
           <p className="mt-3 text-sm text-gray-300">
             {fmt(t.renewDoneBody, { date: formatDate(state.expiresAt) })}
           </p>
-          <Link href="/rejoindre" className={linkBtn}>
+          <Link href="/mercato?onglet=joueuses" className={linkBtn}>
             {t.removeBackCta}
           </Link>
         </div>

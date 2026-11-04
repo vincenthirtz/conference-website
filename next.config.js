@@ -117,6 +117,27 @@ const nextConfig = {
         destination: '/ambassadors',
         permanent: true,
       },
+      /**
+       * Hub mercato : /rejoindre (les joueuses qui cherchent une équipe) et
+       * /recrutement (les équipes qui recrutent) fusionnent dans /mercato, un
+       * onglet par face du marché. Chaque ancienne page mène à SON onglet —
+       * celui qui porte sa liste et son formulaire. Permanentes : les deux
+       * adresses sont au sitemap, partagées dans les emails et sur Discord.
+       *
+       * Correspondance EXACTE (pas de `:path*`) : les pages de lien reçu par
+       * email (/rejoindre/retrait, /rejoindre/prolonger, /rejoindre/[token],
+       * /recrutement/retrait) restent où elles sont.
+       */
+      {
+        source: '/rejoindre',
+        destination: '/mercato?onglet=joueuses',
+        permanent: true,
+      },
+      {
+        source: '/recrutement',
+        destination: '/mercato?onglet=equipes',
+        permanent: true,
+      },
     ];
   },
   async headers() {

@@ -47,8 +47,8 @@ const getSiteSections = (t: PlanDict): SiteSection[] => [
     links: [
       { label: t.linkRegister, href: '/register' },
       { label: t.linkRegister2026, href: '/inscription-2026' },
-      { label: t.linkFindTeam, href: '/rejoindre' },
-      { label: t.linkRecruit, href: '/recrutement' },
+      { label: t.linkFindTeam, href: '/mercato?onglet=joueuses' },
+      { label: t.linkRecruit, href: '/mercato?onglet=equipes' },
       { label: t.linkCreateTeam, href: '/team/create' },
       { label: t.linkCaptainGuide, href: '/guide/gerer-mon-equipe' },
       { label: t.linkCaptainSpace, href: '/espace-capitaine' },

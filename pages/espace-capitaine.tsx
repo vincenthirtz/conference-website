@@ -264,7 +264,7 @@ function EspaceCapitainePage() {
               </p>
             </div>
             <Link
-              href="/recrutement"
+              href="/mercato?onglet=equipes"
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--color-violet)]/50 bg-[var(--color-violet-cta)]/15 px-6 py-3 text-sm font-bold text-white transition hover:border-[var(--color-violet)] hover:bg-[var(--color-violet-cta)]/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-violet)]"
             >
               {t.recruitCta}

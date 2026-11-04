@@ -110,7 +110,7 @@ function RetraitAnnoncePage() {
         <div className={card} role="status">
           <h1 className="text-xl font-bold">{t.removeDoneTitle}</h1>
           <p className="mt-3 text-sm text-gray-300">{t.removeDoneBody}</p>
-          <Link href="/recrutement" className={linkBtn}>
+          <Link href="/mercato?onglet=equipes" className={linkBtn}>
             {t.removeBackCta}
           </Link>
         </div>
@@ -143,7 +143,7 @@ function RetraitAnnoncePage() {
             {state.kind === 'removing' ? t.removeWorking : t.removeConfirm}
           </button>
 
-          <Link href="/recrutement" className={linkBtn}>
+          <Link href="/mercato?onglet=equipes" className={linkBtn}>
             {t.removeBackCta}
           </Link>
         </div>

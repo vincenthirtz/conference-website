@@ -168,9 +168,13 @@ export default function DirectoryTeamRow({
               {t.proposeCta}
             </ButtonLink>
           )}
-          {/* L'annonce vit sur /recrutement, qui porte le contact. */}
+          {/* L'annonce vit dans le mercato (onglet équipes), qui porte le contact. */}
           {team.opening && (
-            <ButtonLink variant="secondary" size="sm" href="/recrutement">
+            <ButtonLink
+              variant="secondary"
+              size="sm"
+              href="/mercato?onglet=equipes"
+            >
               {t.viewOpeningCta}
             </ButtonLink>
           )}

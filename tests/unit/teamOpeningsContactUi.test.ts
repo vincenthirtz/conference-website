@@ -47,7 +47,14 @@ describe('contactErrorKind', () => {
 });
 
 describe('CONTACT_LOGIN_HREF', () => {
-  it('ramène sur /recrutement après connexion', () => {
-    expect(CONTACT_LOGIN_HREF).toBe('/login?next=/recrutement');
+  it('ramène sur l’onglet « équipes » du mercato après connexion', () => {
+    expect(CONTACT_LOGIN_HREF).toBe(
+      '/login?next=%2Fmercato%3Fonglet%3Dequipes'
+    );
+    // Ce que /login lira (`safeNext`) : un chemin interne, onglet compris.
+    const next = new URLSearchParams(CONTACT_LOGIN_HREF.split('?')[1]).get(
+      'next'
+    );
+    expect(next).toBe('/mercato?onglet=equipes');
   });
 });

@@ -27,7 +27,8 @@ describe('HomeHeroV2 — CTA', () => {
   it('rend des liens, sans <button> imbriqué dans un <a>', () => {
     const html = renderHero();
     expect(html).toContain('href="/team/create"');
-    expect(html).toContain('href="/rejoindre"');
+    // Le CTA « joueuse seule » mène au hub mercato, onglet des joueuses.
+    expect(html).toContain('href="/mercato?onglet=joueuses"');
     expect(html).toContain('href="https://discord.gg/');
     // Un <button> dans un <a> : HTML invalide et deux arrêts de tabulation.
     expect(html).not.toContain('<button');
@@ -39,7 +40,7 @@ describe('HomeHeroV2 — CTA', () => {
       /<a[^>]*class="esport-cta[^"]*"[^>]*href="\/team\/create"|<a[^>]*href="\/team\/create"[^>]*class="esport-cta/
     );
     expect(html).toMatch(
-      /<a[^>]*class="hero-secondary-btn[^"]*"[^>]*href="\/rejoindre"/
+      /<a[^>]*class="hero-secondary-btn[^"]*"[^>]*href="\/mercato\?onglet=joueuses"/
     );
   });
 });

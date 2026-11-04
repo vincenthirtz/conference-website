@@ -1,80 +1,135 @@
 // components/FreePlayers/JoinAsPlayerForm.tsx
 //
-// Formulaire « je cherche une équipe » — lot 1 du backlog d'acquisition.
+// Formulaire « je cherche une équipe » — /mercato/joueuse (hub mercato).
 //
 // Deux partis pris qui expliquent la forme :
-//   1. AUCUN COMPTE REQUIS. C'est tout l'objet du lot : exiger une inscription
-//      avant même de savoir si quelqu'un la contactera remettrait exactement la
-//      friction qu'on cherche à supprimer.
-//   2. Un seul champ obligatoire de plus que le strict minimum. Pseudo, email,
-//      au moins un poste — le reste est facultatif. Chaque champ obligatoire
-//      supplémentaire coûte des abandons, et une fiche incomplète vaut mieux
-//      qu'une fiche jamais envoyée.
+//   1. AUCUN COMPTE REQUIS. Exiger une inscription avant même de savoir si
+//      quelqu'un la contactera remettrait exactement la friction qu'on cherche
+//      à supprimer.
+//   2. Peu d'obligatoire. Pseudo, email, au moins un poste — tout le reste
+//      (rang, plateforme, contrôle, genre, parcours, objectifs) est
+//      facultatif. Une fiche incomplète vaut mieux qu'une fiche jamais envoyée.
+//
+// Le GENRE est une donnée personnelle : facultatif, « je préfère ne pas dire »
+// par défaut (rien n'est affiché), et le formulaire dit qu'il apparaît sur la
+// fiche publique avant qu'on le coche. La limite des 50 mots s'affiche en
+// direct (`WordLimitedTextarea`), avec la même fonction de comptage que l'API.
 //
 // Anti-spam : honeypot hors écran + captcha HMAC maison récupéré paresseusement
-// à la première interaction (le formulaire ne doit pas déclencher une requête
-// au simple affichage de la page) — cf. `usePublicFormGuard`.
+// à la première interaction — cf. `usePublicFormGuard`.
 
 import { useId, useState } from 'react';
+import Link from 'next/link';
 import { socialUrl } from '@/config/socials';
 import { useT, format as fmt } from '@/lib/i18n/useT';
-import Link from 'next/link';
 import nsRejoindrePage from '@/lib/i18n/locales/fr/rejoindrePage';
+import nsMercato from '@/lib/i18n/locales/fr/mercato';
 import { usePublicFormGuard } from '@/hooks/usePublicFormGuard';
 import HoneypotField from '@/components/forms/HoneypotField';
 import {
-  FREE_PLAYER_LEVELS,
-  FREE_PLAYER_LIMITS,
-  FREE_PLAYER_ROLES,
-  type FreePlayerLevel,
-  type FreePlayerRole,
-} from '@/utils/freePlayers';
+  ChipGroup,
+  GenderField,
+  PUBLIC_FIELD_CLASSES as C,
+  RankField,
+  WordLimitedTextarea,
+} from '@/components/Mercato/MercatoFields';
+import {
+  INPUT_LABEL,
+  PLATFORM_LABEL,
+  POSITION_LABEL,
+} from '@/components/Mercato/mercatoLabels';
+import { FREE_PLAYER_LIMITS } from '@/utils/freePlayers';
+import {
+  DEFAULT_PLAYER_GENDER,
+  MERCATO_INPUTS,
+  MERCATO_LIMITS,
+  MERCATO_PLATFORMS,
+  MERCATO_POSITIONS,
+  countWords,
+  type MercatoInput,
+  type MercatoPlatform,
+  type MercatoPosition,
+  type PlayerGender,
+  type RankDivision,
+  type RankTier,
+} from '@/utils/mercato';
 
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-type Dict = typeof nsRejoindrePage.fr;
-
-/** Libellé i18n d'un poste. Table explicite : pas de clé construite à la volée. */
-const ROLE_LABEL: Record<FreePlayerRole, keyof Dict> = {
-  tank: 'roleTank',
-  dps: 'roleDps',
-  support: 'roleSupport',
-  flex: 'roleFlex',
+/** La fiche en cours de saisie : un seul objet plutôt qu'un état par champ. */
+type PlayerDraft = {
+  displayName: string;
+  email: string;
+  mainRole: MercatoPosition | '';
+  positions: MercatoPosition[];
+  tier: RankTier | 'unknown';
+  division: RankDivision | null;
+  platforms: MercatoPlatform[];
+  inputs: MercatoInput[];
+  gender: PlayerGender;
+  pastTeams: string;
+  goals: string;
+  availability: string;
+  note: string;
+  contactDiscord: string;
+  /**
+   * Réseau entre espaces (lot 4) : SA décision, pas celle du site. Décochée
+   * par défaut — déposer une annonce ici n'est pas la déposer partout.
+   */
+  shareAcrossTenants: boolean;
 };
 
-const LEVEL_LABEL: Record<FreePlayerLevel, keyof Dict> = {
-  unknown: 'levelUnknown',
-  bronze: 'levelBronze',
-  silver: 'levelSilver',
-  gold: 'levelGold',
-  platinum: 'levelPlatinum',
-  emerald: 'levelEmerald',
-  diamond: 'levelDiamond',
-  master: 'levelMaster',
-  grandmaster: 'levelGrandmaster',
-  champion: 'levelChampion',
+const EMPTY_DRAFT: PlayerDraft = {
+  displayName: '',
+  email: '',
+  mainRole: '',
+  positions: [],
+  tier: 'unknown',
+  division: null,
+  platforms: [],
+  inputs: [],
+  gender: DEFAULT_PLAYER_GENDER,
+  pastTeams: '',
+  goals: '',
+  availability: '',
+  note: '',
+  contactDiscord: '',
+  shareAcrossTenants: false,
 };
 
 export default function JoinAsPlayerForm({
   onPublished,
 }: {
-  /** Appelé après une publication réussie — la page rafraîchit sa liste. */
+  /** Appelé après une publication réussie. */
   onPublished?: () => void;
 }) {
   const t = useT(nsRejoindrePage);
+  const tm = useT(nsMercato);
 
-  const [displayName, setDisplayName] = useState('');
-  const [email, setEmail] = useState('');
-  const [roles, setRoles] = useState<FreePlayerRole[]>([]);
-  const [level, setLevel] = useState<FreePlayerLevel>('unknown');
-  const [availability, setAvailability] = useState('');
-  const [note, setNote] = useState('');
-  const [contactDiscord, setContactDiscord] = useState('');
-  // Réseau entre espaces (lot 4) : SA décision, pas celle du site. Décochée
-  // par défaut — déposer une annonce ici n'est pas la déposer partout.
-  const [shareAcrossTenants, setShareAcrossTenants] = useState(false);
+  const [form, setForm] = useState<PlayerDraft>(EMPTY_DRAFT);
+  const set =
+    <K extends keyof PlayerDraft>(key: K) =>
+    (value: PlayerDraft[K]) =>
+      setForm((f) => ({ ...f, [key]: value }));
+  const {
+    displayName,
+    email,
+    mainRole,
+    positions,
+    tier,
+    division,
+    platforms,
+    inputs,
+    gender,
+    pastTeams,
+    goals,
+    availability,
+    note,
+    contactDiscord,
+    shareAcrossTenants,
+  } = form;
 
   const guard = usePublicFormGuard();
   const [status, setStatus] = useState<Status>('idle');
@@ -82,37 +137,28 @@ export default function JoinAsPlayerForm({
 
   const nameId = useId();
   const emailId = useId();
+  const mainRoleId = useId();
+  const pastTeamsId = useId();
   const availabilityId = useId();
   const noteId = useId();
   const discordId = useId();
-  const levelId = useId();
   const captchaId = useId();
   const statusId = useId();
 
-  function toggleRole(role: FreePlayerRole) {
-    setRoles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
-    );
-  }
+  const fail = (msg: string) => {
+    setStatus('error');
+    setErrorMsg(msg);
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (displayName.trim().length < 2) {
-      setStatus('error');
-      setErrorMsg(t.errorName);
-      return;
-    }
-    if (!EMAIL_RE.test(email.trim())) {
-      setStatus('error');
-      setErrorMsg(t.errorEmail);
-      return;
-    }
-    if (roles.length === 0) {
-      setStatus('error');
-      setErrorMsg(t.errorRoles);
-      return;
+    if (displayName.trim().length < 2) return fail(t.errorName);
+    if (!EMAIL_RE.test(email.trim())) return fail(t.errorEmail);
+    if (positions.length === 0 && !mainRole) return fail(tm.errorPositions);
+    if (countWords(goals) > MERCATO_LIMITS.goalsWords) {
+      return fail(tm.errorGoals);
     }
 
     setStatus('submitting');
@@ -123,8 +169,16 @@ export default function JoinAsPlayerForm({
         body: JSON.stringify({
           displayName: displayName.trim(),
           email: email.trim(),
-          roles,
-          level,
+          // Les rôles historiques sont déduits des postes par l'API.
+          mainRole: mainRole || undefined,
+          positions,
+          level: tier,
+          rankDivision: tier !== 'unknown' ? division : null,
+          gender,
+          platforms,
+          inputs,
+          pastTeams: pastTeams.trim() || undefined,
+          goals: goals.trim() || undefined,
           availability: availability.trim() || undefined,
           note: note.trim() || undefined,
           contactDiscord: contactDiscord.trim() || undefined,
@@ -147,17 +201,8 @@ export default function JoinAsPlayerForm({
     }
   }
 
-  const inputClass =
-    'w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-violet-light)]';
-  const labelClass = 'block text-sm font-medium text-gray-200';
-  const hintClass = 'mt-1 text-xs text-gray-400';
-
-  // Écran de succès. Il confirmait la publication et s'arrêtait là — un
-  // cul-de-sac : la joueuse venait de se signaler et n'avait plus rien à faire,
-  // alors que la vie de la communauté (et le recrutement des capitaines) se
-  // passe sur le Discord. On enchaîne donc sur la suite naturelle, en disant
-  // aussi COMMENT on la contactera. Deux phrases et un bouton : au-delà, plus
-  // personne ne lit.
+  // Écran de succès : on enchaîne sur la suite naturelle (le mercato, le
+  // Discord) plutôt que de laisser la joueuse dans un cul-de-sac.
   if (status === 'success') {
     return (
       <div
@@ -167,18 +212,23 @@ export default function JoinAsPlayerForm({
         <h3 className="text-lg font-bold text-white">{t.successTitle}</h3>
         <p className="mt-2 text-sm text-gray-200">{t.successBody}</p>
         <p className="mt-3 text-sm text-gray-200">{t.successDiscordBody}</p>
-        <a
-          href={socialUrl('discord')}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-4 inline-block rounded-lg bg-[#5865F2] px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
-        >
-          {t.successDiscordCta}
-        </a>
-        {/* Une fiche expire à 60 jours ; la carte joueuse, elle, reste. C'est
-            le seul endroit du parcours où l'on peut le dire à quelqu'un qui
-            vient justement de manifester qu'elle cherche — et un simple lien,
-            pas un bouton, pour ne pas concurrencer l'appel Discord ci-dessus. */}
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
+          <Link
+            href="/mercato?onglet=joueuses"
+            className="inline-block rounded-lg border border-white/20 px-5 py-2.5 text-sm font-bold text-white transition hover:border-white/40"
+          >
+            {tm.backToHub}
+          </Link>
+          <a
+            href={socialUrl('discord')}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-block rounded-lg bg-[#5865F2] px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-yellow)]"
+          >
+            {t.successDiscordCta}
+          </a>
+        </div>
+        {/* Une fiche expire à 60 jours ; la carte joueuse, elle, reste. */}
         <p className="mt-4 text-xs text-gray-300">
           {t.successCardBody}{' '}
           <Link
@@ -208,140 +258,182 @@ export default function JoinAsPlayerForm({
       onFocus={guard.ensure}
       className="space-y-5 rounded-2xl border border-white/10 bg-[var(--bg-elevated)] p-6"
       noValidate
+      data-test="mercato-player-form"
     >
       <div>
-        <label htmlFor={nameId} className={labelClass}>
+        <label htmlFor={nameId} className={C.label}>
           {t.nameLabel}
         </label>
         <input
           id={nameId}
           type="text"
           value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
+          onChange={(e) => set('displayName')(e.target.value)}
           maxLength={FREE_PLAYER_LIMITS.displayName}
           placeholder={t.namePlaceholder}
-          className={`${inputClass} mt-1`}
+          className={`${C.input} mt-1`}
           required
         />
       </div>
 
-      <fieldset>
-        <legend className={labelClass}>{t.rolesLabel}</legend>
-        <p className={hintClass}>{t.rolesHint}</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {FREE_PLAYER_ROLES.map((role) => {
-            const active = roles.includes(role);
-            return (
-              <button
-                key={role}
-                type="button"
-                onClick={() => toggleRole(role)}
-                aria-pressed={active}
-                className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-                  active
-                    ? 'border-[var(--color-violet-light)] bg-[var(--color-violet-cta)]/30 text-white'
-                    : 'border-white/15 bg-white/[0.03] text-gray-300 hover:border-white/30'
-                }`}
-              >
-                {t[ROLE_LABEL[role]] as string}
-              </button>
-            );
-          })}
-        </div>
-      </fieldset>
-
       <div>
-        <label htmlFor={levelId} className={labelClass}>
-          {t.levelLabel}
+        <label htmlFor={mainRoleId} className={C.label}>
+          {tm.mainRoleLabel}
         </label>
         <select
-          id={levelId}
-          value={level}
-          onChange={(e) => setLevel(e.target.value as FreePlayerLevel)}
-          className={`${inputClass} mt-1`}
+          id={mainRoleId}
+          value={mainRole}
+          onChange={(e) =>
+            set('mainRole')(e.target.value as MercatoPosition | '')
+          }
+          className={`${C.input} mt-1`}
         >
-          {FREE_PLAYER_LEVELS.map((lvl) => (
-            <option key={lvl} value={lvl}>
-              {t[LEVEL_LABEL[lvl]] as string}
+          <option value="">{tm.mainRoleNone}</option>
+          {MERCATO_POSITIONS.map((p) => (
+            <option key={p} value={p}>
+              {tm[POSITION_LABEL[p]]}
             </option>
           ))}
         </select>
-        <p className={hintClass}>{t.levelHint}</p>
       </div>
 
+      <ChipGroup
+        legend={tm.positionsLabel}
+        hint={tm.multiHint}
+        options={MERCATO_POSITIONS.map((p) => ({
+          value: p,
+          label: tm[POSITION_LABEL[p]],
+        }))}
+        value={positions}
+        onChange={set('positions')}
+      />
+
+      <RankField
+        tier={tier}
+        division={division}
+        onChange={(nextTier, nextDivision) =>
+          setForm((f) => ({ ...f, tier: nextTier, division: nextDivision }))
+        }
+      />
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <ChipGroup
+          legend={tm.platformLabel}
+          hint={tm.multiHint}
+          options={MERCATO_PLATFORMS.map((p) => ({
+            value: p,
+            label: tm[PLATFORM_LABEL[p]],
+          }))}
+          value={platforms}
+          onChange={set('platforms')}
+        />
+        <ChipGroup
+          legend={tm.inputLabel}
+          hint={tm.multiHint}
+          options={MERCATO_INPUTS.map((i) => ({
+            value: i,
+            label: tm[INPUT_LABEL[i]],
+          }))}
+          value={inputs}
+          onChange={set('inputs')}
+        />
+      </div>
+
+      <GenderField value={gender} onChange={set('gender')} />
+
       <div>
-        <label htmlFor={availabilityId} className={labelClass}>
+        <label htmlFor={pastTeamsId} className={C.label}>
+          {tm.pastTeamsLabel}
+        </label>
+        <textarea
+          id={pastTeamsId}
+          value={pastTeams}
+          onChange={(e) => set('pastTeams')(e.target.value)}
+          maxLength={MERCATO_LIMITS.pastTeams}
+          rows={2}
+          placeholder={tm.pastTeamsPlaceholder}
+          className={`${C.input} mt-1 resize-y`}
+        />
+      </div>
+
+      <WordLimitedTextarea
+        label={tm.goalsLabel}
+        value={goals}
+        onChange={set('goals')}
+        placeholder={tm.goalsPlaceholder}
+      />
+
+      <div>
+        <label htmlFor={availabilityId} className={C.label}>
           {t.availabilityLabel}
         </label>
         <input
           id={availabilityId}
           type="text"
           value={availability}
-          onChange={(e) => setAvailability(e.target.value)}
+          onChange={(e) => set('availability')(e.target.value)}
           maxLength={FREE_PLAYER_LIMITS.availability}
           placeholder={t.availabilityPlaceholder}
-          className={`${inputClass} mt-1`}
+          className={`${C.input} mt-1`}
         />
       </div>
 
       <div>
-        <label htmlFor={noteId} className={labelClass}>
+        <label htmlFor={noteId} className={C.label}>
           {t.noteLabel}
         </label>
         <textarea
           id={noteId}
           value={note}
-          onChange={(e) => setNote(e.target.value)}
+          onChange={(e) => set('note')(e.target.value)}
           maxLength={FREE_PLAYER_LIMITS.note}
           rows={3}
           placeholder={t.notePlaceholder}
-          className={`${inputClass} mt-1 resize-y`}
+          className={`${C.input} mt-1 resize-y`}
         />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor={emailId} className={labelClass}>
+          <label htmlFor={emailId} className={C.label}>
             {t.emailLabel}
           </label>
           <input
             id={emailId}
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => set('email')(e.target.value)}
             maxLength={FREE_PLAYER_LIMITS.contactEmail}
             placeholder={t.emailPlaceholder}
-            className={`${inputClass} mt-1`}
+            className={`${C.input} mt-1`}
             required
           />
-          <p className={hintClass}>{t.emailHint}</p>
+          <p className={C.hint}>{t.emailHint}</p>
         </div>
         <div>
-          <label htmlFor={discordId} className={labelClass}>
+          <label htmlFor={discordId} className={C.label}>
             {t.discordLabel}
           </label>
           <input
             id={discordId}
             type="text"
             value={contactDiscord}
-            onChange={(e) => setContactDiscord(e.target.value)}
+            onChange={(e) => set('contactDiscord')(e.target.value)}
             maxLength={FREE_PLAYER_LIMITS.contactDiscord}
             placeholder={t.discordPlaceholder}
-            className={`${inputClass} mt-1`}
+            className={`${C.input} mt-1`}
           />
-          {/* « Facultatif » ne dit pas à quoi ça sert : sans ce pseudo, on ne
-              peut la joindre que par email. */}
-          <p className={hintClass}>{t.discordHint}</p>
+          <p className={C.hint}>{t.discordHint}</p>
         </div>
       </div>
 
-      {/* Visibilité au-delà de ce site. Posée ici, juste après les contacts et
-          avant l'envoi : c'est le moment où l'on décide qui pourra la lire. */}
-      <label className="flex items-start gap-3 cursor-pointer">
+      {/* Visibilité au-delà de ce site, posée juste avant l'envoi : c'est le
+          moment où l'on décide qui pourra la lire. */}
+      <label className="flex cursor-pointer items-start gap-3">
         <input
           type="checkbox"
           checked={shareAcrossTenants}
-          onChange={(e) => setShareAcrossTenants(e.target.checked)}
+          onChange={(e) => set('shareAcrossTenants')(e.target.checked)}
           className="mt-0.5 h-5 w-5 rounded border-white/20 bg-black/40 text-purple-500 focus:ring-purple-400"
           data-test="free-player-share-network"
         />
@@ -349,7 +441,7 @@ export default function JoinAsPlayerForm({
           <span className="block text-sm font-medium text-gray-100">
             {t.shareNetworkLabel}
           </span>
-          <span className={hintClass}>{t.shareNetworkHint}</span>
+          <span className={C.hint}>{t.shareNetworkHint}</span>
         </span>
       </label>
 
@@ -361,7 +453,7 @@ export default function JoinAsPlayerForm({
 
       {guard.question && (
         <div>
-          <label htmlFor={captchaId} className={labelClass}>
+          <label htmlFor={captchaId} className={C.label}>
             {fmt(t.captchaLabel, { question: guard.question })}
           </label>
           <input
@@ -371,7 +463,7 @@ export default function JoinAsPlayerForm({
             value={guard.captchaAnswer}
             onChange={(e) => guard.setCaptchaAnswer(e.target.value)}
             placeholder={t.captchaPlaceholder}
-            className={`${inputClass} mt-1`}
+            className={`${C.input} mt-1`}
             required
           />
         </div>

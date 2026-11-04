@@ -60,7 +60,9 @@ describe('activePublicLinkRef', () => {
   });
 
   it('une page de sous-menu active son entrée parente', () => {
-    expect(activePublicLinkRef('/rejoindre')).toBe(key('Communauté'));
+    // Le hub mercato (ses deux onglets sont deux entrées du sous-menu).
+    expect(activePublicLinkRef('/mercato')).toBe(key('Communauté'));
+    expect(activePublicLinkRef('/mercato/joueuse')).toBe(key('Communauté'));
   });
 
   it('« Cartes » actif sur le catalogue et ses sous-pages', () => {

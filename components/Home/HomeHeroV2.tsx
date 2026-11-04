@@ -340,7 +340,7 @@ export default function HomeHeroV2({
               et la carte du prochain rendez-vous porte le même lien. */}
           {!followMode && (
             <Link
-              href="/rejoindre"
+              href="/mercato?onglet=joueuses"
               className="hero-secondary-btn hero-secondary-btn--violet group flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-medium text-white backdrop-blur transition-all duration-300 sm:w-auto sm:px-6 sm:text-base"
             >
               <svg

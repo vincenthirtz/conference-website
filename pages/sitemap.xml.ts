@@ -12,12 +12,13 @@ const publicRoutes = [
   { path: '/tournaments', priority: '0.9', changefreq: 'weekly' },
   { path: '/jeux', priority: '0.8', changefreq: 'monthly' },
   { path: '/inscription-2026', priority: '0.9', changefreq: 'weekly' },
-  // Page d'entrée du parcours « je joue seule » — cible SEO « trouver une
-  // équipe Overwatch féminine ». Priorité haute : c'est une porte d'entrée.
-  { path: '/rejoindre', priority: '0.9', changefreq: 'daily' },
-  // Le miroir de la précédente — « recruter une joueuse Overwatch ». Même
-  // priorité : les deux faces de l'appariement valent autant l'une que l'autre.
-  { path: '/recrutement', priority: '0.9', changefreq: 'daily' },
+  // Hub mercato : les deux faces du marché (ex-/rejoindre et ex-/recrutement,
+  // redirigées) et leurs deux formulaires — cibles SEO « trouver une équipe
+  // Overwatch féminine » et « recruter une joueuse Overwatch ». Priorité
+  // haute : ce sont des portes d'entrée.
+  { path: '/mercato', priority: '0.9', changefreq: 'daily' },
+  { path: '/mercato/joueuse', priority: '0.8', changefreq: 'monthly' },
+  { path: '/mercato/equipe', priority: '0.8', changefreq: 'monthly' },
   { path: '/espace-capitaine', priority: '0.7', changefreq: 'monthly' },
   { path: '/guide/gerer-mon-equipe', priority: '0.8', changefreq: 'monthly' },
   { path: '/actualites', priority: '0.8', changefreq: 'daily' },

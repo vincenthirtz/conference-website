@@ -1,6 +1,8 @@
 // components/TeamOpenings/TeamOpeningsList.tsx
 //
-// Liste PUBLIQUE et anonymisée des équipes qui recrutent.
+// Liste PUBLIQUE et anonymisée des équipes qui recrutent — onglet « Équipes
+// qui recrutent » du hub mercato (/mercato). Les filtres sont posés par la page
+// et appliqués ici (`openingMatchesFilters`, utils/mercato.ts).
 //
 // Comme la liste des joueuses libres, son rôle est d'abord une PREUVE : une
 // joueuse qui hésite doit voir qu'il y a des places à prendre. L'API publique
@@ -13,20 +15,28 @@
 // documenté dans la route. Les coordonnées ne sont chargées qu'au clic, une
 // annonce à la fois : la page reste sans adresse tant que personne ne demande.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from '@/hooks/useSession';
 import CopyButton from '@/components/player/CopyButton';
 import { useT, format as fmt } from '@/lib/i18n/useT';
 import nsRecrutementPage from '@/lib/i18n/locales/fr/recrutementPage';
+import nsMercato from '@/lib/i18n/locales/fr/mercato';
 import { useLang } from '@/lib/i18n/LanguageProvider';
 import { formatSiteDate } from '@/utils/timezone';
-import {
-  TEAM_OPENING_ROLES,
-  type ContactTeamOpening,
-  type PublicTeamOpening,
-  type TeamOpeningRole,
+import type {
+  ContactTeamOpening,
+  PublicTeamOpening,
+  TeamOpeningRole,
 } from '@/utils/teamOpenings';
+import { openingMatchesFilters, type MercatoFilters } from '@/utils/mercato';
+import {
+  INPUT_LABEL,
+  PLATFORM_LABEL,
+  POSITION_LABEL,
+  SOUGHT_LABEL,
+  openingRankLabel,
+} from '@/components/Mercato/mercatoLabels';
 
 type Dict = typeof nsRecrutementPage.fr;
 
@@ -37,21 +47,12 @@ const ROLE_LABEL: Record<TeamOpeningRole, keyof Dict> = {
   flex: 'roleFlex',
 };
 
-const LEVEL_LABEL: Record<string, keyof Dict> = {
-  unknown: 'levelUnknown',
-  bronze: 'levelBronze',
-  silver: 'levelSilver',
-  gold: 'levelGold',
-  platinum: 'levelPlatinum',
-  emerald: 'levelEmerald',
-  diamond: 'levelDiamond',
-  master: 'levelMaster',
-  grandmaster: 'levelGrandmaster',
-  champion: 'levelChampion',
-};
-
 /** Retour vers la liste après connexion : la joueuse revient là où elle était. */
-export const CONTACT_LOGIN_HREF = '/login?next=/recrutement';
+export const CONTACT_LOGIN_HREF = `/login?next=${encodeURIComponent(
+  '/mercato?onglet=equipes'
+)}`;
+
+const NO_FILTERS: MercatoFilters = {};
 
 export type ContactErrorKind = 'rateLimited' | 'gone' | 'session' | 'generic';
 
@@ -82,6 +83,38 @@ const CONTACT_ERROR_LABEL: Record<ContactErrorKind, keyof Dict> = {
   session: 'contactSession',
   generic: 'contactError',
 };
+
+const ROLE_CHIP =
+  'rounded-full border border-[var(--color-green)]/30 bg-[var(--color-green)]/15 px-2.5 py-1 text-xs text-gray-100';
+
+/** Profils, rang, plateformes et contrôles recherchés, en une ou deux lignes. */
+function OpeningFacts({
+  opening,
+  tm,
+}: {
+  opening: PublicTeamOpening;
+  tm: typeof nsMercato.fr;
+}) {
+  const rank = openingRankLabel(tm, opening);
+  const sought = opening.soughtGenders.map((g) => tm[SOUGHT_LABEL[g]]);
+  const gear = [
+    ...opening.platforms.map((x) => tm[PLATFORM_LABEL[x]]),
+    ...opening.inputs.map((x) => tm[INPUT_LABEL[x]]),
+  ];
+  if (!rank && sought.length === 0 && gear.length === 0) return null;
+  return (
+    <div className="space-y-1 text-xs text-gray-300">
+      {sought.length > 0 && (
+        <p>{fmt(tm.cardSought, { list: sought.join(', ') })}</p>
+      )}
+      {(rank || gear.length > 0) && (
+        <p className="text-gray-400">
+          {[rank, ...gear].filter(Boolean).join(' · ')}
+        </p>
+      )}
+    </div>
+  );
+}
 
 const CONTACT_CTA_CLASS =
   'inline-flex items-center justify-center rounded-lg border border-[var(--color-violet-light)]/50 bg-[var(--color-violet-cta)]/20 px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-violet-cta)]/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:cursor-not-allowed disabled:opacity-60';
@@ -219,15 +252,17 @@ function OpeningContact({ openingId, t }: { openingId: string; t: Dict }) {
 export default function TeamOpeningsList({
   /** Incrémenté par la page après une publication : force un rechargement. */
   refreshKey = 0,
+  filters = NO_FILTERS,
 }: {
   refreshKey?: number;
+  filters?: MercatoFilters;
 }) {
   const t = useT(nsRecrutementPage);
+  const tm = useT(nsMercato);
   const { lang } = useLang();
   const [openings, setOpenings] = useState<PublicTeamOpening[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [roleFilter, setRoleFilter] = useState<TeamOpeningRole | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -252,56 +287,31 @@ export default function TeamOpeningsList({
     void load();
   }, [load, refreshKey]);
 
-  const visible = roleFilter
-    ? openings.filter((o) => o.roles.includes(roleFilter))
-    : openings;
+  const visible = useMemo(
+    () => openings.filter((o) => openingMatchesFilters(o, filters)),
+    [openings, filters]
+  );
+  const filtered = visible.length !== openings.length;
 
   return (
     <section aria-labelledby="team-openings-list-title">
-      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2
-            id="team-openings-list-title"
-            className="text-2xl font-extrabold tracking-tight text-white"
-          >
-            {t.listTitle}
-          </h2>
-          <p className="mt-1 text-sm text-gray-400">
-            {loading
-              ? t.listSubtitle
+      <div className="mb-6">
+        <h2
+          id="team-openings-list-title"
+          className="text-2xl font-extrabold tracking-tight text-white"
+        >
+          {t.listTitle}
+        </h2>
+        <p className="mt-1 text-sm text-gray-400" aria-live="polite">
+          {loading
+            ? t.listSubtitle
+            : filtered
+              ? fmt(tm.resultCount, {
+                  shown: visible.length,
+                  total: openings.length,
+                })
               : fmt(t.listCount, { count: openings.length })}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setRoleFilter(null)}
-            aria-pressed={roleFilter === null}
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-              roleFilter === null
-                ? 'border-[var(--color-violet-light)] bg-[var(--color-violet-cta)]/30 text-white'
-                : 'border-white/15 text-gray-300 hover:border-white/30'
-            }`}
-          >
-            {t.filterAll}
-          </button>
-          {TEAM_OPENING_ROLES.map((role) => (
-            <button
-              key={role}
-              type="button"
-              onClick={() => setRoleFilter(role)}
-              aria-pressed={roleFilter === role}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                roleFilter === role
-                  ? 'border-[var(--color-violet-light)] bg-[var(--color-violet-cta)]/30 text-white'
-                  : 'border-white/15 text-gray-300 hover:border-white/30'
-              }`}
-            >
-              {t[ROLE_LABEL[role]] as string}
-            </button>
-          ))}
-        </div>
+        </p>
       </div>
 
       {loading && (
@@ -333,13 +343,16 @@ export default function TeamOpeningsList({
 
       {!loading && !error && visible.length === 0 && (
         <p className="rounded-xl border border-white/10 bg-white/[0.03] p-6 text-center text-sm text-gray-300">
-          {t.listEmpty}
+          {openings.length > 0 ? tm.noMatch : t.listEmpty}
         </p>
       )}
 
       {!loading && !error && visible.length > 0 && (
         <>
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul
+            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            data-test="mercato-openings-list"
+          >
             {visible.map((opening) => (
               <li
                 key={opening.id}
@@ -368,24 +381,27 @@ export default function TeamOpeningsList({
                   )}
                 </div>
 
-                {opening.roles.length > 0 && (
+                {opening.positions.length > 0 ? (
                   <ul className="flex flex-wrap gap-1.5">
-                    {opening.roles.map((role) => (
-                      <li
-                        key={role}
-                        className="rounded-full border border-[var(--color-green)]/30 bg-[var(--color-green)]/15 px-2.5 py-1 text-xs text-gray-100"
-                      >
-                        {t[ROLE_LABEL[role]] as string}
+                    {opening.positions.map((pos) => (
+                      <li key={pos} className={ROLE_CHIP}>
+                        {tm[POSITION_LABEL[pos]]}
                       </li>
                     ))}
                   </ul>
+                ) : (
+                  opening.roles.length > 0 && (
+                    <ul className="flex flex-wrap gap-1.5">
+                      {opening.roles.map((role) => (
+                        <li key={role} className={ROLE_CHIP}>
+                          {t[ROLE_LABEL[role]] as string}
+                        </li>
+                      ))}
+                    </ul>
+                  )
                 )}
 
-                {opening.level && LEVEL_LABEL[opening.level] && (
-                  <p className="text-xs text-gray-400">
-                    {t[LEVEL_LABEL[opening.level]] as string}
-                  </p>
-                )}
+                <OpeningFacts opening={opening} tm={tm} />
 
                 {opening.availability && (
                   <p className="text-sm text-gray-300">

@@ -49,6 +49,7 @@ import nsNewsletterSignup from './newsletterSignup';
 import nsRejoindrePage from './rejoindrePage';
 import nsSoloSignup from './soloSignup';
 import nsRecrutementPage from './recrutementPage';
+import nsMercato from './mercato';
 import nsNewsletterMerci from './newsletterMerci';
 import nsCookieBanner from './cookieBanner';
 import nsOfflineBanner from './offlineBanner';
@@ -227,6 +228,7 @@ export const frDict = {
   rejoindrePage: nsRejoindrePage.fr,
   soloSignup: nsSoloSignup.fr,
   recrutementPage: nsRecrutementPage.fr,
+  mercato: nsMercato.fr,
   newsletterMerci: nsNewsletterMerci.fr,
   cookieBanner: nsCookieBanner.fr,
   offlineBanner: nsOfflineBanner.fr,

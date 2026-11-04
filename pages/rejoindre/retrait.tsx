@@ -98,7 +98,7 @@ function RetraitPage() {
         <div className={card} role="alert">
           <h1 className="text-xl font-bold">{t.removeInvalidTitle}</h1>
           <p className="mt-3 text-sm text-gray-300">{t.removeInvalidBody}</p>
-          <Link href="/rejoindre#lien-perdu" className={`${linkBtn} mr-4`}>
+          <Link href="/mercato#lien-perdu" className={`${linkBtn} mr-4`}>
             {t.removeLostLink}
           </Link>
           <Link href="/contact" className={linkBtn}>
@@ -111,7 +111,7 @@ function RetraitPage() {
         <div className={card} role="status">
           <h1 className="text-xl font-bold">{t.removeDoneTitle}</h1>
           <p className="mt-3 text-sm text-gray-300">{t.removeDoneBody}</p>
-          <Link href="/rejoindre" className={linkBtn}>
+          <Link href="/mercato?onglet=joueuses" className={linkBtn}>
             {t.removeBackCta}
           </Link>
         </div>
@@ -144,7 +144,7 @@ function RetraitPage() {
             {state.kind === 'removing' ? t.removeWorking : t.removeConfirm}
           </button>
 
-          <Link href="/rejoindre" className={linkBtn}>
+          <Link href="/mercato?onglet=joueuses" className={linkBtn}>
             {t.removeBackCta}
           </Link>
         </div>

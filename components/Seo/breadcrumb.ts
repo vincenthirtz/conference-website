@@ -49,7 +49,7 @@ const INTERMEDIATES: Record<string, { path: string; name: string }> = {
   '/developpeurs': { path: '/organisateurs', name: 'Organisateurs' },
   '/partenaires': { path: '/partenaires', name: 'Partenaires' },
   '/organisateurs': { path: '/organisateurs', name: 'Organisateurs' },
-  '/rejoindre': { path: '/rejoindre', name: 'Trouver une équipe' },
+  '/mercato': { path: '/mercato', name: 'Mercato' },
 };
 
 /** Routes d'erreur : l'URL affichée n'est pas celle de la page rendue. */

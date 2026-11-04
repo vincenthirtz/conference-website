@@ -180,6 +180,7 @@ import enPlayerMyTeams from './playerMyTeams';
 import enRejoindrePage from './rejoindrePage';
 import enSoloSignup from './soloSignup';
 import enRecrutementPage from './recrutementPage';
+import enMercato from './mercato';
 import enProductionPartner from './productionPartner';
 import enPalmaresPage from './palmaresPage';
 import enMapsVoxelPage from './mapsVoxelPage';
@@ -358,6 +359,7 @@ const enDict = {
   rejoindrePage: enRejoindrePage,
   soloSignup: enSoloSignup,
   recrutementPage: enRecrutementPage,
+  mercato: enMercato,
   productionPartner: enProductionPartner,
   palmaresPage: enPalmaresPage,
   mapsVoxelPage: enMapsVoxelPage,

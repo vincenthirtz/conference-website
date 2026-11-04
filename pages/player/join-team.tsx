@@ -414,7 +414,7 @@ function JoinTeamPage() {
                         <ol className="mt-3 space-y-2">
                           <li>
                             <Link
-                              href="/rejoindre"
+                              href="/mercato?onglet=joueuses"
                               className="block rounded-lg border border-purple-400/40 bg-purple-500/10 px-3 py-2 hover:bg-purple-500/20 transition"
                             >
                               <span className="block text-sm font-semibold text-white">
@@ -427,7 +427,7 @@ function JoinTeamPage() {
                           </li>
                           <li>
                             <Link
-                              href="/recrutement"
+                              href="/mercato?onglet=equipes"
                               className="block rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 hover:bg-white/10 transition"
                             >
                               <span className="block text-sm font-semibold text-white">

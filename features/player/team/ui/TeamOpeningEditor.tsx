@@ -9,6 +9,10 @@
 // Visible pour toute membre qui peut la lire (la route exige la permission de
 // recrutement : un 403 masque simplement le bloc) ; éditable seulement si
 // `editable` et hors inspection staff.
+//
+// Hub mercato : mêmes champs que le formulaire public /mercato/equipe (postes
+// fins, profils recherchés, rang moyen + fourchette, plateformes, contrôles,
+// description et but du recrutement), mêmes composants (MercatoFields).
 
 import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
@@ -19,13 +23,36 @@ import { format, useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsTeamOpening from '@/lib/i18n/locales/fr/teamOpening';
 import nsRecrutementPage from '@/lib/i18n/locales/fr/recrutementPage';
+import nsMercato from '@/lib/i18n/locales/fr/mercato';
 import {
-  TEAM_OPENING_LEVELS,
   TEAM_OPENING_LIMITS,
-  TEAM_OPENING_ROLES,
   type TeamOpeningLevel,
   type TeamOpeningRole,
 } from '@/utils/teamOpenings';
+import {
+  MERCATO_INPUTS,
+  MERCATO_PLATFORMS,
+  MERCATO_POSITIONS,
+  SOUGHT_GENDERS,
+  tierIndex,
+  type MercatoInput,
+  type MercatoPlatform,
+  type MercatoPosition,
+  type RankTier,
+  type SoughtGender,
+} from '@/utils/mercato';
+import {
+  ChipGroup,
+  TeamRankFields,
+  type FieldClasses,
+} from '@/components/Mercato/MercatoFields';
+import {
+  INPUT_LABEL,
+  PLATFORM_LABEL,
+  POSITION_LABEL,
+  SOUGHT_LABEL,
+  openingRankLabel,
+} from '@/components/Mercato/mercatoLabels';
 import { usePlayerErrorText } from '../../_shared/useErrorText';
 import type { TeamOpeningDto } from '../opening/schemas';
 import {
@@ -51,8 +78,15 @@ export function openingLevelLabel(
 }
 
 type Draft = {
+  /** Rôles historiques : renvoyés tels quels tant qu'aucun poste fin n'est choisi. */
   roles: TeamOpeningRole[];
+  positions: MercatoPosition[];
+  soughtGenders: SoughtGender[];
   level: TeamOpeningLevel;
+  rankMin: RankTier | null;
+  rankMax: RankTier | null;
+  platforms: MercatoPlatform[];
+  inputs: MercatoInput[];
   availability: string;
   note: string;
   contactDiscord: string;
@@ -61,7 +95,13 @@ type Draft = {
 function draftOf(opening: TeamOpeningDto | null): Draft {
   return {
     roles: opening?.roles ?? [],
+    positions: opening?.positions ?? [],
+    soughtGenders: opening?.soughtGenders ?? [],
     level: opening?.level ?? 'unknown',
+    rankMin: opening?.rankMin ?? null,
+    rankMax: opening?.rankMax ?? null,
+    platforms: opening?.platforms ?? [],
+    inputs: opening?.inputs ?? [],
     availability: opening?.availability ?? '',
     note: opening?.note ?? '',
     contactDiscord: opening?.contactDiscord ?? '',
@@ -77,10 +117,17 @@ const FIELD =
   'w-full rounded-xl border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400/80';
 const LABEL =
   'block text-xs font-medium tracking-[0.12em] uppercase text-gray-300 mb-2';
+/** Habillage de l'espace capitaine pour les champs partagés du mercato. */
+const CAPTAIN_FIELDS: FieldClasses = {
+  label: 'block text-xs font-medium tracking-[0.12em] uppercase text-gray-300',
+  hint: 'mt-1 text-xs text-gray-400',
+  input: FIELD,
+};
 
 export default function TeamOpeningEditor({ editable }: { editable: boolean }) {
   const t = useT(nsTeamOpening);
   const tr = useT(nsRecrutementPage) as unknown as Record<string, string>;
+  const tm = useT(nsMercato);
   const locale = useLocale();
   const errorText = usePlayerErrorText();
   const { isInspecting } = usePlayerArea();
@@ -118,28 +165,36 @@ export default function TeamOpeningEditor({ editable }: { editable: boolean }) {
         })
       : '';
 
-  const toggleRole = (role: TeamOpeningRole) =>
-    setDraft((d) => ({
-      ...d,
-      roles: d.roles.includes(role)
-        ? d.roles.filter((r) => r !== role)
-        : [...d.roles, role],
-    }));
-
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (save.isPending) return;
     setError(null);
     setSuccess(null);
-    if (draft.roles.length === 0) {
+    if (draft.positions.length === 0 && draft.roles.length === 0) {
       setError(t.errorRoles);
+      return;
+    }
+    if (
+      draft.rankMin &&
+      draft.rankMax &&
+      tierIndex(draft.rankMin) > tierIndex(draft.rankMax)
+    ) {
+      setError(tm.errorRankRange);
       return;
     }
     const wasNew = !opening;
     try {
       await save.mutateAsync({
-        roles: draft.roles,
+        // Une annonce d'avant le mercato garde ses rôles tant qu'aucun poste
+        // fin n'est choisi ; sinon l'API les déduit des postes.
+        roles: draft.positions.length === 0 ? draft.roles : undefined,
+        positions: draft.positions,
+        soughtGenders: draft.soughtGenders,
         level: draft.level,
+        rankMin: draft.rankMin,
+        rankMax: draft.rankMax,
+        platforms: draft.platforms,
+        inputs: draft.inputs,
         availability: draft.availability.trim() || null,
         note: draft.note.trim() || null,
         contactDiscord: draft.contactDiscord.trim() || null,
@@ -200,20 +255,36 @@ export default function TeamOpeningEditor({ editable }: { editable: boolean }) {
             </p>
           )}
           <div className="flex flex-wrap gap-2">
-            {opening.roles.map((role) => (
+            {(opening.positions.length > 0
+              ? opening.positions.map((p) => tm[POSITION_LABEL[p]])
+              : opening.roles.map((role) => openingRoleLabel(tr, role))
+            ).map((label) => (
               <span
-                key={role}
+                key={label}
                 className="rounded-full border border-purple-400/40 bg-purple-500/15 px-3 py-1 text-xs font-semibold text-purple-100"
               >
-                {openingRoleLabel(tr, role)}
+                {label}
               </span>
             ))}
-            {opening.level && (
+            {(openingRankLabel(tm, opening) ||
+              (opening.level && openingLevelLabel(tr, opening.level))) && (
               <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-gray-200">
-                {openingLevelLabel(tr, opening.level)}
+                {openingRankLabel(tm, opening) ||
+                  openingLevelLabel(tr, opening.level as TeamOpeningLevel)}
               </span>
             )}
           </div>
+          {(opening.soughtGenders.length > 0 ||
+            opening.platforms.length > 0 ||
+            opening.inputs.length > 0) && (
+            <p className="text-xs text-gray-300">
+              {[
+                ...opening.soughtGenders.map((g) => tm[SOUGHT_LABEL[g]]),
+                ...opening.platforms.map((x) => tm[PLATFORM_LABEL[x]]),
+                ...opening.inputs.map((x) => tm[INPUT_LABEL[x]]),
+              ].join(' · ')}
+            </p>
+          )}
           {opening.availability && (
             <p className="text-gray-300">{opening.availability}</p>
           )}
@@ -248,7 +319,7 @@ export default function TeamOpeningEditor({ editable }: { editable: boolean }) {
                 {t.close}
               </button>
               <Link
-                href="/recrutement"
+                href="/mercato?onglet=equipes"
                 className="inline-flex min-h-[44px] items-center px-4 text-sm text-purple-300 hover:text-purple-200 underline"
               >
                 {t.viewPublic}
@@ -264,51 +335,63 @@ export default function TeamOpeningEditor({ editable }: { editable: boolean }) {
 
       {showForm && query.isSuccess && (
         <form onSubmit={submit} className="space-y-4" noValidate>
-          <fieldset>
-            <legend className={LABEL}>{t.rolesLabel}</legend>
-            <div className="flex flex-wrap gap-2">
-              {TEAM_OPENING_ROLES.map((role) => {
-                const on = draft.roles.includes(role);
-                return (
-                  <button
-                    key={role}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => toggleRole(role)}
-                    className={`min-h-[44px] min-w-[44px] px-4 rounded-xl border text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/80 ${
-                      on
-                        ? 'bg-purple-600/30 border-purple-400/50 text-white'
-                        : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'
-                    }`}
-                  >
-                    {openingRoleLabel(tr, role)}
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
+          <ChipGroup
+            legend={t.rolesLabel}
+            hint={tm.multiHint}
+            classes={CAPTAIN_FIELDS}
+            options={MERCATO_POSITIONS.map((p) => ({
+              value: p,
+              label: tm[POSITION_LABEL[p]],
+            }))}
+            value={draft.positions}
+            onChange={(positions) => setDraft((d) => ({ ...d, positions }))}
+          />
 
-          <div>
-            <label htmlFor="team-opening-level" className={LABEL}>
-              {t.levelLabel}
-            </label>
-            <select
-              id="team-opening-level"
-              value={draft.level}
-              onChange={(e) =>
-                setDraft((d) => ({
-                  ...d,
-                  level: e.target.value as TeamOpeningLevel,
-                }))
-              }
-              className={FIELD}
-            >
-              {TEAM_OPENING_LEVELS.map((level) => (
-                <option key={level} value={level}>
-                  {openingLevelLabel(tr, level)}
-                </option>
-              ))}
-            </select>
+          <ChipGroup
+            legend={tm.soughtGendersLabel}
+            hint={tm.soughtGendersHint}
+            classes={CAPTAIN_FIELDS}
+            options={SOUGHT_GENDERS.map((g) => ({
+              value: g,
+              label: tm[SOUGHT_LABEL[g]],
+            }))}
+            value={draft.soughtGenders}
+            onChange={(soughtGenders) =>
+              setDraft((d) => ({ ...d, soughtGenders }))
+            }
+          />
+
+          <TeamRankFields
+            classes={CAPTAIN_FIELDS}
+            level={draft.level}
+            rankMin={draft.rankMin}
+            rankMax={draft.rankMax}
+            onChange={(next) => setDraft((d) => ({ ...d, ...next }))}
+          />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ChipGroup
+              legend={tm.teamPlatformLabel}
+              hint={tm.anyHint}
+              classes={CAPTAIN_FIELDS}
+              options={MERCATO_PLATFORMS.map((p) => ({
+                value: p,
+                label: tm[PLATFORM_LABEL[p]],
+              }))}
+              value={draft.platforms}
+              onChange={(platforms) => setDraft((d) => ({ ...d, platforms }))}
+            />
+            <ChipGroup
+              legend={tm.teamInputLabel}
+              hint={tm.anyHint}
+              classes={CAPTAIN_FIELDS}
+              options={MERCATO_INPUTS.map((i) => ({
+                value: i,
+                label: tm[INPUT_LABEL[i]],
+              }))}
+              value={draft.inputs}
+              onChange={(inputs) => setDraft((d) => ({ ...d, inputs }))}
+            />
           </div>
 
           <div>
@@ -330,14 +413,14 @@ export default function TeamOpeningEditor({ editable }: { editable: boolean }) {
 
           <div>
             <label htmlFor="team-opening-note" className={LABEL}>
-              {t.noteLabel}
+              {tm.teamNoteLabel}
             </label>
             <textarea
               id="team-opening-note"
-              rows={3}
+              rows={4}
               value={draft.note}
               maxLength={TEAM_OPENING_LIMITS.note}
-              placeholder={t.notePlaceholder}
+              placeholder={tm.teamNotePlaceholder}
               onChange={(e) =>
                 setDraft((d) => ({ ...d, note: e.target.value }))
               }

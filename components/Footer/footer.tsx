@@ -64,8 +64,8 @@ const communityLinks = (t: FooterDict): FooterLink[] => [
   // relié ni ici ni en navbar : 13 joueuses libres, 0 annonce d'équipe. Une
   // capitaine qui ne trouve pas la page ne publie pas, et la joueuse qui
   // s'est signalée attend une annonce qui ne viendra pas.
-  { label: t.joinTeam, href: '/rejoindre', Icon: AboutIcon },
-  { label: t.recruitPlayer, href: '/recrutement', Icon: LinkIcon },
+  { label: t.joinTeam, href: '/mercato?onglet=joueuses', Icon: AboutIcon },
+  { label: t.recruitPlayer, href: '/mercato?onglet=equipes', Icon: LinkIcon },
   { label: t.about, href: '/about', Icon: AboutIcon },
   { label: t.installApp, href: '/app', Icon: AppIcon },
   { label: t.donate, href: '/don', Icon: DonationIcon },

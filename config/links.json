@@ -24,11 +24,11 @@
     "subMenu": [
       {
         "title": "Rejoindre une équipe",
-        "ref": "/rejoindre"
+        "ref": "/mercato?onglet=joueuses"
       },
       {
         "title": "Recruter une joueuse",
-        "ref": "/recrutement"
+        "ref": "/mercato?onglet=equipes"
       },
       {
         "title": "L'association",

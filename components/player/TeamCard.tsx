@@ -336,7 +336,7 @@ export default function TeamCard({
                   juste après « rejoindre » : c'est l'autre moitié du même
                   geste — au lieu de chercher, se laisser trouver. */}
               <Link
-                href="/rejoindre"
+                href="/mercato?onglet=joueuses"
                 className="block w-full text-center px-4 py-3 rounded-xl border border-[var(--color-green)]/40 bg-[var(--color-green)]/10 hover:bg-[var(--color-green)]/20 text-white text-sm font-medium transition"
               >
                 {t.signalFreePlayer}
