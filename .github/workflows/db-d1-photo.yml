@@ -1,16 +1,18 @@
 # La photo de la nuit de la base D1 — lot 5b de docs/D1-MIGRATION.md (accord de la
 # propriétaire du 2026-11-03).
 #
-# Chaque nuit, après la sauvegarde (db-backup.yml, 2 h 17 UTC) : la sauvegarde est restaurée
-# sur la machine jetable de GitHub (db-restore-test.yml), puis copiée dans la vraie base D1
-# `owwomenscup-db`, sans les tables de secrets. L'API compare ensuite une partie de ses
+# Après chaque sauvegarde réussie (db-backup.yml ; GitHub la lance souvent des heures après
+# son heure prévue, d'où ce déclenchement plutôt qu'une heure fixe) : la sauvegarde est
+# restaurée sur la machine jetable de GitHub (db-restore-test.yml), puis copiée dans la vraie
+# base D1 `owwomenscup-db`, sans les tables de secrets. L'API compare ensuite une partie de ses
 # lectures à cette photo (lecture dans l'ombre). Le résumé ne contient que des nombres.
 
 name: db-d1-photo
 
 on:
-  schedule:
-    - cron: '41 3 * * *'
+  workflow_run:
+    workflows: [db-backup]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -18,6 +20,7 @@ permissions:
 
 jobs:
   photo:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     uses: ./.github/workflows/db-restore-test.yml
     with:
       d1_photo: true
