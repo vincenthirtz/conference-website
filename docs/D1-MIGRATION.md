@@ -122,7 +122,13 @@ Bonnes nouvelles :
     ([doc](https://developers.cloudflare.com/d1/reference/time-travel/)) ;
   - l'export **bloque** la base pendant qu'il tourne ;
   - export quotidien vers R2 par un Workflow ([exemple](https://developers.cloudflare.com/workflows/examples/backup-d1/)).
-- **Better Auth** a son dialecte D1 intégré : une ligne de configuration (déjà essayé, voir AUTH-BETTER-AUTH.md).
+- **Better Auth** : son dialecte D1 intégré ne convient PAS à notre schéma (il écrit les dates en
+  `toISOString()`, `…123Z`, que les gardes de type de D1 refusent). Il passe par son propre
+  adaptateur, `worker/identityD1Adapter.ts` de conference-api, bâti sur le compilateur de la façade
+  (relevé du 2026-11-04, préparation du lot 6). Sans transactions interactives sur D1, deux cas
+  peuvent rester à moitié faits si la seconde écriture échoue : une inscription par Discord sans
+  son lien, un changement de mot de passe « déconnecter les autres appareils » qui déconnecte sans
+  changer le mot de passe.
 - **Le site et l'API peuvent lier la même base D1.**
 
 ## 3. Le plan pour D1
