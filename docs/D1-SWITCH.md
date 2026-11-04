@@ -40,7 +40,8 @@ pages, et tu dis « stop » si quelque chose te semble faux.
 
 - Claude passe `DB_WRITES_FROZEN` à `"1"` dans `wrangler.jsonc` de l'API et pousse.
 - À partir de la mise en ligne : toute modification reçoit « Maintenance de la base en cours… » ; les tâches
-  planifiées s'arrêtent (journal : `[crons] écritures gelées`).
+  planifiées s'arrêtent (journal : `[crons] écritures gelées`). La connexion au site et les commandes du bot qui
+  écrivent sont indisponibles aussi, le temps du gel.
 - Contrôle : une page s'ouvre normalement ; un formulaire (par exemple un brouillon d'actualité) affiche le message de
   maintenance.
 

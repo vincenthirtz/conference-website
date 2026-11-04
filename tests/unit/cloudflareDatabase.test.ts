@@ -182,7 +182,7 @@ describe('la base du rendu serveur', () => {
     expect(worker).toMatch(/bindSiteDatabase\(env\)/);
   });
 
-  it('wrangler.jsonc : la base liée, l’interrupteur à « supabase » (sans effet)', () => {
+  it('wrangler.jsonc : la base liée, l’interrupteur à une valeur connue', () => {
     const config = JSON.parse(
       readFileSync(join(ROOT, 'wrangler.jsonc'), 'utf8').replace(
         /^\s*\/\/.*$/gm,
@@ -192,7 +192,9 @@ describe('la base du rendu serveur', () => {
       vars: Record<string, string>;
       d1_databases: Array<Record<string, string>>;
     };
-    expect(config.vars.DB_BACKEND).toBe('supabase');
+    // « supabase » aujourd'hui, « d1 » après la bascule (docs/D1-SWITCH.md) : jamais autre chose,
+    // qui laisserait les pages sur Supabase en silence.
+    expect(['supabase', 'd1']).toContain(config.vars.DB_BACKEND);
     expect(config.d1_databases).toEqual([
       {
         binding: 'MAIN_DB',
