@@ -251,6 +251,47 @@ describe('FreePlayersList — filtres et genre affiché', () => {
   });
 });
 
+describe('réponse d’une API d’avant le mercato', () => {
+  it('les listes restent debout et affichent les rôles historiques', async () => {
+    // Forme EXACTE des projections d'avant la migration : aucun champ du
+    // mercato (le site peut partir avant l'API).
+    players = [
+      {
+        id: 'old',
+        name: 'Ancienne',
+        roles: ['dps'],
+        level: 'gold',
+        availability: null,
+        note: null,
+        since: null,
+      } as unknown as PublicFreePlayer,
+    ];
+    openings = [
+      {
+        id: 'old-o',
+        teamName: 'Vieille équipe',
+        roles: ['support'],
+        level: null,
+        availability: null,
+        note: null,
+        since: null,
+      } as unknown as PublicTeamOpening,
+    ];
+    render(<FreePlayersList filters={{ platform: 'pc' }} />);
+    // Filtrée (plateforme inconnue) : pas affichée, mais pas de plantage.
+    await screen.findByText(tm.noMatch);
+    cleanup();
+    render(<FreePlayersList />);
+    await screen.findByText('Ancienne');
+    expect(screen.getByText('DPS')).toBeTruthy();
+    cleanup();
+    render(<TeamOpeningsList filters={{ platform: 'console' }} />);
+    // Annonce sans exigence de plateforme : elle répond.
+    await screen.findByText('Vieille équipe');
+    expect(screen.getByText('Support')).toBeTruthy();
+  });
+});
+
 describe('TeamOpeningsList — profils recherchés', () => {
   it('une équipe « mixte » ou sans exigence répond à tout genre', async () => {
     openings = [

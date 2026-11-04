@@ -37,6 +37,7 @@ import {
   SOUGHT_LABEL,
   openingRankLabel,
 } from '@/components/Mercato/mercatoLabels';
+import { withOpeningDefaults } from '@/components/Mercato/defaults';
 
 type Dict = typeof nsRecrutementPage.fr;
 
@@ -271,7 +272,11 @@ export default function TeamOpeningsList({
       const res = await fetch('/api/public/team-openings');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setOpenings(Array.isArray(data.openings) ? data.openings : []);
+      setOpenings(
+        Array.isArray(data.openings)
+          ? data.openings.map(withOpeningDefaults)
+          : []
+      );
     } catch {
       // Un échec réseau ne doit pas se déguiser en « personne ne recrute » :
       // les deux états se ressemblent à l'écran et ne disent pas du tout la

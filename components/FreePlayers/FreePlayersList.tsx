@@ -27,6 +27,7 @@ import {
   POSITION_LABEL,
   rankLabel,
 } from '@/components/Mercato/mercatoLabels';
+import { withPlayerDefaults } from '@/components/Mercato/defaults';
 
 type Dict = typeof nsRejoindrePage.fr;
 
@@ -68,7 +69,9 @@ export default function FreePlayersList({
       const res = await fetch('/api/public/free-players');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setPlayers(Array.isArray(data.players) ? data.players : []);
+      setPlayers(
+        Array.isArray(data.players) ? data.players.map(withPlayerDefaults) : []
+      );
     } catch {
       // Un échec réseau ne doit pas se déguiser en « personne ne cherche » :
       // les deux états se ressemblent à l'écran mais ne disent pas la même

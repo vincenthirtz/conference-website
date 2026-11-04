@@ -14,7 +14,7 @@
 // fins, profils recherchés, rang moyen + fourchette, plateformes, contrôles,
 // description et but du recrutement), mêmes composants (MercatoFields).
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { Card } from '@/features/ruban';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -53,6 +53,7 @@ import {
   SOUGHT_LABEL,
   openingRankLabel,
 } from '@/components/Mercato/mercatoLabels';
+import { withOpeningDefaults } from '@/components/Mercato/defaults';
 import { usePlayerErrorText } from '../../_shared/useErrorText';
 import type { TeamOpeningDto } from '../opening/schemas';
 import {
@@ -138,7 +139,14 @@ export default function TeamOpeningEditor({ editable }: { editable: boolean }) {
   const close = useCloseTeamOpening();
   const { confirm, dialog } = useConfirmDialog();
 
-  const opening = query.data?.opening ?? null;
+  const rawOpening = query.data?.opening ?? null;
+  // Complétée si l'API ne porte pas encore les champs du mercato (cf.
+  // components/Mercato/defaults.ts). Mémoïsée : l'effet de brouillon ci-dessous
+  // dépend de son identité.
+  const opening = useMemo(
+    () => (rawOpening ? withOpeningDefaults(rawOpening) : null),
+    [rawOpening]
+  );
   const accountEmail = query.data?.accountEmail ?? null;
 
   const [editing, setEditing] = useState(false);
