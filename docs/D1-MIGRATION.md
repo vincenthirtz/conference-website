@@ -762,8 +762,20 @@ Feu vert : « go lot 5 ». Un sous-lot à la fois.
 | 5a | La copie, répétée sur la sauvegarde de la nuit, vers un D1 **jetable** | **fait** le 2026-11-03 (API `4d7d26e`, site `16d97588b`) |
 | 5b-1 | La photo de la nuit : la sauvegarde copiée dans la vraie base D1, sans les secrets | **fait** le 2026-11-04 (API `7feacbf`, site `9aa7ba645`, `ac56942f9`) |
 | 5b-2 | Les lectures de l'API refaites sur D1 et comparées (branchement en lecture seule) | **allumé à 5 %** le 2026-11-04 (API `e8fdb5d`, `7c6792c`) |
-| 5b-3 | Deux semaines d'observation, avec si possible un soir de match | à faire |
-| 5c | La répétition chronométrée de la bascule **et du retour arrière**, sur une copie | à faire |
+| 5b-3 | **Une semaine** d'observation (décision du 2026-11-04), lectures comparées à **50 %** depuis le 2026-11-04 13 h 10 UTC (API `06dcc2a`) ; aucun match prévu dans les 60 jours | en cours, fin vers le 2026-11-11 |
+| 5c | La répétition chronométrée de la bascule **et du retour arrière**, sur une copie | préparation lancée le 2026-11-04 |
+
+**Le 2026-11-04, sur ta décision** (« on peut le faire aujourd'hui », puis les trois choix) : observation raccourcie à
+une semaine, comparaisons montées à 50 %, et toute la préparation de la bascule lancée le jour même, sans rien
+changer en production :
+- le retour arrière D1 → Supabase et la répétition chronométrée (5c) ;
+- Better Auth sur D1 ;
+- l'interrupteur de l'API et du site, le gel des écritures, la copie finale depuis le vrai Supabase, et le déroulé
+  du soir de bascule.
+
+Un garde-fou est déjà en place (API `c346556`) : une fois D1 devenue la base principale, la photo de la nuit ne peut
+plus la vider. **Date visée pour la bascule : vers le 12-14 novembre**, un soir de ton choix, si l'observation et la
+répétition sont propres.
 
 **5a, fait le 2026-11-03.** Rien n'est écrit sur Cloudflare, aucune donnée ne passe par un ordinateur.
 
