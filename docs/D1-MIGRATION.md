@@ -761,7 +761,7 @@ Feu vert : « go lot 5 ». Un sous-lot à la fois.
 |---|---|---|
 | 5a | La copie, répétée sur la sauvegarde de la nuit, vers un D1 **jetable** | **fait** le 2026-11-03 (API `4d7d26e`, site `16d97588b`) |
 | 5b-1 | La photo de la nuit : la sauvegarde copiée dans la vraie base D1, sans les secrets | **fait** le 2026-11-04 (API `7feacbf`, site `9aa7ba645`, `ac56942f9`) |
-| 5b-2 | Les lectures de l'API refaites sur D1 et comparées (branchement en lecture seule) | à faire |
+| 5b-2 | Les lectures de l'API refaites sur D1 et comparées (branchement en lecture seule) | **allumé à 5 %** le 2026-11-04 (API `e8fdb5d`, `7c6792c`) |
 | 5b-3 | Deux semaines d'observation, avec si possible un soir de match | à faire |
 | 5c | La répétition chronométrée de la bascule **et du retour arrière**, sur une copie | à faire |
 
@@ -829,6 +829,34 @@ lenteurs, pendant deux semaines (avec si possible un soir de match). Trois faço
   - environ une minute, la base étant à Francfort et la machine de GitHub aux États-Unis.
 
   La clé Cloudflare de la CI avait déjà les droits nécessaires.
+
+**5b-2, les lectures comparées, allumées le 2026-11-04.**
+
+- **Comment.** Le client de l'API vers Supabase confie chaque requête à un observateur
+  (`utils/db/d1/shadow.ts`). L'observateur note la requête sans la changer. Quand une **lecture** se termine,
+  une fois sur vingt, il la refait sur la photo D1, **après** la réponse aux joueuses, et compare : mêmes lignes,
+  même erreur, même compte. Les dates sont ramenées au même format, et l'ordre ne compte que si la requête le
+  demande.
+- **Ce qui n'est jamais comparé** : les écritures, les tables de secrets et les lectures qui s'y rattachent, et
+  tout quand la photo manque ou date de plus de 48 h.
+- **Les verdicts**, au journal du Worker de l'API (`[d1-shadow]`, sans aucune valeur) :
+  - **identique** ;
+  - **fraîche** : différent, mais Supabase rend une ligne modifiée après la photo, donc écart attendu ;
+  - **écart** : à examiner ;
+  - **non rejouée** : la façade ne sait pas refaire la requête.
+- **Sans risque pour les joueuses.** Une erreur de l'observateur ou de D1 ne remonte jamais. Au plus
+  4 comparaisons à la fois. Le taux est un réglage du Worker (`D1_SHADOW_RATE`) : remis à `0`, il coupe tout.
+- **Le site** reçoit la même petite modification de `utils/supabase.ts` (fichier partagé). Sans observateur, elle
+  ne fait rien.
+- **Les tests** : le vrai constructeur de requêtes de supabase-js face à un faux Supabase, et la photo dans un D1
+  local. Ils vérifient :
+  - la requête et la réponse inchangées ;
+  - chaque verdict ;
+  - ce qui n'est jamais comparé ;
+  - une panne de D1 sans effet.
+
+  Contre-épreuve : 12 détails cassés exprès, 12 détectés.
+- **En deux déploiements** : d'abord la base branchée avec la comparaison coupée, puis le taux passé à 5 %.
 
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
