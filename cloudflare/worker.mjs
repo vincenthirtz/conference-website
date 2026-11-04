@@ -34,6 +34,10 @@
 // 7) SESSION BETTER AUTH du rendu serveur : un lecteur sur globalThis, que la porte
 //    (utils/identity.ts) interroge ; il demande à l'API par API_WORKER
 //    (cloudflare/identityReader.ts). Sans EDGE_PROXY_SECRET, pas de lecteur.
+//
+// 8) LA BASE DU RENDU SERVEUR (lot 6 de docs/D1-MIGRATION.md, docs/D1-SWITCH.md) :
+//    DB_BACKEND = « d1 » → les lectures des pages partent dans la base D1 MAIN_DB, par le
+//    crochet de la façade sur globalThis (cloudflare/database.ts). « supabase » : rien.
 
 import handler from '../.open-next/worker.js';
 import {
@@ -50,6 +54,7 @@ import {
   upstreamUnavailableResponse,
 } from '../utils/edgeApiProxy.ts';
 import { dueCronJobs, resolveCronApiBaseUrl, runCronJob } from './crons.ts';
+import { bindSiteDatabase } from './database.ts';
 import { bindIdentityReader } from './identityReader.ts';
 import {
   browserCacheControl,
@@ -170,6 +175,7 @@ export default {
           }
         : null
     );
+    bindSiteDatabase(env);
 
     const selfImage = selfImageRewrite(url);
     let response = await handler.fetch(

@@ -37,6 +37,15 @@
     ]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],
+  // La base D1 de l'association, la même que celle de l'API (lot 6 de docs/D1-MIGRATION.md,
+  // docs/D1-SWITCH.md). Lue seulement quand DB_BACKEND vaut « d1 » (cloudflare/database.ts).
+  "d1_databases": [
+    {
+      "binding": "MAIN_DB",
+      "database_name": "owwomenscup-db",
+      "database_id": "967ed911-71e3-41ae-a2fe-ae7a3ad5c8c1"
+    }
+  ],
   "images": { "binding": "IMAGES" },
   // Un seul déclencheur ; les horaires des tâches sont dans cloudflare/crons.ts.
   "triggers": { "crons": ["* * * * *"] },
@@ -47,6 +56,9 @@
     // « 0 » depuis le 2026-10-31 : les tâches planifiées tournent sur le Worker de l'API, qui est
     // passé à « 1 » au même moment. Jamais les deux ensemble (retour arrière : l'inverse).
     "CRONS_ENABLED": "0",
+    // La base que lit le rendu serveur (docs/D1-SWITCH.md) : « supabase » comme avant, ou « d1 »
+    // (la base MAIN_DB), posée le soir de la bascule EN MÊME TEMPS que la même variable de l'API.
+    "DB_BACKEND": "supabase",
     // Better Auth source des comptes (lot 8 de docs/AUTH-BETTER-AUTH.md) : le rendu serveur lit
     // les comptes dans auth_user et ignore les cookies de Supabase. À poser avec la même variable
     // de l'API et NEXT_PUBLIC_AUTH_BACKEND=better-auth ; retour arrière : retirer les trois.
