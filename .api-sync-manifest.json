@@ -1,6 +1,6 @@
 {
-  "apiCommit": "e8fdb5d59ed11b506833b2c8aa7bfa388b226593",
-  "syncedAt": "2026-11-04T08:19:03.981Z",
+  "apiCommit": "b32ccce60d18397c7037f90d984a87e8b67cbf5b",
+  "syncedAt": "2026-11-04T14:12:24.298Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -199,6 +199,8 @@
     "utils/matches/scheduleDiagnostics.ts",
     "utils/matches/scoreReports.ts",
     "utils/matches/streamUrl.ts",
+    "utils/mercato.ts",
+    "utils/mercatoSchema.ts",
     "utils/moderation/blacklistExpiry.ts",
     "utils/moderation/missingColumn.ts",
     "utils/mvp/awards.ts",

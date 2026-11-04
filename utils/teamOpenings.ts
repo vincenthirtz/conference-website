@@ -23,6 +23,18 @@ import {
   type FreePlayerLevel,
   type FreePlayerRole,
 } from './freePlayers';
+import {
+  isRankTier,
+  normalizeInputs,
+  normalizePlatforms,
+  normalizePositions,
+  normalizeSoughtGenders,
+  type MercatoInput,
+  type MercatoPlatform,
+  type MercatoPosition,
+  type RankTier,
+  type SoughtGender,
+} from './mercato';
 
 /** Postes RECHERCHÉS par l'équipe. Mêmes valeurs que les postes joués. */
 export const TEAM_OPENING_ROLES = FREE_PLAYER_ROLES;
@@ -51,7 +63,9 @@ export const TEAM_OPENING_TTL_DAYS = 60;
 export const TEAM_OPENING_LIMITS = {
   teamName: 60,
   availability: 200,
-  note: 400,
+  // 600 depuis le hub mercato : la note porte désormais la description de
+  // l'équipe ET le but du recrutement (tournoi prévu, création d'équipe…).
+  note: 600,
   contactDiscord: 60,
   contactEmail: 200,
 } as const;
@@ -88,11 +102,19 @@ export type TeamOpeningRow = {
   contact_discord: string | null;
   marked_at: string | null;
   expires_at: string | null;
+  // --- Hub mercato (migration mercato_hub_fields.sql) — facultatifs : une
+  // row d'avant le mercato ne les porte pas.
+  sought_genders?: string[] | null;
+  rank_min?: string | null;
+  rank_max?: string | null;
+  platforms?: string[] | null;
+  inputs?: string[] | null;
+  positions?: string[] | null;
 };
 
 /** Colonnes à sélectionner pour construire l'une ou l'autre projection. */
 export const TEAM_OPENING_SELECT =
-  'id, tenant_id, source, team_id, team_name, roles, level, availability, note, contact_email, contact_discord, marked_at, expires_at';
+  'id, tenant_id, source, team_id, team_name, roles, level, availability, note, contact_email, contact_discord, marked_at, expires_at, sought_genders, rank_min, rank_max, platforms, inputs, positions';
 
 /**
  * Vue PUBLIQUE d'une annonce — celle que sert `GET /api/public/team-openings`.
@@ -115,6 +137,16 @@ export type PublicTeamOpening = {
    * milieu de la liste doit pouvoir s'expliquer d'un coup d'œil.
    */
   from?: { name: string; slug: string | null } | null;
+  /** Profils recherchés (`mixed` = équipe mixte). Vide = non précisé. */
+  soughtGenders: SoughtGender[];
+  /** Fourchette de rang acceptée (paliers), en plus du rang moyen `level`. */
+  rankMin: RankTier | null;
+  rankMax: RankTier | null;
+  /** Vide = « peu importe ». */
+  platforms: MercatoPlatform[];
+  inputs: MercatoInput[];
+  /** Postes recherchés (vocabulaire fin du mercato). Vide sur une ancienne annonce. */
+  positions: MercatoPosition[];
 };
 
 export function toPublicTeamOpening(
@@ -133,6 +165,12 @@ export function toPublicTeamOpening(
     availability: row.availability?.trim() || null,
     note: row.note?.trim() || null,
     since: row.marked_at,
+    soughtGenders: normalizeSoughtGenders(row.sought_genders),
+    rankMin: isRankTier(row.rank_min) ? row.rank_min : null,
+    rankMax: isRankTier(row.rank_max) ? row.rank_max : null,
+    platforms: normalizePlatforms(row.platforms),
+    inputs: normalizeInputs(row.inputs),
+    positions: normalizePositions(row.positions),
   };
 }
 

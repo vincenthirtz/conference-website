@@ -21,17 +21,38 @@ import {
   type TeamOpeningLevel,
   type TeamOpeningRole,
 } from '../../../../utils/teamOpenings';
+import type {
+  MercatoInput,
+  MercatoPlatform,
+  MercatoPosition,
+  RankTier,
+  SoughtGender,
+} from '../../../../utils/mercato';
+import {
+  RANK_RANGE_INVERTED,
+  hasAnyPosition,
+  rankRangeIsOrdered,
+  teamMercatoShape,
+} from '../../../../utils/mercatoSchema';
 
-/** Corps de PUT /api/teams/opening (création OU mise à jour). */
-export const TeamOpeningUpsertBody = z.object({
+const NO_ROLE = 'Choisis au moins un poste recherché.';
+
+/**
+ * Corps de PUT /api/teams/opening (création OU mise à jour).
+ *
+ * Champs du hub mercato FACULTATIFS, et un champ absent n'efface rien : une
+ * annonce mise à jour par un écran qui ne les connaît pas (ou par le bot, qui
+ * pose les questions en deux temps) garde ce qu'elle portait.
+ */
+export const TeamOpeningUpsertBody = z
+  .object({
   // Au moins un poste : une annonce sans poste n'aide aucune joueuse à savoir
-  // si elle est concernée (même règle que le formulaire public).
+  // si elle est concernée (même règle que le formulaire public). Depuis le
+  // mercato, `positions` suffit (les rôles historiques en sont déduits).
   roles: z
-    .array(z.enum(TEAM_OPENING_ROLES), {
-      error: 'Choisis au moins un poste recherché.',
-    })
-    .min(1, 'Choisis au moins un poste recherché.')
-    .max(TEAM_OPENING_ROLES.length),
+    .array(z.enum(TEAM_OPENING_ROLES), { error: NO_ROLE })
+    .max(TEAM_OPENING_ROLES.length)
+    .optional(),
   level: z.enum(TEAM_OPENING_LEVELS, { error: 'Niveau invalide.' }).optional(),
   availability: z
     .string()
@@ -44,7 +65,13 @@ export const TeamOpeningUpsertBody = z.object({
     .trim()
     .max(TEAM_OPENING_LIMITS.contactDiscord)
     .nullish(),
-});
+  ...teamMercatoShape,
+  })
+  .refine(hasAnyPosition, { message: NO_ROLE, path: ['roles'] })
+  .refine((v) => rankRangeIsOrdered(v.rankMin, v.rankMax), {
+    message: RANK_RANGE_INVERTED,
+    path: ['rankMax'],
+  });
 export type TeamOpeningUpsertInput = z.infer<typeof TeamOpeningUpsertBody>;
 
 /** L'annonce de l'équipe telle que la voit son encadrement. */
@@ -61,6 +88,13 @@ export type TeamOpeningDto = {
   expiresAt: string | null;
   /** `false` = périmée : invisible publiquement tant qu'elle n'est pas renouvelée. */
   active: boolean;
+  // --- Hub mercato ---
+  positions: MercatoPosition[];
+  soughtGenders: SoughtGender[];
+  rankMin: RankTier | null;
+  rankMax: RankTier | null;
+  platforms: MercatoPlatform[];
+  inputs: MercatoInput[];
 };
 
 /** Réponse de GET / PUT /api/teams/opening. */

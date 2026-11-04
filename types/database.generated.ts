@@ -2283,10 +2283,18 @@ export type Database = {
           display_name: string | null
           expires_at: string | null
           expiry_reminder_sent_at: string | null
+          gender: string | null
+          goals: string | null
           id: string
+          inputs: string[]
           level: string | null
+          main_role: string | null
           marked_at: string
           note: string | null
+          past_teams: string | null
+          platforms: string[]
+          positions: string[]
+          rank_division: number | null
           roles: string[]
           share_across_tenants: boolean
           source: string
@@ -2305,10 +2313,18 @@ export type Database = {
           display_name?: string | null
           expires_at?: string | null
           expiry_reminder_sent_at?: string | null
+          gender?: string | null
+          goals?: string | null
           id?: string
+          inputs?: string[]
           level?: string | null
+          main_role?: string | null
           marked_at?: string
           note?: string | null
+          past_teams?: string | null
+          platforms?: string[]
+          positions?: string[]
+          rank_division?: number | null
           roles?: string[]
           share_across_tenants?: boolean
           source?: string
@@ -2327,10 +2343,18 @@ export type Database = {
           display_name?: string | null
           expires_at?: string | null
           expiry_reminder_sent_at?: string | null
+          gender?: string | null
+          goals?: string | null
           id?: string
+          inputs?: string[]
           level?: string | null
+          main_role?: string | null
           marked_at?: string
           note?: string | null
+          past_teams?: string | null
+          platforms?: string[]
+          positions?: string[]
+          rank_division?: number | null
           roles?: string[]
           share_across_tenants?: boolean
           source?: string
@@ -8255,10 +8279,16 @@ export type Database = {
           contact_email: string | null
           expires_at: string | null
           id: string
+          inputs: string[]
           level: string | null
           marked_at: string
           note: string | null
+          platforms: string[]
+          positions: string[]
+          rank_max: string | null
+          rank_min: string | null
           roles: string[]
+          sought_genders: string[]
           source: string
           team_id: string | null
           team_name: string | null
@@ -8271,10 +8301,16 @@ export type Database = {
           contact_email?: string | null
           expires_at?: string | null
           id?: string
+          inputs?: string[]
           level?: string | null
           marked_at?: string
           note?: string | null
+          platforms?: string[]
+          positions?: string[]
+          rank_max?: string | null
+          rank_min?: string | null
           roles?: string[]
+          sought_genders?: string[]
           source?: string
           team_id?: string | null
           team_name?: string | null
@@ -8287,10 +8323,16 @@ export type Database = {
           contact_email?: string | null
           expires_at?: string | null
           id?: string
+          inputs?: string[]
           level?: string | null
           marked_at?: string
           note?: string | null
+          platforms?: string[]
+          positions?: string[]
+          rank_max?: string | null
+          rank_min?: string | null
           roles?: string[]
+          sought_genders?: string[]
           source?: string
           team_id?: string | null
           team_name?: string | null

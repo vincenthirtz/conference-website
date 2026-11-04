@@ -14,6 +14,20 @@
 // les projections évite qu'une évolution de schéma ne fasse fuiter un email par
 // un `select('*')` distrait.
 
+import {
+  DISCLOSED_GENDERS,
+  isMercatoPosition,
+  isRankDivision,
+  normalizeInputs,
+  normalizePlatforms,
+  normalizePositions,
+  type DisclosedGender,
+  type MercatoInput,
+  type MercatoPlatform,
+  type MercatoPosition,
+  type RankDivision,
+} from './mercato';
+
 /** Postes joués. Aligné sur `team_members.specialty` — même vocabulaire partout. */
 export const FREE_PLAYER_ROLES = ['tank', 'dps', 'support', 'flex'] as const;
 export type FreePlayerRole = (typeof FREE_PLAYER_ROLES)[number];
@@ -109,6 +123,16 @@ export type FreePlayerRow = {
    * annonce déposée sur un site n'a pas été déposée sur tous les autres.
    */
   share_across_tenants?: boolean | null;
+  // --- Hub mercato (migration mercato_hub_fields.sql) — facultatifs : une
+  // row d'avant le mercato ne les porte pas.
+  gender?: string | null;
+  rank_division?: number | null;
+  platforms?: string[] | null;
+  inputs?: string[] | null;
+  main_role?: string | null;
+  positions?: string[] | null;
+  past_teams?: string | null;
+  goals?: string | null;
 };
 
 /**
@@ -133,7 +157,30 @@ export type PublicFreePlayer = {
    * la lit.
    */
   from?: { name: string; slug: string | null } | null;
+  /**
+   * Genre, UNIQUEMENT s'il a été choisi pour être affiché. « Préfère ne pas
+   * dire » (et toute fiche d'avant le mercato) sort `null` : rien à afficher,
+   * rien à filtrer.
+   */
+  gender: DisclosedGender | null;
+  /** Division du palier `level` (5 → 1), `null` sans palier connu. */
+  rankDivision: RankDivision | null;
+  platforms: MercatoPlatform[];
+  inputs: MercatoInput[];
+  mainRole: MercatoPosition | null;
+  /** Postes visés (vocabulaire fin du mercato). Vide sur une ancienne fiche. */
+  positions: MercatoPosition[];
+  pastTeams: string | null;
+  goals: string | null;
 };
+
+/** Genre affichable, ou `null` (non dit, inconnu, hors vocabulaire). */
+export function disclosedGender(value: unknown): DisclosedGender | null {
+  return typeof value === 'string' &&
+    (DISCLOSED_GENDERS as readonly string[]).includes(value)
+    ? (value as DisclosedGender)
+    : null;
+}
 
 export function toPublicFreePlayer(
   row: FreePlayerRow
@@ -144,20 +191,33 @@ export function toPublicFreePlayer(
   const name = (row.display_name || row.discord_username || '').trim();
   if (!name) return null;
 
+  const level = isFreePlayerLevel(row.level) ? row.level : null;
   return {
     id: row.id,
     name,
     roles: normalizeRoles(row.roles),
-    level: isFreePlayerLevel(row.level) ? row.level : null,
+    level,
     availability: row.availability?.trim() || null,
     note: row.note?.trim() || null,
     since: row.marked_at,
+    gender: disclosedGender(row.gender),
+    // Une division sans palier ne veut rien dire (« 3 » de quoi ?).
+    rankDivision:
+      level && level !== 'unknown' && isRankDivision(row.rank_division)
+        ? row.rank_division
+        : null,
+    platforms: normalizePlatforms(row.platforms),
+    inputs: normalizeInputs(row.inputs),
+    mainRole: isMercatoPosition(row.main_role) ? row.main_role : null,
+    positions: normalizePositions(row.positions),
+    pastTeams: row.past_teams?.trim() || null,
+    goals: row.goals?.trim() || null,
   };
 }
 
 /** Colonnes à sélectionner pour construire l'une ou l'autre projection. */
 export const FREE_PLAYER_SELECT =
-  'id, tenant_id, source, discord_user_id, discord_username, auth_user_id, display_name, roles, availability, level, note, contact_email, contact_discord, marked_at, expires_at, share_across_tenants';
+  'id, tenant_id, source, discord_user_id, discord_username, auth_user_id, display_name, roles, availability, level, note, contact_email, contact_discord, marked_at, expires_at, share_across_tenants, gender, rank_division, platforms, inputs, main_role, positions, past_teams, goals';
 
 /**
  * Une annonce est-elle encore vivante ? `expires_at` nul = pas de péremption
