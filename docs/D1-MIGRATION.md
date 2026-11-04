@@ -760,7 +760,9 @@ Feu vert : « go lot 5 ». Un sous-lot à la fois.
 | Sous-lot | Contenu | État |
 |---|---|---|
 | 5a | La copie, répétée sur la sauvegarde de la nuit, vers un D1 **jetable** | **fait** le 2026-11-03 (API `4d7d26e`, site `16d97588b`) |
-| 5b | La lecture dans l'ombre : les lectures de l'API refaites sur D1 et comparées | **attend deux accords** (voir plus bas) |
+| 5b-1 | La photo de la nuit : la sauvegarde copiée dans la vraie base D1, sans les secrets | **fait** le 2026-11-04 (API `7feacbf`, site `9aa7ba645`, `ac56942f9`) |
+| 5b-2 | Les lectures de l'API refaites sur D1 et comparées (branchement en lecture seule) | à faire |
+| 5b-3 | Deux semaines d'observation, avec si possible un soir de match | à faire |
 | 5c | La répétition chronométrée de la bascule **et du retour arrière**, sur une copie | à faire |
 
 **5a, fait le 2026-11-03.** Rien n'est écrit sur Cloudflare, aucune donnée ne passe par un ordinateur.
@@ -804,6 +806,29 @@ lenteurs, pendant deux semaines (avec si possible un soir de match). Trois faço
 2. **Brancher cette base sur l'API, en lecture seule, pour la comparaison.** C'est un changement de configuration
    du Worker de l'API. Aucune écriture, aucune réponse aux joueuses ne passerait par D1. Une panne de D1 ne
    ferait que manquer une comparaison.
+
+**Les deux accords ont été donnés le 2026-11-03** (« Oui, je t'autorise », pour chacun).
+
+**5b-1, la photo de la nuit, faite le 2026-11-04.**
+
+- **Une précaution en plus, proposée et appliquée : les tables de secrets ne sont jamais copiées.** C'est moins que
+  l'accord, jamais plus. Sont concernés :
+  - identifiants et sessions de connexion, clés de signature, secrets de la double authentification ;
+  - jetons des intégrations et des espaces, abonnements aux notifications.
+
+  Cela fait 17 tables, plus les 2 tables de journal qui en dépendent. Elles restent en un seul endroit jusqu'à la
+  bascule. Un test oblige à décider pour toute nouvelle table dont une colonne ressemble à un secret : l'écarter,
+  ou la garder avec une raison écrite.
+- **Chaque nuit, après la sauvegarde.** Le workflow `db-d1-photo` part à la fin de chaque sauvegarde réussie, pas à
+  une heure fixe : GitHub lance la sauvegarde « de 2 h 17 » vers 9 h 35 UTC. Il restaure la sauvegarde sur la
+  machine jetable, **vide la base D1**, la recharge, la relit table par table, et ne note l'heure de la photo
+  (celle de la sauvegarde) que si tout est identique.
+- **Premier passage, lancé à la main, sur la sauvegarde du 2026-11-03** :
+  - 167 tables copiées, **14 413 lignes, identiques** ;
+  - aucune clé orpheline, 19 tables de secrets laissées vides ;
+  - environ une minute, la base étant à Francfort et la machine de GitHub aux États-Unis.
+
+  La clé Cloudflare de la CI avait déjà les droits nécessaires.
 
 ## 4. L'autre voie : quitter Supabase en gardant Postgres
 
