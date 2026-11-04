@@ -62,10 +62,21 @@ export type DbFunctionName = (typeof DB_FUNCTIONS)[number];
 type RpcCapable = { rpc: unknown };
 
 /**
+ * Lot 6 (la bascule) : quand D1 est la base (`DB_BACKEND` = « d1 »), le Worker pose sur
+ * globalThis une fonction sous cette clé (utils/db/d1/primary.ts). Elle reçoit l'appel tel
+ * quel — l'`rpc` d'origine, le nom, les arguments — et rend la réponse de la fonction réécrite
+ * pour D1, à la forme de supabase-js. Sans elle (aujourd'hui, et partout ailleurs), rien ne
+ * change. Comme utils/supabase.ts, ce fichier n'importe rien : la façade vit à part.
+ */
+const RPC_HOOK = Symbol.for('owwc.db.rpc-hook');
+
+/**
  * Les fonctions de la base, vues par ce client. `dbFunctions(db)('pool_place', args)` ≡
  * `db.rpc('pool_place', args)`.
  */
 export function dbFunctions<Db extends RpcCapable>(db: Db): Db['rpc'] {
-  const rpc = db.rpc as (...args: unknown[]) => unknown;
-  return rpc.bind(db) as Db['rpc'];
+  const rpc = (db.rpc as (...args: unknown[]) => unknown).bind(db);
+  const hook = (globalThis as unknown as Record<symbol, unknown>)[RPC_HOOK];
+  if (typeof hook !== 'function') return rpc as Db['rpc'];
+  return ((...args: unknown[]) => hook(rpc, ...args)) as Db['rpc'];
 }
