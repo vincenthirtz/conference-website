@@ -18,8 +18,9 @@ pages, et tu dis « stop » si quelque chose te semble faux.
   - `DB_BACKEND` (API et site) : `supabase` = comme aujourd'hui ; `d1` = D1 répond à tout ;
   - la marque « base principale » dans D1, posée par la copie finale : ensuite, plus rien ne peut vider cette base.
 - **Ce qui dépend encore des deux autres chantiers** (marqué **[A]** et **[B]** plus bas) :
-  - **[A]** le retour arrière D1 → Supabase (recopie) et la répétition de la CI ;
-  - **[B]** les comptes (Better Auth) sur D1, la même nuit.
+  - **[A]** le retour arrière D1 → Supabase (recopie, workflow `db-d1-rollback`) et la répétition de la CI
+    (`db-restore-test`, option `switch_rehearsal`) : en place depuis le 2026-11-04 ;
+  - **[B]** les comptes (Better Auth) sur D1, la même nuit : en place depuis le 2026-11-04, sans réglage à part.
 
 ## Avant le soir
 
@@ -27,9 +28,9 @@ pages, et tu dis « stop » si quelque chose te semble faux.
 |---|---|---|---|
 | Dès que prêt | Le code des trois chantiers fusionné et déployé, réglages à leur valeur sans effet (`DB_BACKEND` = `supabase`, `DB_WRITES_FROZEN` = `0`) | — | https://api.owwomenscup.fr/api/health répond `"dbBackend":"supabase"` |
 | J-7 à J-2 | **Répétition chronométrée** : GitHub › Actions › `db-d1-switch` › « Run workflow », mode `repetition`. La base en service est lue (rien n'y est écrit), copiée dans une base jetable, vérifiée | ~5 min | Le résumé dit « identique », « Aucune table n'a bougé » et donne les durées |
-| J-7 à J-2 | **[A]** Répétition du retour arrière, sur une copie | à compléter par A | à compléter par A |
+| J-7 à J-2 | **Répétition de la bascule et du retour arrière, sur une copie** : GitHub › Actions › `db-restore-test` › « Run workflow », cocher `switch_rehearsal`. La sauvegarde de la nuit est restaurée sur la machine de GitHub, copiée dans un D1 jetable, des écritures d'après la bascule y sont jouées, puis le tout revient dans une seconde base Postgres et est comparé. Rien n'est écrit en ligne | ~10 min | Le résumé dit « identique » pour la copie et pour le retour, et donne les durées de chaque étape |
 | J-1 | **Secrets du temps réel** sur l'API : `db-d1-switch`, mode `secrets` | ~2 min | Le résumé dit « Posés : REALTIME_NOTIFY_SECRET, REALTIME_TICKET_SECRET » |
-| J-1 | **[B]** Préparation des comptes sur D1 | à compléter par B | à compléter par B |
+| J-1 | Comptes sur D1 : rien à préparer, ils suivent `DB_BACKEND` (étape 3) | — | — |
 | Le jour même | Pas de match ce soir-là ni le lendemain matin ; un mot sur Discord si tu veux prévenir (« maintenance de 30 min ce soir ») | — | — |
 
 ## Le soir, étape par étape
@@ -60,8 +61,14 @@ pages, et tu dis « stop » si quelque chose te semble faux.
 - **Si une table « a bougé »** : la copie reste juste (elle garde l'état d'un seul instant), mais une écriture a
   échappé au gel. Claude regarde laquelle avant de continuer.
 
-**3. [B] Les comptes sur D1.** À compléter par B : réglages de Better Auth pour D1, à poser dans le même déploiement
-que l'étape 4.
+**3. Les comptes sur D1 : aucun réglage à part.** Better Auth suit `DB_BACKEND` (API `worker/identityRoute.ts` :
+`d1` → la base principale D1, tout le reste → Supabase par Hyperdrive) : il bascule dans le même déploiement que
+l'étape 4, jamais séparément. La copie finale emporte toutes les tables des comptes (`auth_user`, `auth_account`,
+`auth_session`, `auth_verification`, `auth_two_factor`, `auth_jwks`, `auth_rate_limit`, `auth_settings`) : les
+sessions ouvertes restent ouvertes, les jetons déjà donnés restent valables, la double authentification aussi. À
+ne PAS toucher : le secret `BETTER_AUTH_SECRET` (il chiffre les clés des jetons et les secrets de double
+authentification), la liaison Hyperdrive `AUTH_DB` et les variables `IDENTITY_*` (gardées pour un retour arrière ;
+retirées au lot 7). Pendant le gel, la connexion est impossible (écriture) ; la lecture de la session marche.
 
 **4. Basculer** (~10 min, les deux déploiements en parallèle). Les écritures restent gelées.
 
@@ -119,7 +126,7 @@ répétition chronométrée (lot 5c) remplacera ces estimations.
 
 Les écritures étaient gelées : D1 n'a rien reçu d'important.
 
-1. API et site : `DB_BACKEND` à `"supabase"` (et **[B]** les comptes remis sur Supabase). Écritures toujours gelées.
+1. API et site : `DB_BACKEND` à `"supabase"` (les comptes reviennent sur Supabase avec lui). Écritures toujours gelées.
    ~10 min.
 2. Contrôle : https://api.owwomenscup.fr/api/health répond `"dbBackend":"supabase"` ; les pages s'ouvrent.
 3. Dégel : `DB_WRITES_FROZEN` à `"0"`. ~10 min.
@@ -132,8 +139,15 @@ Les écritures étaient gelées : D1 n'a rien reçu d'important.
 Des écritures ont eu lieu dans D1 : il faut les ramener dans Supabase.
 
 1. Gel : `DB_WRITES_FROZEN` à `"1"` (`DB_BACKEND` reste `"d1"`). ~10 min.
-2. **[A]** La recopie D1 → Supabase et sa vérification. À compléter par A (workflow, durée, contrôle).
-3. API et site : `DB_BACKEND` à `"supabase"` (et **[B]** les comptes). `D1_SHADOW_RATE` reste à `"0"`. ~10 min.
+2. La recopie D1 → Supabase et sa vérification : GitHub › Actions › `db-d1-rollback` › « Run workflow », écrire
+   `RETOUR`. Elle refuse si les écritures ne sont pas gelées ou si D1 n'est plus en service ; elle lit D1 sans
+   l'écrire, remplace les tables de Supabase en une transaction (rien ne change si une seule étape échoue), puis
+   relit et compare les deux bases. ~2 min (estimation du lot 5c : 20–45 s de recopie). Contrôle : le résumé dit
+   « identique » ; sinon Supabase est inchangé, rester sur D1 et chercher. Toute écriture faite dans Supabase
+   après la bascule est effacée (D1 fait foi). La marque « base principale » reste sur D1 : la photo de la nuit
+   reste en pause.
+3. API et site : `DB_BACKEND` à `"supabase"` (les comptes suivent ; la recopie de l'étape 2 les a ramenés).
+   `D1_SHADOW_RATE` reste à `"0"`. ~10 min.
 4. Contrôles : `"dbBackend":"supabase"` ; les mêmes pages qu'à l'étape 4.
 5. Dégel : `DB_WRITES_FROZEN` à `"0"`. ~10 min.
 
