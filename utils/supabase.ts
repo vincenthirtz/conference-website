@@ -153,13 +153,34 @@ export function getServerClient(
  * ---------------------------------------------------------*/
 
 export const supabaseAdmin = SUPABASE_SERVICE_ROLE
-  ? createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
+  ? observable(
+      createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      })
+    )
   : null!;
+
+/**
+ * Lecture dans l'ombre (lot 5b de conference-website docs/D1-MIGRATION.md) : le Worker de
+ * l'API peut poser sur globalThis un observateur des `from(table)` de ce client
+ * (utils/db/d1/shadow.ts). Sans observateur, partout ailleurs (le site compris), rien ne
+ * change. Rien n'est importé ici : l'observateur vit dans l'API seule.
+ */
+function observable<T extends object>(client: T): T {
+  const target = client as unknown as { from: (table: string) => unknown };
+  const from = target.from.bind(client);
+  target.from = (table: string) => {
+    const builder = from(table);
+    const hook = (globalThis as unknown as Record<symbol, unknown>)[
+      Symbol.for('owwc.db.from-hook')
+    ];
+    return typeof hook === 'function' ? hook(builder, table) : builder;
+  };
+  return client;
+}
 
 /* -----------------------------------------------------------
  * 4) Client ANON côté serveur (sans persistance de session)
