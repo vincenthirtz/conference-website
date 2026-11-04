@@ -829,6 +829,15 @@ lenteurs, pendant deux semaines (avec si possible un soir de match). Trois faço
   - environ une minute, la base étant à Francfort et la machine de GitHub aux États-Unis.
 
   La clé Cloudflare de la CI avait déjà les droits nécessaires.
+- **Premier passage automatique, le 2026-11-04 : échoué, puis corrigé le jour même.**
+  - **La cause** : en vidant la base de la veille, les équipes partaient avant le vivier. Leur suppression ôtait
+    l'équipe d'une entrée « placée », ce que la règle `tournament_pool_entries_check` refuse. La première photo,
+    faite sur une base vide, ne pouvait pas le montrer.
+  - **Aucun dégât** : l'échec s'est produit dans un envoi atomique, et la photo de la veille est restée intacte.
+  - **La correction** (API `32d5c7c`) : la base se vide dans l'ordre des liens, et un test reproduit le cas.
+  - **En plus**, sur ton accord : la vérification relit les tables par paquets. Elle prend 4,3 s au lieu de
+    27,5 s.
+  - **La photo relancée sur la sauvegarde du 2026-11-04** : 14 478 lignes, identiques.
 
 **5b-2, les lectures comparées, allumées le 2026-11-04.**
 
