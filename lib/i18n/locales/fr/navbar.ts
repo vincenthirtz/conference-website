@@ -32,6 +32,11 @@ export default ns('navbar', {
   mobileMenuAria: 'Menu mobile',
   publicLinks: {
     Accueil: 'Accueil',
+    // Les événements passés, du plus ancien au plus récent.
+    Agenda: 'Agenda',
+    'OWWC 2025': 'OWWC 2025',
+    "Journée contre l'homophobie": "Journée contre l'homophobie",
+    'OWWC 2026': 'OWWC 2026',
     'Event Halloween': 'Event Halloween',
     Classement: 'Classement',
     Ligues: 'Ligues',
@@ -46,6 +51,5 @@ export default ns('navbar', {
     "L'association": "L'association",
     Ambassadeur·rices: 'Ambassadeur·rices',
     Partenaires: 'Partenaires',
-    'Édition 2025': 'Édition 2025',
   },
 });

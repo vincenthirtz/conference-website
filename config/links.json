@@ -4,8 +4,25 @@
     "ref": "/"
   },
   {
-    "title": "Event Halloween",
-    "ref": "/tournament/halloween-2026"
+    "title": "Agenda",
+    "subMenu": [
+      {
+        "title": "OWWC 2025",
+        "ref": "/tournoi"
+      },
+      {
+        "title": "Journée contre l'homophobie",
+        "ref": "/news/scrim-caritatif-du-17-mai"
+      },
+      {
+        "title": "OWWC 2026",
+        "ref": "/tournament/ow-womens-cup-2026"
+      },
+      {
+        "title": "Event Halloween",
+        "ref": "/tournament/halloween-2026"
+      }
+    ]
   },
   {
     "title": "Classement",
@@ -41,10 +58,6 @@
       {
         "title": "Partenaires",
         "ref": "/partenaires"
-      },
-      {
-        "title": "Édition 2025",
-        "ref": "/tournoi"
       }
     ]
   }

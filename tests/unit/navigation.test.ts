@@ -35,13 +35,16 @@ describe('activePublicLinkRef', () => {
   const key = (title: string) =>
     publicLinkKey(PUBLIC_LINKS.find((l) => l.title === title)!);
 
-  it('« Event Halloween » actif sur les pages de l’event — l’URL réelle, pas le motif', () => {
-    expect(activePublicLinkRef('/tournament/halloween-2026')).toBe(
-      key('Event Halloween')
-    );
-    expect(
-      activePublicLinkRef('/tournament/halloween-2026/inscription-solo')
-    ).toBe(key('Event Halloween'));
+  it('« Agenda » actif sur les pages des événements — l’URL réelle, pas le motif', () => {
+    for (const path of [
+      '/tournoi',
+      '/news/scrim-caritatif-du-17-mai',
+      '/tournament/ow-womens-cup-2026',
+      '/tournament/halloween-2026',
+      '/tournament/halloween-2026/inscription-solo',
+    ]) {
+      expect(activePublicLinkRef(path)).toBe(key('Agenda'));
+    }
   });
 
   it('le lien le plus précis gagne : « Équipes » sur /teams', () => {
@@ -68,6 +71,35 @@ describe('activePublicLinkRef', () => {
   it('« Cartes » actif sur le catalogue et ses sous-pages', () => {
     expect(activePublicLinkRef('/tcg')).toBe(key('Cartes'));
     expect(activePublicLinkRef('/tcg/fan-art')).toBe(key('Cartes'));
+  });
+});
+
+describe('l’Agenda des événements passés', () => {
+  it('les quatre événements, du plus ancien au plus récent', () => {
+    const agenda = PUBLIC_LINKS.find((l) => l.title === 'Agenda');
+    expect(agenda?.subMenu?.map((s) => [s.title, s.ref])).toEqual([
+      ['OWWC 2025', '/tournoi'],
+      ["Journée contre l'homophobie", '/news/scrim-caritatif-du-17-mai'],
+      ['OWWC 2026', '/tournament/ow-womens-cup-2026'],
+      ['Event Halloween', '/tournament/halloween-2026'],
+    ]);
+  });
+
+  it('plus d’entrée « Event Halloween » ni « Édition 2025 » ailleurs dans le menu', () => {
+    // Un doublon soulignerait une autre entrée que l'Agenda sur la même page.
+    for (const ref of ['/tournoi', '/tournament/halloween-2026']) {
+      expect(flatPublicLinks().filter((l) => l.ref === ref)).toHaveLength(1);
+    }
+    expect(PUBLIC_LINKS.some((l) => l.title === 'Event Halloween')).toBe(false);
+  });
+
+  it('localisé, sous-menu compris', () => {
+    expect(enNavbar.publicLinks.Agenda).toBe('Events');
+    const agenda = PUBLIC_LINKS.find((l) => l.title === 'Agenda');
+    for (const sub of agenda?.subMenu ?? []) {
+      expect(nsNavbar.fr.publicLinks).toHaveProperty([sub.title]);
+      expect(enNavbar.publicLinks).toHaveProperty([sub.title]);
+    }
   });
 });
 

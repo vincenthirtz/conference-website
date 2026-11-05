@@ -32,16 +32,16 @@ test.describe('en-tête — visiteur anonyme, bureau', () => {
     });
   }
 
-  test('« Event Halloween » actif sur l’event', async ({ page }) => {
-    test.skip(
-      (await open(page, '/tournament/halloween-2026')) !== 200,
-      'event halloween-2026 indisponible'
-    );
-    await expect(
-      page.locator(`${NAV} a[aria-current="page"]`, {
-        hasText: 'Event Halloween',
-      })
-    ).toHaveCount(1);
+  test('« Agenda » : les quatre événements passés', async ({ page }) => {
+    await open(page, '/');
+    const agenda = page.locator(`${NAV} [data-test="nav-Agenda"]`);
+    await agenda.locator('button').click();
+    await expect(agenda.getByRole('menuitem')).toHaveText([
+      /OWWC 2025/,
+      /homophobie/,
+      /OWWC 2026/,
+      /Halloween/,
+    ]);
   });
 
   test('la barre d’onglets du tournoi reste au même endroit', async ({

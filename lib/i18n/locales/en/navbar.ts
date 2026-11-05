@@ -33,6 +33,10 @@ export default {
   mobileMenuAria: 'Mobile menu',
   publicLinks: {
     Accueil: 'Home',
+    Agenda: 'Events',
+    'OWWC 2025': 'OWWC 2025',
+    "Journée contre l'homophobie": 'Day against homophobia',
+    'OWWC 2026': 'OWWC 2026',
     'Event Halloween': 'Halloween event',
     Classement: 'Leaderboard',
     Ligues: 'Leagues',
@@ -45,6 +49,5 @@ export default {
     "L'association": 'The association',
     Ambassadeur·rices: 'Ambassadors',
     Partenaires: 'Partners',
-    'Édition 2025': '2025 edition',
   },
 };
