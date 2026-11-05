@@ -49,7 +49,7 @@ test.describe('en-tête — visiteur anonyme, bureau', () => {
     ).toHaveCount(0);
     await expect(
       agenda.getByRole('group', { name: 'À revoir' }).getByRole('menuitem')
-    ).toHaveText([/OWWC 2025/, /homophobie/, /OWWC 2026/, /Halloween/]);
+    ).toHaveText([/Halloween/, /OWWC 2026/, /homophobie/, /OWWC 2025/]);
   });
 
   test('la barre d’onglets du tournoi reste au même endroit', async ({

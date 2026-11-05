@@ -42,13 +42,13 @@ function openAgenda() {
 describe('menu du site — Agenda au clavier', () => {
   it('↓ ouvre sur le premier lien à revoir, en sautant OWWC 2027', () => {
     fireEvent.keyDown(openAgenda(), { key: 'ArrowDown' });
-    expect(document.activeElement?.textContent).toBe('OWWC 2025');
+    expect(document.activeElement?.textContent).toBe('Event Halloween');
   });
 
   it('les flèches restent dans l’Agenda et bouclent sur ses liens', () => {
     fireEvent.keyDown(openAgenda(), { key: 'ArrowUp' });
-    expect(document.activeElement?.textContent).toBe('Event Halloween');
-    fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowDown' });
     expect(document.activeElement?.textContent).toBe('OWWC 2025');
+    fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowDown' });
+    expect(document.activeElement?.textContent).toBe('Event Halloween');
   });
 });

@@ -32,8 +32,8 @@ export default ns('navbar', {
   mobileMenuAria: 'Menu mobile',
   publicLinks: {
     Accueil: 'Accueil',
-    // L'événement annoncé, puis les événements passés, du plus ancien au plus
-    // récent.
+    // L'événement annoncé, puis les événements passés, du plus récent au plus
+    // ancien.
     Agenda: 'Agenda',
     'À venir': 'À venir',
     'OWWC 2027': 'OWWC 2027',

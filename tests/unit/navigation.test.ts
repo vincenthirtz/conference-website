@@ -77,7 +77,7 @@ describe('activePublicLinkRef', () => {
 });
 
 describe('l’Agenda des événements', () => {
-  it('« À venir » : OWWC 2027, grisé et sans lien ; « À revoir » : les quatre passés, dans l’ordre', () => {
+  it('« À venir » : OWWC 2027, grisé et sans lien ; « À revoir » : les quatre passés, le plus récent d’abord', () => {
     const agenda = PUBLIC_LINKS.find((l) => l.title === 'Agenda');
     expect(
       subMenuSections(agenda?.subMenu ?? []).map((s) => [
@@ -89,14 +89,14 @@ describe('l’Agenda des événements', () => {
       [
         'À revoir',
         [
-          ['OWWC 2025', '/tournoi', true],
+          ['Event Halloween', '/tournament/halloween-2026', true],
+          ['OWWC 2026', '/tournament/ow-womens-cup-2026', true],
           [
             "Journée contre l'homophobie",
             '/news/scrim-caritatif-du-17-mai',
             true,
           ],
-          ['OWWC 2026', '/tournament/ow-womens-cup-2026', true],
-          ['Event Halloween', '/tournament/halloween-2026', true],
+          ['OWWC 2025', '/tournoi', true],
         ],
       ],
     ]);
