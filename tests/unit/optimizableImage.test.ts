@@ -80,4 +80,16 @@ describe('synchronisation avec next.config.js', () => {
         'Un hôte optimisable non déclaré fait échouer next/image AU RENDU.'
     ).toEqual([]);
   });
+
+  it('déclare les hôtes des images d’actualités publiées (en-têtes vides sinon)', () => {
+    // Relevé du 2026-11-05 : l'en-tête des articles passe par next/image, et
+    // l'optimiseur répondait 400 à ces deux hôtes absents de remotePatterns.
+    const config = fs.readFileSync(
+      path.join(process.cwd(), 'next.config.js'),
+      'utf8'
+    );
+    for (const host of ['img.youtube.com', 'images.unsplash.com']) {
+      expect(config).toContain(`hostname: '${host}'`);
+    }
+  });
 });

@@ -58,6 +58,20 @@ const nextConfig = {
         hostname: 'i.ytimg.com',
         pathname: '/vi/**',
       },
+      // La même miniature, à l'autre adresse de YouTube : des actualités l'ont
+      // enregistrée ainsi (« Scrim caritatif du 17 mai »), et l'optimiseur
+      // répondait 400 — image d'en-tête vide.
+      {
+        protocol: 'https',
+        hostname: 'img.youtube.com',
+        pathname: '/vi/**',
+      },
+      // Photos d'illustration d'anciennes actualités (« Tournoi Mixte »,
+      // « Bonne année 2026 »…), vides pour la même raison.
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
     ],
   },
   /**
