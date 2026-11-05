@@ -1,17 +1,21 @@
 // pages/leaderboard.tsx
-// Page publique : classement des joueuses, sur trois axes.
+// Page publique : classement des joueuses, sur plusieurs axes.
 //
+//   - « tournoi »     : un onglet par tournoi phare (config/leaderboardTournaments),
+//                       variations de rating cumulées sur ce seul tournoi. En
+//                       tête de la barre, et la page s'ouvre sur le premier
+//                       (choix de la propriétaire du 2026-11-05) ;
 //   - « rating »      : le classement de référence (Glicko-2), paginé ;
 //   - « progression » : plus fortes variations sur 30 jours glissants ;
 //   - « saison »      : variations cumulées sur les tournois de la saison
 //                       publique en cours (ou la dernière terminée).
 //
-// WHY les deux axes secondaires : le rating Glicko-2 bouge lentement, donc le
-// haut du classement montre les mêmes joueuses pendant des mois. La
-// progression et la saison font tourner la mise en avant sans toucher au
+// WHY les axes secondaires : le rating Glicko-2 bouge lentement, donc le
+// haut du classement montre les mêmes joueuses pendant des mois. Les tournois,
+// la progression et la saison font tourner la mise en avant sans toucher au
 // classement de référence.
 //
-// Pré-rendu ISR (getStaticProps revalidate:300) : les TROIS axes sont lus en
+// Pré-rendu ISR (getStaticProps revalidate:300) : TOUS les axes sont lus en
 // props → premier rendu SSR pré-rempli et indexable, bascule d'onglet sans
 // aucun aller-retour réseau. Seule la pagination « voir plus » de l'axe rating
 // (offset > 0) reste en fetch client via GET /api/players/leaderboard.
@@ -33,8 +37,10 @@ import {
   readMonthlyMovers,
   readFeaturedSeason,
   readSeasonMovers,
+  readTournamentMovers,
   MOVERS_WINDOW_DAYS,
 } from '@/utils/rating/readLeaderboardAxes';
+import { LEADERBOARD_TOURNAMENTS } from '@/config/leaderboardTournaments';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useIsrRefresh } from '@/hooks/useIsrRefresh';
 import { useT, format } from '@/lib/i18n/useT';
@@ -44,8 +50,23 @@ const PAGE_SIZE = 50;
 const JSONLD_TOP_N = 10;
 /** Profondeur des axes secondaires : un top court, pas un second classement. */
 const AXIS_SIZE = 20;
+/** Un onglet de tournoi montre TOUTES ses joueuses (43 pour l'édition 2026). */
+const TOURNAMENT_SIZE = 64;
 
-type LeaderboardAxis = 'rating' | 'progress' | 'season';
+type TournamentAxis = `tournament:${string}`;
+type LeaderboardAxis = 'rating' | 'progress' | 'season' | TournamentAxis;
+
+/** Le classement d'un tournoi phare, prêt à afficher. */
+type TournamentBoard = {
+  slug: string;
+  label: string;
+  name: string;
+  players: LeaderboardMover[];
+};
+
+function tournamentAxis(slug: string): TournamentAxis {
+  return `tournament:${slug}`;
+}
 
 type LeaderboardDict = typeof nsLeaderboardPage.fr;
 
@@ -68,16 +89,23 @@ export default function LeaderboardPage({
   movers,
   season,
   seasonPlayers,
+  tournaments,
   moversWindowDays,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   const t = useT(nsLeaderboardPage);
   const hasInitial = initialPlayers.length > 0;
 
-  // Onglet actif. Les trois axes sont déjà en props : basculer ne déclenche
-  // aucun fetch, et l'axe rating reste celui rendu au premier paint (donc
-  // celui que les moteurs indexent).
-  const [axis, setAxis] = useState<LeaderboardAxis>('rating');
+  // Un tournoi sans match noté n'a pas d'onglet : un onglet vide n'apprend rien.
+  const boards = tournaments.filter((b) => b.players.length > 0);
+
+  // Onglet actif. Tous les axes sont déjà en props : basculer ne déclenche
+  // aucun fetch. Le premier tournoi phare est rendu au premier paint (donc
+  // celui que les moteurs indexent), le rating sinon.
+  const [axis, setAxis] = useState<LeaderboardAxis>(
+    boards[0] ? tournamentAxis(boards[0].slug) : 'rating'
+  );
   const hasSeason = Boolean(season) && seasonPlayers.length > 0;
+  const board = boards.find((b) => tournamentAxis(b.slug) === axis);
 
   // Première page : servie par l'ISR (props fraîches, revalidate:300). Le hook
   // évite le double-fetch au montage — il ne recharge que si les props sont
@@ -156,12 +184,24 @@ export default function LeaderboardPage({
         <AxisTabs
           axis={axis}
           onChange={setAxis}
+          boards={boards}
           hasSeason={hasSeason}
           seasonName={season?.name ?? null}
           t={t}
         />
 
-        {axis === 'progress' ? (
+        {board ? (
+          <MoverPanel
+            players={board.players}
+            caption={format(t.tournamentCaption, { tournament: board.name })}
+            emptyBody={t.tournamentEmpty}
+            link={{
+              href: `/tournament/${board.slug}`,
+              label: t.tournamentLink,
+            }}
+            t={t}
+          />
+        ) : axis === 'progress' ? (
           <MoverPanel
             players={movers}
             caption={format(t.progressCaption, { days: moversWindowDays })}
@@ -177,7 +217,14 @@ export default function LeaderboardPage({
                 : t.seasonCaptionFallback
             }
             emptyBody={t.seasonEmpty}
-            seasonSlug={season?.slug ?? null}
+            link={
+              season
+                ? {
+                    href: `/leagues/${season.slug}`,
+                    label: t.seasonStandingsLink,
+                  }
+                : null
+            }
             t={t}
           />
         ) : loading ? (
@@ -295,23 +342,27 @@ export default function LeaderboardPage({
 }
 
 /**
- * Barre d'onglets des axes. L'axe « saison » n'apparaît que si une saison
- * publique a des résultats — un onglet vide n'apprend rien.
+ * Barre d'onglets des axes : les tournois phares d'abord. L'axe « saison »
+ * n'apparaît que si une saison publique a des résultats — un onglet vide
+ * n'apprend rien.
  */
 function AxisTabs({
   axis,
   onChange,
+  boards,
   hasSeason,
   seasonName,
   t,
 }: {
   axis: LeaderboardAxis;
   onChange: (axis: LeaderboardAxis) => void;
+  boards: TournamentBoard[];
   hasSeason: boolean;
   seasonName: string | null;
   t: LeaderboardDict;
 }) {
   const tabs: { key: LeaderboardAxis; label: string }[] = [
+    ...boards.map((b) => ({ key: tournamentAxis(b.slug), label: b.label })),
     { key: 'rating', label: t.axisRating },
     { key: 'progress', label: t.axisProgress },
     ...(hasSeason
@@ -334,7 +385,9 @@ function AxisTabs({
       ariaLabel={t.axisNavLabel}
       idBase="leaderboard-axis"
       variant="segmented"
-      className="mb-6 justify-center"
+      // Cinq onglets ne tiennent pas sur une ligne d'un téléphone : ils passent
+      // à la ligne dans leur cadre plutôt que d'élargir la page.
+      className="mb-6 max-w-full flex-wrap justify-center"
     />
   );
 }
@@ -353,33 +406,34 @@ function deltaClass(delta: number): string {
   return 'text-neutral-400';
 }
 
-/** Tableau d'un axe secondaire (progression / saison). */
+/** Tableau d'un axe secondaire (tournoi / progression / saison). */
 function MoverPanel({
   players,
   caption,
   emptyBody,
-  seasonSlug,
+  link,
   t,
 }: {
   players: LeaderboardMover[];
   caption: string;
   emptyBody: string;
-  seasonSlug?: string | null;
+  /** Lien après la légende : la fiche du tournoi, le classement de la saison. */
+  link?: { href: string; label: string } | null;
   t: LeaderboardDict;
 }) {
   return (
     <>
       <p className="mb-4 text-center text-sm text-neutral-400">
         {caption}
-        {seasonSlug && (
+        {link && (
           <>
             {' '}
             <Link
               prefetch={false}
-              href={`/leagues/${seasonSlug}`}
+              href={link.href}
               className="text-[var(--color-violet-light)] hover:underline"
             >
-              {t.seasonStandingsLink}
+              {link.label}
             </Link>
           </>
         )}
@@ -613,6 +667,7 @@ export const getStaticProps: GetStaticProps<{
   movers: LeaderboardMover[];
   season: LeaderboardSeason | null;
   seasonPlayers: LeaderboardMover[];
+  tournaments: TournamentBoard[];
   // En prop, pas en import : la constante vit dans un module serveur
   // (`readLeaderboardAxes` importe `supabaseAdmin`), que l'importer dans le
   // composant embarquerait côté client.
@@ -636,6 +691,7 @@ export const getStaticProps: GetStaticProps<{
         movers: [],
         season: null,
         seasonPlayers: [],
+        tournaments: [],
         moversWindowDays: MOVERS_WINDOW_DAYS,
         seo: leaderboardSeoFallback,
       },
@@ -645,9 +701,23 @@ export const getStaticProps: GetStaticProps<{
 
   // Axes secondaires : best-effort (les lectures avalent leurs erreurs). Un
   // axe vide masque son onglet, il ne fait pas échouer la page.
-  const [movers, season] = await Promise.all([
+  const [movers, season, tournaments] = await Promise.all([
     readMonthlyMovers(DEFAULT_TENANT_ID, AXIS_SIZE),
     readFeaturedSeason(DEFAULT_TENANT_ID),
+    Promise.all(
+      LEADERBOARD_TOURNAMENTS.map(
+        async ({ id, slug, label, name }): Promise<TournamentBoard> => ({
+          slug,
+          label,
+          name,
+          players: await readTournamentMovers(
+            DEFAULT_TENANT_ID,
+            id,
+            TOURNAMENT_SIZE
+          ),
+        })
+      )
+    ),
   ]);
   const seasonPlayers = season
     ? await readSeasonMovers(DEFAULT_TENANT_ID, season.leagueId, AXIS_SIZE)
@@ -659,6 +729,7 @@ export const getStaticProps: GetStaticProps<{
       movers,
       season,
       seasonPlayers,
+      tournaments,
       moversWindowDays: MOVERS_WINDOW_DAYS,
       seo: buildLeaderboardSeo(players),
     },

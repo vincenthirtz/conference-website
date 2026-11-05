@@ -43,4 +43,7 @@ export default {
   seasonStandingsLink: 'See the team standings →',
   seasonEmpty:
     'No results for this season yet. The ranking will appear after the first tournament.',
+  tournamentCaption: 'Rating won or lost during {tournament}, match by match.',
+  tournamentLink: 'See the tournament →',
+  tournamentEmpty: 'No rated match in this tournament yet.',
 };

@@ -3,7 +3,9 @@
 // Axes SECONDAIRES du classement public des joueuses, à côté du rating brut
 // servi par `readLeaderboard` :
 //   - « progression » : variation de rating sur les 30 derniers jours ;
-//   - « saison »      : variation de rating sur les tournois d'une league.
+//   - « saison »      : variation de rating sur les tournois d'une league ;
+//   - « tournoi »     : variation de rating sur un seul tournoi (les onglets
+//                       de config/leaderboardTournaments.ts).
 //
 // WHY : le rating Glicko-2 est stable par construction, donc le haut du
 // classement bouge à peine — les mêmes joueuses y restent des mois. Ces deux
@@ -236,6 +238,32 @@ export async function readSeasonMovers(
     .filter((id): id is string => typeof id === 'string');
   if (tournamentIds.length === 0) return [];
 
+  return readTournamentsMovers(tenantId, tournamentIds, limit, 'season');
+}
+
+/**
+ * Axe « tournoi » : variation de rating cumulée sur UN tournoi, match après
+ * match. Best-effort — liste vide si le tournoi n'a aucun match noté ou en cas
+ * d'erreur DB (l'onglet est alors masqué).
+ */
+export async function readTournamentMovers(
+  tenantId: string,
+  tournamentId: string,
+  limit: number
+): Promise<LeaderboardMover[]> {
+  if (!supabaseAdmin) return [];
+  return readTournamentsMovers(tenantId, [tournamentId], limit, 'tournament');
+}
+
+/** Saison et tournoi : la même lecture de l'historique, sur une liste de tournois. */
+async function readTournamentsMovers(
+  tenantId: string,
+  tournamentIds: string[],
+  limit: number,
+  axis: 'season' | 'tournament'
+): Promise<LeaderboardMover[]> {
+  if (!supabaseAdmin) return [];
+
   const { data, error } = await supabaseAdmin
     .from('player_rating_history')
     .select(HISTORY_COLUMNS)
@@ -244,11 +272,11 @@ export async function readSeasonMovers(
     .limit(HISTORY_ROW_CAP);
 
   if (error) {
-    logger.error('[readSeasonMovers] read error', error);
+    logger.error(`[readLeaderboardAxes] ${axis} read error`, error);
     return [];
   }
 
   const rows = (data ?? []) as RatingHistoryRow[];
-  warnIfCapped('season', rows.length);
+  warnIfCapped(axis, rows.length);
   return hydrateMovers(tenantId, aggregateRatingDeltas(rows), limit);
 }

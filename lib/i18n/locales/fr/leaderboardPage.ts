@@ -43,4 +43,8 @@ export default ns('leaderboardPage', {
   seasonStandingsLink: 'Voir le classement par équipe →',
   seasonEmpty:
     "Aucun résultat sur cette saison pour l'instant. Le classement apparaîtra dès le premier tournoi joué.",
+  tournamentCaption:
+    'Rating gagné ou perdu pendant {tournament}, match après match.',
+  tournamentLink: 'Voir le tournoi →',
+  tournamentEmpty: "Aucun match noté sur ce tournoi pour l'instant.",
 });
