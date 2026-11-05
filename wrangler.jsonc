@@ -58,7 +58,7 @@
     "CRONS_ENABLED": "0",
     // La base que lit le rendu serveur (docs/D1-SWITCH.md) : « supabase » comme avant, ou « d1 »
     // (la base MAIN_DB), posée le soir de la bascule EN MÊME TEMPS que la même variable de l'API.
-    "DB_BACKEND": "supabase",
+    "DB_BACKEND": "d1",
     // Better Auth source des comptes (lot 8 de docs/AUTH-BETTER-AUTH.md) : le rendu serveur lit
     // les comptes dans auth_user et ignore les cookies de Supabase. À poser avec la même variable
     // de l'API et NEXT_PUBLIC_AUTH_BACKEND=better-auth ; retour arrière : retirer les trois.
