@@ -47,12 +47,6 @@ export type HomeData = {
    * faut ouvrir le calendrier.
    */
   matchdays: HomeMatchday[];
-  /**
-   * Le classement de la phase à points en cours, tel que la page Classement
-   * l'affiche (même calcul, départages compris). Vide tant qu'aucun match n'a
-   * été joué : un tableau de zéros n'apprend rien.
-   */
-  standings: HomeStandingRow[];
   countdownTarget: string | null;
   // Vrai quand le chargement du contenu dynamique (news / annonces) a échoué
   // côté serveur. Permet d'afficher un avis d'erreur distinct d'un site
@@ -387,7 +381,13 @@ export function toHomeStandingRows(
   }));
 }
 
-/** Mini-classement de l'accueil : la première phase à points du tournoi. */
+/**
+ * Mini-classement de l'accueil : la première phase à points du tournoi.
+ *
+ * Plus lu par l'accueil depuis le 2026-11-05 (le bloc « Classement de la
+ * saison » en a été retiré à la demande de la propriétaire) ; gardé, avec
+ * `components/Home/HomeStandings`, pour le remettre à la saison suivante.
+ */
 export async function loadHomeStandings(
   tenantId: string,
   tournamentId: string
@@ -407,7 +407,6 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
   let partners: HomePartner[] = [];
   let teams: HomeTeam[] = [];
   let matchdays: HomeMatchday[] = [];
-  let standings: HomeStandingRow[] = [];
   let countdownTarget: string | null = null;
   // Client absent = on n'a pas pu charger le contenu : on le signale plutôt
   // que d'afficher une home faussement vide.
@@ -454,19 +453,6 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
       teams
     );
 
-    // Le classement de la saison en cours. Même source que l'onglet Classement
-    // (confrontation directe, départages du staff, disqualifications compris) :
-    // deux calculs finiraient par se contredire, et c'est le classement qu'on
-    // conteste.
-    if (upcomingTournament?.id) {
-      try {
-        standings = await loadHomeStandings(tenantId, upcomingTournament.id);
-      } catch (error) {
-        // Un classement illisible n'est pas une panne de la home.
-        logger.error('[loadHomeData] standings error', error);
-      }
-    }
-
     // Une erreur sur la requête de contenu signale une panne, à distinguer
     // d'un contenu légitimement vide.
     if (newsRes.error) {
@@ -510,7 +496,6 @@ export async function loadHomeData(tenantId: string): Promise<HomeData> {
     partners,
     teams,
     matchdays,
-    standings,
     countdownTarget,
     loadError,
   };

@@ -33,14 +33,12 @@ import {
   matchdayToday,
   nextKickoff,
 } from '@/utils/home/matchdayToday';
-import { type HomeStandingRow } from '@/utils/home/loadHomeData';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { loadHomeData } from '@/utils/home/loadHomeData';
 import { homeRevalidateSeconds } from '@/utils/isr/stateRevalidate';
 import { useT } from '@/lib/i18n/useT';
 import { useTwitchLive } from '@/components/Home/useTwitchLive';
 import HomeHeroV2 from '@/components/Home/HomeHeroV2';
-import HomeStandings from '@/components/Home/HomeStandings';
 import HomeSpotlight from '@/components/Home/HomeSpotlight';
 import HomeNewsV2 from '@/components/Home/HomeNewsV2';
 import HomeSupportStrip from '@/components/Home/HomeSupportStrip';
@@ -70,7 +68,6 @@ type HomeProps = {
   upcomingTournament: UpcomingTournament | null;
   partners: HomePartner[];
   matchdays: HomeMatchday[];
-  standings: HomeStandingRow[];
   countdownTarget: string | null;
   /** Le bloc TCG : trois cartes, le total à collectionner, le barème. */
   tcg: HomeTcgShowcaseData;
@@ -105,7 +102,6 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
       upcomingTournament: data.upcomingTournament,
       partners: data.partners,
       matchdays: data.matchdays,
-      standings: data.standings,
       countdownTarget: data.countdownTarget,
       tcg,
       podium,
@@ -147,7 +143,6 @@ function Home({
   upcomingTournament,
   partners,
   matchdays,
-  standings,
   countdownTarget,
   tcg,
   podium,
@@ -225,12 +220,12 @@ function Home({
         finalsTonight={finalsTonight}
       />
 
-      {/* OÙ EN EST LA SAISON. Après « ce qui se joue », avant les actus :
-          entre deux journées, c'est la question qu'on vient poser. */}
-      {upcomingTournament && <HomeStandings rows={standings} />}
+      {/* Le « Classement de la saison » (HomeStandings) a quitté l'accueil le
+          2026-11-05, à la demande de la propriétaire : le composant reste,
+          pour la saison suivante (le remettre ici, avec loadHomeStandings). */}
 
       {/* Un jour de match, l'événement passe au second plan : après les
-          affiches et le classement, avant le TCG. */}
+          affiches, avant le TCG. */}
       {today && eventSpotlight}
 
       {/* Le TCG : prolongement des matchs (chaque match rapporte des pièces),
