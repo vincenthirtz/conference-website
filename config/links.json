@@ -7,6 +7,18 @@
     "title": "Agenda",
     "subMenu": [
       {
+        "title": "À venir",
+        "heading": true
+      },
+      {
+        "title": "OWWC 2027",
+        "disabled": true
+      },
+      {
+        "title": "À revoir",
+        "heading": true
+      },
+      {
         "title": "OWWC 2025",
         "ref": "/tournoi"
       },

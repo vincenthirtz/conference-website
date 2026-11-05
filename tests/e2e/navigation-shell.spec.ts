@@ -32,16 +32,24 @@ test.describe('en-tête — visiteur anonyme, bureau', () => {
     });
   }
 
-  test('« Agenda » : les quatre événements passés', async ({ page }) => {
+  test('« Agenda » : OWWC 2027 à venir, grisé, puis les quatre événements à revoir', async ({
+    page,
+  }) => {
     await open(page, '/');
     const agenda = page.locator(`${NAV} [data-test="nav-Agenda"]`);
     await agenda.locator('button').click();
-    await expect(agenda.getByRole('menuitem')).toHaveText([
-      /OWWC 2025/,
-      /homophobie/,
-      /OWWC 2026/,
-      /Halloween/,
-    ]);
+    await expect(
+      agenda.getByRole('group', { name: 'À venir' }).getByRole('menuitem')
+    ).toHaveText([/OWWC 2027/]);
+    await expect(
+      agenda.locator('[data-test="nav-sub-OWWC 2027"]')
+    ).toHaveAttribute('aria-disabled', 'true');
+    await expect(
+      agenda.locator('a[data-test="nav-sub-OWWC 2027"]')
+    ).toHaveCount(0);
+    await expect(
+      agenda.getByRole('group', { name: 'À revoir' }).getByRole('menuitem')
+    ).toHaveText([/OWWC 2025/, /homophobie/, /OWWC 2026/, /Halloween/]);
   });
 
   test('la barre d’onglets du tournoi reste au même endroit', async ({

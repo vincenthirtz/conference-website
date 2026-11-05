@@ -32,8 +32,12 @@ export default ns('navbar', {
   mobileMenuAria: 'Menu mobile',
   publicLinks: {
     Accueil: 'Accueil',
-    // Les événements passés, du plus ancien au plus récent.
+    // L'événement annoncé, puis les événements passés, du plus ancien au plus
+    // récent.
     Agenda: 'Agenda',
+    'À venir': 'À venir',
+    'OWWC 2027': 'OWWC 2027',
+    'À revoir': 'À revoir',
     'OWWC 2025': 'OWWC 2025',
     "Journée contre l'homophobie": "Journée contre l'homophobie",
     'OWWC 2026': 'OWWC 2026',

@@ -56,6 +56,34 @@ export function flatPublicLinks(
   return out;
 }
 
+/** Une entrée de sous-menu qui mène quelque part : ni sous-titre, ni grisée. */
+export function isNavigableLink(link: LinkItem): boolean {
+  return !link.heading && !link.disabled && Boolean(link.ref);
+}
+
+export type SubMenuSection = { heading: string | null; items: LinkItem[] };
+
+/**
+ * Un sous-menu découpé par ses sous-titres (l'Agenda : « À venir », « À
+ * revoir »). Les entrées placées avant le premier sous-titre forment une
+ * section sans titre ; un sous-menu sans sous-titre en donne une seule.
+ */
+export function subMenuSections(
+  subMenu: readonly LinkItem[]
+): SubMenuSection[] {
+  const sections: SubMenuSection[] = [];
+  for (const item of subMenu) {
+    if (item.heading) {
+      sections.push({ heading: item.title, items: [] });
+      continue;
+    }
+    const last = sections[sections.length - 1];
+    if (last) last.items.push(item);
+    else sections.push({ heading: null, items: [item] });
+  }
+  return sections;
+}
+
 /** Chemin sans query ni ancre. */
 function cleanPath(asPath: string): string {
   const p = asPath.split(/[?#]/)[0] || '/';

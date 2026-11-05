@@ -34,6 +34,9 @@ export default {
   publicLinks: {
     Accueil: 'Home',
     Agenda: 'Events',
+    'À venir': 'Coming up',
+    'OWWC 2027': 'OWWC 2027',
+    'À revoir': 'Look back',
     'OWWC 2025': 'OWWC 2025',
     "Journée contre l'homophobie": 'Day against homophobia',
     'OWWC 2026': 'OWWC 2026',

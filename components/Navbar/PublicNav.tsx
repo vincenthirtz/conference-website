@@ -9,7 +9,13 @@ import LanguageToggle from './LanguageToggle';
 import AccountMenu, { type LabeledAccountLink } from './AccountMenu';
 import nsNavbar from '@/lib/i18n/locales/fr/navbar';
 
-import { PUBLIC_LINKS, activePublicLinkRef, publicLinkKey } from './navigation';
+import {
+  PUBLIC_LINKS,
+  activePublicLinkRef,
+  isNavigableLink,
+  publicLinkKey,
+  subMenuSections,
+} from './navigation';
 
 type PublicNavProps = {
   staffLoading: boolean;
@@ -42,7 +48,12 @@ export default function PublicNav({
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const closeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSubMenuHovered = useRef(false);
-  const subMenuRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  // Rangés PAR MENU : tous les sous-menus sont rendus (cachés), et une seule
+  // liste par position laissait le dernier (Communauté) écraser les liens de
+  // l'Agenda — les flèches y cherchaient le focus dans un menu fermé.
+  const subMenuRefs = useRef<Map<string, (HTMLAnchorElement | null)[]>>(
+    new Map()
+  );
   const triggerRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
 
   const closeMenu = useCallback(() => {
@@ -60,7 +71,9 @@ export default function PublicNav({
   }, [openMenu, closeMenu]);
 
   useEffect(() => {
-    if (focusedIndex >= 0) subMenuRefs.current[focusedIndex]?.focus();
+    if (focusedIndex >= 0 && openMenu) {
+      subMenuRefs.current.get(openMenu)?.[focusedIndex]?.focus();
+    }
   }, [focusedIndex, openMenu]);
 
   const handleHoverEnter = (title: string) => {
@@ -94,6 +107,9 @@ export default function PublicNav({
         const hasSubMenu = !!link.subMenu;
         const isOpen = openMenu === link.title;
         const isActive = activeKey === publicLinkKey(link);
+        // Les flèches ne passent que par les vrais liens : un sous-titre ou une
+        // entrée grisée ne prend pas le focus.
+        const navigable = link.subMenu?.filter(isNavigableLink) ?? [];
 
         return (
           <div
@@ -115,7 +131,7 @@ export default function PublicNav({
                 }`}
                 onClick={() => setOpenMenu(isOpen ? null : link.title)}
                 onKeyDown={(e) => {
-                  const max = link.subMenu!.length - 1;
+                  const max = navigable.length - 1;
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     setOpenMenu(isOpen ? null : link.title);
@@ -185,41 +201,82 @@ export default function PublicNav({
                 aria-hidden={!isOpen}
               >
                 <div className="flex flex-col py-1">
-                  {link.subMenu!.map((sub: LinkItem, index: number) => (
-                    <Link
-                      key={sub.title}
-                      href={sub.ref ?? '#'}
-                      role="menuitem"
-                      ref={(el) => {
-                        subMenuRefs.current[index] = el;
-                      }}
-                      data-test={`nav-sub-${sub.title}`}
-                      className="group/sub flex items-center justify-between gap-3 px-4 py-2.5 text-[13px] text-neutral-300 transition-colors hover:bg-white/[0.06] hover:text-white focus:bg-white/[0.06] focus:text-white focus:outline-none"
-                      onKeyDown={(e) => {
-                        const max = link.subMenu!.length - 1;
-                        if (e.key === 'ArrowDown') {
-                          e.preventDefault();
-                          setFocusedIndex(index === max ? 0 : index + 1);
-                        }
-                        if (e.key === 'ArrowUp') {
-                          e.preventDefault();
-                          setFocusedIndex(index === 0 ? max : index - 1);
-                        }
-                        if (e.key === 'Escape') {
-                          e.preventDefault();
-                          closeMenu();
-                          triggerRefs.current.get(link.title)?.focus();
-                        }
-                        if (e.key === 'Tab') closeMenu();
-                      }}
+                  {subMenuSections(link.subMenu!).map((section, s) => (
+                    <div
+                      key={section.heading ?? `section-${s}`}
+                      role={section.heading ? 'group' : undefined}
+                      aria-label={
+                        section.heading ? linkLabel(section.heading) : undefined
+                      }
+                      className={
+                        s > 0 ? 'mt-1 border-t border-white/10 pt-1' : undefined
+                      }
                     >
-                      <span>{linkLabel(sub.title)}</span>
-                      {sub.badge && (
-                        <span className="inline-flex items-center rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-500 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-wide text-white shadow-[0_0_12px_-2px_rgba(178,75,224,0.6)]">
-                          {sub.badge}
-                        </span>
+                      {section.heading && (
+                        <div
+                          aria-hidden
+                          className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500"
+                        >
+                          {linkLabel(section.heading)}
+                        </div>
                       )}
-                    </Link>
+                      {section.items.map((sub: LinkItem) => {
+                        if (!isNavigableLink(sub)) {
+                          // Grisée et sans lien : annoncée, pas encore ouverte.
+                          return (
+                            <span
+                              key={sub.title}
+                              role="menuitem"
+                              aria-disabled="true"
+                              data-test={`nav-sub-${sub.title}`}
+                              className="flex cursor-default items-center px-4 py-2.5 text-[13px] text-neutral-500"
+                            >
+                              {linkLabel(sub.title)}
+                            </span>
+                          );
+                        }
+                        const index = navigable.indexOf(sub);
+                        return (
+                          <Link
+                            key={sub.title}
+                            href={sub.ref ?? '#'}
+                            role="menuitem"
+                            ref={(el) => {
+                              const refs =
+                                subMenuRefs.current.get(link.title) ?? [];
+                              refs[index] = el;
+                              subMenuRefs.current.set(link.title, refs);
+                            }}
+                            data-test={`nav-sub-${sub.title}`}
+                            className="group/sub flex items-center justify-between gap-3 px-4 py-2.5 text-[13px] text-neutral-300 transition-colors hover:bg-white/[0.06] hover:text-white focus:bg-white/[0.06] focus:text-white focus:outline-none"
+                            onKeyDown={(e) => {
+                              const max = navigable.length - 1;
+                              if (e.key === 'ArrowDown') {
+                                e.preventDefault();
+                                setFocusedIndex(index === max ? 0 : index + 1);
+                              }
+                              if (e.key === 'ArrowUp') {
+                                e.preventDefault();
+                                setFocusedIndex(index === 0 ? max : index - 1);
+                              }
+                              if (e.key === 'Escape') {
+                                e.preventDefault();
+                                closeMenu();
+                                triggerRefs.current.get(link.title)?.focus();
+                              }
+                              if (e.key === 'Tab') closeMenu();
+                            }}
+                          >
+                            <span>{linkLabel(sub.title)}</span>
+                            {sub.badge && (
+                              <span className="inline-flex items-center rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-500 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-wide text-white shadow-[0_0_12px_-2px_rgba(178,75,224,0.6)]">
+                                {sub.badge}
+                              </span>
+                            )}
+                          </Link>
+                        );
+                      })}
+                    </div>
                   ))}
                 </div>
               </div>

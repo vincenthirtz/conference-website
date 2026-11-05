@@ -8,6 +8,10 @@ export interface LinkItem {
   ref?: string;
   badge?: string;
   subMenu?: LinkItem[];
+  /** Sous-titre d'un sous-menu (« À venir », « À revoir ») : ni lien ni focus. */
+  heading?: boolean;
+  /** Entrée grisée, sans lien ni focus (un événement annoncé, pas encore ouvert). */
+  disabled?: boolean;
 }
 
 export enum ConferenceStatus {

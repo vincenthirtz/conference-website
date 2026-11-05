@@ -7,7 +7,12 @@ import { useT } from '@/lib/i18n/useT';
 import LanguageToggle from './LanguageToggle';
 import nsNavbar from '@/lib/i18n/locales/fr/navbar';
 
-import { PUBLIC_LINKS, activePublicLinkRef, publicLinkKey } from './navigation';
+import {
+  PUBLIC_LINKS,
+  activePublicLinkRef,
+  isNavigableLink,
+  publicLinkKey,
+} from './navigation';
 
 function Chevron({ open, size = 'md' }: { open: boolean; size?: 'sm' | 'md' }) {
   const cls = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
@@ -344,21 +349,40 @@ const NavDrop = forwardRef<HTMLDivElement, INavDropProp>(function NavDrop(
                 >
                   <div className="overflow-hidden">
                     <div className="ml-3 mt-1 flex flex-col gap-0.5 border-l border-white/10 pl-3">
-                      {link.subMenu!.map((sub) => (
-                        <Link
-                          key={sub.ref ?? sub.title}
-                          href={sub.ref || '#'}
-                          onClick={closeAndNavigate}
-                          className="flex items-center justify-between gap-3 rounded-md px-3 py-2.5 text-[14px] text-neutral-300 transition-all hover:bg-white/[0.06] hover:text-white"
-                        >
-                          <span>{linkLabel(sub.title)}</span>
-                          {sub.badge && (
-                            <span className="inline-flex items-center rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-500 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-wide text-white shadow-[0_0_12px_-2px_rgba(178,75,224,0.6)]">
-                              {sub.badge}
-                            </span>
-                          )}
-                        </Link>
-                      ))}
+                      {link.subMenu!.map((sub) =>
+                        sub.heading ? (
+                          // Sous-titre (« À venir », « À revoir ») : du texte.
+                          <span
+                            key={`heading-${sub.title}`}
+                            className="px-3 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500"
+                          >
+                            {linkLabel(sub.title)}
+                          </span>
+                        ) : !isNavigableLink(sub) ? (
+                          // Grisée et sans lien : annoncée, pas encore ouverte.
+                          <span
+                            key={sub.title}
+                            aria-disabled="true"
+                            className="flex items-center rounded-md px-3 py-2.5 text-[14px] text-neutral-500"
+                          >
+                            {linkLabel(sub.title)}
+                          </span>
+                        ) : (
+                          <Link
+                            key={sub.ref ?? sub.title}
+                            href={sub.ref || '#'}
+                            onClick={closeAndNavigate}
+                            className="flex items-center justify-between gap-3 rounded-md px-3 py-2.5 text-[14px] text-neutral-300 transition-all hover:bg-white/[0.06] hover:text-white"
+                          >
+                            <span>{linkLabel(sub.title)}</span>
+                            {sub.badge && (
+                              <span className="inline-flex items-center rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-500 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-wide text-white shadow-[0_0_12px_-2px_rgba(178,75,224,0.6)]">
+                                {sub.badge}
+                              </span>
+                            )}
+                          </Link>
+                        )
+                      )}
                     </div>
                   </div>
                 </div>

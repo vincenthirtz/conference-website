@@ -8,7 +8,9 @@ import {
   PUBLIC_LINKS,
   activePublicLinkRef,
   flatPublicLinks,
+  isNavigableLink,
   publicLinkKey,
+  subMenuSections,
 } from '@/components/Navbar/navigation';
 import nsNavbar from '@/lib/i18n/locales/fr/navbar';
 import enNavbar from '@/lib/i18n/locales/en/navbar';
@@ -74,15 +76,44 @@ describe('activePublicLinkRef', () => {
   });
 });
 
-describe('l’Agenda des événements passés', () => {
-  it('les quatre événements, du plus ancien au plus récent', () => {
+describe('l’Agenda des événements', () => {
+  it('« À venir » : OWWC 2027, grisé et sans lien ; « À revoir » : les quatre passés, dans l’ordre', () => {
     const agenda = PUBLIC_LINKS.find((l) => l.title === 'Agenda');
-    expect(agenda?.subMenu?.map((s) => [s.title, s.ref])).toEqual([
-      ['OWWC 2025', '/tournoi'],
-      ["Journée contre l'homophobie", '/news/scrim-caritatif-du-17-mai'],
-      ['OWWC 2026', '/tournament/ow-womens-cup-2026'],
-      ['Event Halloween', '/tournament/halloween-2026'],
+    expect(
+      subMenuSections(agenda?.subMenu ?? []).map((s) => [
+        s.heading,
+        s.items.map((i) => [i.title, i.ref ?? null, isNavigableLink(i)]),
+      ])
+    ).toEqual([
+      ['À venir', [['OWWC 2027', null, false]]],
+      [
+        'À revoir',
+        [
+          ['OWWC 2025', '/tournoi', true],
+          [
+            "Journée contre l'homophobie",
+            '/news/scrim-caritatif-du-17-mai',
+            true,
+          ],
+          ['OWWC 2026', '/tournament/ow-womens-cup-2026', true],
+          ['Event Halloween', '/tournament/halloween-2026', true],
+        ],
+      ],
     ]);
+  });
+
+  it('ni sous-titre ni entrée grisée dans la liste « Site » des barres staff et joueuse', () => {
+    const titles = flatPublicLinks().map((l) => l.title);
+    for (const t of ['À venir', 'À revoir', 'OWWC 2027']) {
+      expect(titles.some((title) => title.endsWith(`– ${t}`))).toBe(false);
+    }
+  });
+
+  it('un sous-menu sans sous-titre reste une seule section', () => {
+    const community = PUBLIC_LINKS.find((l) => l.title === 'Communauté');
+    const sections = subMenuSections(community?.subMenu ?? []);
+    expect(sections).toHaveLength(1);
+    expect(sections[0]?.heading).toBeNull();
   });
 
   it('plus d’entrée « Event Halloween » ni « Édition 2025 » ailleurs dans le menu', () => {
