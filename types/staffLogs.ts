@@ -15,6 +15,8 @@ export type StaffLogAction =
   | 'tournament_update'
   | 'finalize_tournament'
   | 'unfinalize_tournament'
+  // Demande de debrief envoyée aux équipes engagées (bouton de l'admin).
+  | 'request_tournament_debrief'
   | 'update_public_page'
   | 'update_tournament_template'
   | 'apply_template'

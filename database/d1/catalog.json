@@ -19688,6 +19688,123 @@
       ],
       "touch": "updated_at"
     },
+    "tournament_debriefs": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": "uuid"
+        },
+        {
+          "name": "tenant_id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "tournament_id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "team_id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "positives",
+          "type": "text",
+          "pg": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "negatives",
+          "type": "text",
+          "pg": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "submitted_by_discord_id",
+          "type": "text",
+          "pg": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "pg": "timestamp with time zone",
+          "nullable": false,
+          "default": "now"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "pg": "timestamp with time zone",
+          "nullable": false,
+          "default": "now"
+        }
+      ],
+      "primaryKey": [
+        "id"
+      ],
+      "uniques": [
+        {
+          "name": "tournament_debriefs_tournament_team_key",
+          "columns": [
+            "tournament_id",
+            "team_id"
+          ],
+          "expressions": null,
+          "where": null
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "tournament_debriefs_team_id_fkey",
+          "columns": [
+            "team_id"
+          ],
+          "table": "teams",
+          "references": [
+            "id"
+          ],
+          "onDelete": "cascade"
+        },
+        {
+          "name": "tournament_debriefs_tenant_id_fkey",
+          "columns": [
+            "tenant_id"
+          ],
+          "table": "tenants",
+          "references": [
+            "id"
+          ],
+          "onDelete": "cascade"
+        },
+        {
+          "name": "tournament_debriefs_tournament_id_fkey",
+          "columns": [
+            "tournament_id"
+          ],
+          "table": "tournaments",
+          "references": [
+            "id"
+          ],
+          "onDelete": "cascade"
+        }
+      ],
+      "touch": "updated_at"
+    },
     "tournament_maps": {
       "columns": [
         {

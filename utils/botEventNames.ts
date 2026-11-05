@@ -115,6 +115,16 @@ export const BOT_EVENT_NAMES = [
   'helloasso.payment.received',
   'captain.support.opened',
   'tournament.finalized',
+  // Debrief de fin de tournoi : le bot poste, dans le salon privé de chaque
+  // équipe engagée, un bouton qui ouvre « Points positifs » / « Points
+  // négatifs » (réponse → PUT /api/bot/v1/tournaments/:id/debriefs/:teamId).
+  // Émis par la finalisation (en plus de `tournament.finalized`, à la première
+  // seulement) et par le bouton « Demander le debrief » de l'admin. Charge :
+  // `{ tournament_id, tournament_name, tournament_slug,
+  //    teams: [{ team_id, name, discord_channel_id }] }` (salon null = ignorée).
+  // Les réponses ne sont lues que par le staff : aucune annonce Discord, hors
+  // `WEB_PUSH_EVENT_TYPES` et hors webhooks publics (utils/tournaments/debriefs.ts).
+  'tournament.debrief_requested',
   /*
    * LE SCRUTIN MVP DU PUBLIC, ouvert et fermé par la RÉGIE depuis le cockpit.
    *

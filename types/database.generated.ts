@@ -9279,6 +9279,64 @@ export type Database = {
           },
         ]
       }
+      tournament_debriefs: {
+        Row: {
+          created_at: string
+          id: string
+          negatives: string | null
+          positives: string | null
+          submitted_by_discord_id: string | null
+          team_id: string
+          tenant_id: string
+          tournament_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          negatives?: string | null
+          positives?: string | null
+          submitted_by_discord_id?: string | null
+          team_id: string
+          tenant_id: string
+          tournament_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          negatives?: string | null
+          positives?: string | null
+          submitted_by_discord_id?: string | null
+          team_id?: string
+          tenant_id?: string
+          tournament_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_debriefs_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_debriefs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_debriefs_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament_maps: {
         Row: {
           created_at: string
