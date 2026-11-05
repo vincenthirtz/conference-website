@@ -112,7 +112,9 @@ async function fillFromPastLineups(
     .select('user_id, created_at, team:team_id ( id, name, slug, logo_url )')
     .eq('tenant_id', tenantId)
     .in('user_id', userIds)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    // Une composition s'enregistre d'un bloc (même date) : le second tri fixe l'équipe retenue.
+    .order('id');
 
   if (error) {
     logger.error('[readPlayerTeamBadges] lineup fallback error', error);
