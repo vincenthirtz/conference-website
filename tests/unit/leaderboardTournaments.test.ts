@@ -95,10 +95,50 @@ describe('page Classement — onglets des tournois', () => {
     const tabs = [...html.matchAll(/role="tab"[^>]*>([^<]*)</g)].map(
       (m) => m[1]
     );
-    expect(tabs.slice(0, 3)).toEqual(['OWWC 2026', 'OWWC 2025', 'Rating']);
+    expect(tabs.slice(0, 4)).toEqual([
+      'OWWC 2026',
+      'OWWC 2025',
+      'Équipes',
+      'Rating',
+    ]);
     expect(html).toMatch(/aria-selected="true"[^>]*>OWWC 2026</);
     expect(html).toContain('OW Women&#x27;s Cup 2026');
     expect(html).toContain(`href="/tournament/${OWWC_2026!.slug}"`);
+  });
+
+  it('l’onglet « Équipes » suit les deux tournois : 2026 lu en base, 2025 écrit dans la config', async () => {
+    store.player_rating_history = [
+      history('u1', OWWC_2026!.id, 1500, 1520, 'win'),
+    ] as never;
+    store.final_rankings = [
+      {
+        tenant_id: TENANT,
+        tournament_id: OWWC_2026!.id,
+        rank: 1,
+        teams: {
+          id: 't1',
+          name: 'Chocomates',
+          short_name: null,
+          slug: 'chocomates',
+          logo_url: null,
+        },
+      },
+    ] as never;
+    const p = await props();
+    expect(
+      p.teamBoards.map((b) => [b.slug, b.teams.map((x) => x.name)])
+    ).toEqual([
+      [OWWC_2026!.slug, ['Chocomates']],
+      [
+        OWWC_2025!.slug,
+        ['Hinode Sparkles', 'Onna Bugeisha', 'Avoidgers', 'Venom Valkyries'],
+      ],
+    ]);
+    const html = renderToString(createElement(LeaderboardPage, p));
+    const tabs = [...html.matchAll(/role="tab"[^>]*>([^<]*)</g)].map(
+      (m) => m[1]
+    );
+    expect(tabs.slice(0, 3)).toEqual(['OWWC 2026', 'Équipes', 'Rating']);
   });
 
   it('un tournoi sans match noté n’a pas d’onglet ; sans aucun, la page s’ouvre sur Rating', async () => {

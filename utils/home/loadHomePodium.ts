@@ -31,17 +31,31 @@ export async function loadHomePodium(
   tenantId: string,
   tournamentId: string
 ): Promise<HomePodiumEntry[]> {
+  return loadFinalRankings(tenantId, tournamentId, 3);
+}
+
+/**
+ * Le classement figé d'un tournoi, de la 1re place à `maxRank` (toutes les
+ * places sans lui) : l'accueil en prend trois, l'onglet « Équipes » de la page
+ * Classement le prend en entier. Mêmes garanties que le podium : vide tant que
+ * le tournoi n'est pas finalisé, ne lève jamais.
+ */
+export async function loadFinalRankings(
+  tenantId: string,
+  tournamentId: string,
+  maxRank?: number
+): Promise<HomePodiumEntry[]> {
   if (!supabaseAdmin) return [];
   try {
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('final_rankings')
       .select('rank, teams:teams!inner(id, name, short_name, slug, logo_url)')
       .eq('tenant_id', tenantId)
-      .eq('tournament_id', tournamentId)
-      .lte('rank', 3)
-      .order('rank', { ascending: true });
+      .eq('tournament_id', tournamentId);
+    if (maxRank !== undefined) query = query.lte('rank', maxRank);
+    const { data, error } = await query.order('rank', { ascending: true });
     if (error) {
-      logger.error('[loadHomePodium] final_rankings error', error);
+      logger.error('[loadFinalRankings] final_rankings error', error);
       return [];
     }
 
@@ -62,7 +76,7 @@ export async function loadHomePodium(
     }
     return entries;
   } catch (err) {
-    logger.error('[loadHomePodium] error', err);
+    logger.error('[loadFinalRankings] error', err);
     return [];
   }
 }

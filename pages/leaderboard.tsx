@@ -5,6 +5,8 @@
 //                       variations de rating cumulées sur ce seul tournoi. En
 //                       tête de la barre, et la page s'ouvre sur le premier
 //                       (choix de la propriétaire du 2026-11-05) ;
+//   - « équipes »     : le classement final des équipes de ces mêmes tournois,
+//                       un tableau par édition ;
 //   - « rating »      : le classement de référence (Glicko-2), paginé ;
 //   - « progression » : plus fortes variations sur 30 jours glissants ;
 //   - « saison »      : variations cumulées sur les tournois de la saison
@@ -40,7 +42,12 @@ import {
   readTournamentMovers,
   MOVERS_WINDOW_DAYS,
 } from '@/utils/rating/readLeaderboardAxes';
-import { LEADERBOARD_TOURNAMENTS } from '@/config/leaderboardTournaments';
+import {
+  LEADERBOARD_TOURNAMENTS,
+  type LeaderboardTeam,
+} from '@/config/leaderboardTournaments';
+import { loadFinalRankings } from '@/utils/home/loadHomePodium';
+import TeamAvatar from '@/components/Team/TeamAvatar';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 import { useIsrRefresh } from '@/hooks/useIsrRefresh';
 import { useT, format } from '@/lib/i18n/useT';
@@ -54,7 +61,12 @@ const AXIS_SIZE = 20;
 const TOURNAMENT_SIZE = 64;
 
 type TournamentAxis = `tournament:${string}`;
-type LeaderboardAxis = 'rating' | 'progress' | 'season' | TournamentAxis;
+type LeaderboardAxis =
+  | 'rating'
+  | 'progress'
+  | 'season'
+  | 'teams'
+  | TournamentAxis;
 
 /** Le classement d'un tournoi phare, prêt à afficher. */
 type TournamentBoard = {
@@ -62,6 +74,14 @@ type TournamentBoard = {
   label: string;
   name: string;
   players: LeaderboardMover[];
+};
+
+/** Le classement final des équipes d'un tournoi phare. */
+type TeamBoard = {
+  slug: string;
+  name: string;
+  resultsHref: string;
+  teams: LeaderboardTeam[];
 };
 
 function tournamentAxis(slug: string): TournamentAxis {
@@ -90,6 +110,7 @@ export default function LeaderboardPage({
   season,
   seasonPlayers,
   tournaments,
+  teamBoards,
   moversWindowDays,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   const t = useT(nsLeaderboardPage);
@@ -97,6 +118,8 @@ export default function LeaderboardPage({
 
   // Un tournoi sans match noté n'a pas d'onglet : un onglet vide n'apprend rien.
   const boards = tournaments.filter((b) => b.players.length > 0);
+  // Même règle pour les équipes : un tournoi sans classement final est omis.
+  const rankedTeams = teamBoards.filter((b) => b.teams.length > 0);
 
   // Onglet actif. Tous les axes sont déjà en props : basculer ne déclenche
   // aucun fetch. Le premier tournoi phare est rendu au premier paint (donc
@@ -185,12 +208,15 @@ export default function LeaderboardPage({
           axis={axis}
           onChange={setAxis}
           boards={boards}
+          hasTeams={rankedTeams.length > 0}
           hasSeason={hasSeason}
           seasonName={season?.name ?? null}
           t={t}
         />
 
-        {board ? (
+        {axis === 'teams' ? (
+          <TeamsPanel boards={rankedTeams} t={t} />
+        ) : board ? (
           <MoverPanel
             players={board.players}
             caption={format(t.tournamentCaption, { tournament: board.name })}
@@ -350,6 +376,7 @@ function AxisTabs({
   axis,
   onChange,
   boards,
+  hasTeams,
   hasSeason,
   seasonName,
   t,
@@ -357,12 +384,16 @@ function AxisTabs({
   axis: LeaderboardAxis;
   onChange: (axis: LeaderboardAxis) => void;
   boards: TournamentBoard[];
+  hasTeams: boolean;
   hasSeason: boolean;
   seasonName: string | null;
   t: LeaderboardDict;
 }) {
   const tabs: { key: LeaderboardAxis; label: string }[] = [
     ...boards.map((b) => ({ key: tournamentAxis(b.slug), label: b.label })),
+    ...(hasTeams
+      ? [{ key: 'teams' as LeaderboardAxis, label: t.axisTeams }]
+      : []),
     { key: 'rating', label: t.axisRating },
     { key: 'progress', label: t.axisProgress },
     ...(hasSeason
@@ -389,6 +420,96 @@ function AxisTabs({
       // à la ligne dans leur cadre plutôt que d'élargir la page.
       className="mb-6 max-w-full flex-wrap justify-center"
     />
+  );
+}
+
+/** Onglet « Équipes » : le classement final, un tableau par édition. */
+function TeamsPanel({
+  boards,
+  t,
+}: {
+  boards: TeamBoard[];
+  t: LeaderboardDict;
+}) {
+  return (
+    <>
+      <p className="mb-4 text-center text-sm text-neutral-400">
+        {t.teamsCaption}
+      </p>
+      <div className="flex flex-col gap-8">
+        {boards.map((b) => (
+          <section key={b.slug} aria-labelledby={`teams-${b.slug}`}>
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id={`teams-${b.slug}`} className="text-lg font-semibold">
+                {b.name}
+              </h2>
+              <Link
+                prefetch={false}
+                href={b.resultsHref}
+                className="text-sm text-[var(--color-violet-light)] hover:underline"
+              >
+                {t.teamsResultsLink}
+              </Link>
+            </div>
+            <div className="card-brand overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/40">
+              <table className="w-full text-sm">
+                <thead className="bg-neutral-900/80 text-xs uppercase text-neutral-400">
+                  <tr>
+                    <th scope="col" className="w-20 px-4 py-3 text-left">
+                      {t.thPlace}
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left">
+                      {t.thTeam}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {b.teams.map((team) => {
+                    const identity = (
+                      <>
+                        <TeamAvatar
+                          name={team.name}
+                          logoUrl={team.logoUrl}
+                          size="sm"
+                        />
+                        <span className="font-medium">{team.name}</span>
+                      </>
+                    );
+                    return (
+                      <tr
+                        key={`${team.rank}-${team.name}`}
+                        className="border-t border-neutral-800/60 transition-colors hover:bg-white/[0.03]"
+                      >
+                        <td
+                          className={`px-4 py-3 font-mono font-semibold ${ratingBadge(team.rank)}`}
+                        >
+                          #{team.rank}
+                        </td>
+                        <td className="px-4 py-3">
+                          {team.slug ? (
+                            <Link
+                              prefetch={false}
+                              href={`/team/${team.slug}`}
+                              className="flex items-center gap-3 hover:text-[var(--color-yellow)]"
+                            >
+                              {identity}
+                            </Link>
+                          ) : (
+                            <span className="flex items-center gap-3">
+                              {identity}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -668,6 +789,7 @@ export const getStaticProps: GetStaticProps<{
   season: LeaderboardSeason | null;
   seasonPlayers: LeaderboardMover[];
   tournaments: TournamentBoard[];
+  teamBoards: TeamBoard[];
   // En prop, pas en import : la constante vit dans un module serveur
   // (`readLeaderboardAxes` importe `supabaseAdmin`), que l'importer dans le
   // composant embarquerait côté client.
@@ -692,6 +814,7 @@ export const getStaticProps: GetStaticProps<{
         season: null,
         seasonPlayers: [],
         tournaments: [],
+        teamBoards: [],
         moversWindowDays: MOVERS_WINDOW_DAYS,
         seo: leaderboardSeoFallback,
       },
@@ -701,7 +824,7 @@ export const getStaticProps: GetStaticProps<{
 
   // Axes secondaires : best-effort (les lectures avalent leurs erreurs). Un
   // axe vide masque son onglet, il ne fait pas échouer la page.
-  const [movers, season, tournaments] = await Promise.all([
+  const [movers, season, tournaments, teamBoards] = await Promise.all([
     readMonthlyMovers(DEFAULT_TENANT_ID, AXIS_SIZE),
     readFeaturedSeason(DEFAULT_TENANT_ID),
     Promise.all(
@@ -718,6 +841,33 @@ export const getStaticProps: GetStaticProps<{
         })
       )
     ),
+    // Le classement figé en base (final_rankings), sauf s'il est écrit dans
+    // la config (édition jamais finalisée).
+    Promise.all(
+      LEADERBOARD_TOURNAMENTS.map(
+        async ({
+          id,
+          slug,
+          name,
+          resultsHref,
+          teamRanking,
+        }): Promise<TeamBoard> => ({
+          slug,
+          name,
+          resultsHref,
+          teams: teamRanking
+            ? [...teamRanking]
+            : (await loadFinalRankings(DEFAULT_TENANT_ID, id)).map(
+                ({ rank, team }) => ({
+                  rank,
+                  name: team.name,
+                  slug: team.slug,
+                  logoUrl: team.logoUrl,
+                })
+              ),
+        })
+      )
+    ),
   ]);
   const seasonPlayers = season
     ? await readSeasonMovers(DEFAULT_TENANT_ID, season.leagueId, AXIS_SIZE)
@@ -730,6 +880,7 @@ export const getStaticProps: GetStaticProps<{
       season,
       seasonPlayers,
       tournaments,
+      teamBoards,
       moversWindowDays: MOVERS_WINDOW_DAYS,
       seo: buildLeaderboardSeo(players),
     },

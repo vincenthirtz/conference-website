@@ -47,4 +47,9 @@ export default ns('leaderboardPage', {
     'Rating gagné ou perdu pendant {tournament}, match après match.',
   tournamentLink: 'Voir le tournoi →',
   tournamentEmpty: "Aucun match noté sur ce tournoi pour l'instant.",
+  axisTeams: 'Équipes',
+  teamsCaption: 'Classement final des équipes, édition par édition.',
+  thPlace: 'Place',
+  thTeam: 'Équipe',
+  teamsResultsLink: 'Voir le résultat complet →',
 });

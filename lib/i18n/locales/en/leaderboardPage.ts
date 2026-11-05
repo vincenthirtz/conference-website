@@ -46,4 +46,9 @@ export default {
   tournamentCaption: 'Rating won or lost during {tournament}, match by match.',
   tournamentLink: 'See the tournament →',
   tournamentEmpty: 'No rated match in this tournament yet.',
+  axisTeams: 'Teams',
+  teamsCaption: 'Final team standings, edition by edition.',
+  thPlace: 'Place',
+  thTeam: 'Team',
+  teamsResultsLink: 'See the full results →',
 };
