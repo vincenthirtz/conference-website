@@ -49,9 +49,24 @@ export type EmitResult = {
    * l'événement existe, il n'a pas été réémis (ni réécrit, ni poussé).
    */
   duplicate?: boolean;
+  /**
+   * `true` avec l'option `background` : l'événement est dans l'outbox et le push
+   * part APRÈS la réponse. Son issue n'est pas connue de l'appelant.
+   */
+  queued?: boolean;
 };
 
 export type EmitOptions = {
+  /**
+   * Pousser vers le bot APRÈS la réponse, sans l'attendre : l'appel ne rend la
+   * main qu'une fois l'événement écrit dans l'outbox (le bot le rattrape par
+   * polling si le push échoue). Pour les écritures où l'humain attend la
+   * réponse et n'a que faire de l'issue du push : bot injoignable, chaque
+   * modification du tableau des tâches attendait 3 essais de 5 s (13 à 34 s
+   * par geste, le 2026-11-05, VPS du bot en panne). Sans outbox (insertion
+   * ratée), le push est attendu comme d'habitude : c'est alors le seul filet.
+   */
+  background?: boolean;
   /**
    * Clé logique d'unicité de l'événement (ex. `task.digest:<tenant>:2026-W40`).
    * L'`id` de l'événement en est dérivé de façon déterministe : un second
@@ -361,6 +376,14 @@ export async function emitBotEvent(
     logger.error(
       `[botEvents] ${event} NON PERSISTÉ dans l'outbox (${write.error}) — le bot ne pourra pas le rattraper par polling`
     );
+  }
+
+  if (options.background && write.ok) {
+    runInBackground(
+      pushToBot(event, fullPayload, write.id, tenantId),
+      `emitBotEvent:${event}`
+    );
+    return { delivered: false, queued: true, attempts: 0 };
   }
 
   const result = await pushToBot(
