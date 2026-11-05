@@ -1,8 +1,9 @@
 // pages/admin/tournament/[id]/stats.tsx
 // Merged stats route. Hosts the former /stats (standings), /analytics
-// (aggregated KPIs), /podium (final ranking) and the live MVP vote board as
-// deep-linkable sub-tabs (`?tab=overview|analytics|entry|podium|mvp|mvp-public`). The old /analytics and /podium routes
-// redirect here.
+// (aggregated KPIs), /podium (final ranking), the live MVP vote board and the
+// end-of-tournament team debriefs as deep-linkable sub-tabs
+// (`?tab=overview|analytics|entry|podium|mvp|mvp-public|debriefs`). The old
+// /analytics and /podium routes redirect here.
 
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -20,6 +21,7 @@ import StatsAnalyticsPanel from '@/components/admin/tournament/StatsAnalyticsPan
 import StatsPodiumPanel from '@/components/admin/tournament/StatsPodiumPanel';
 import StatsMvpPanel from '@/components/admin/tournament/StatsMvpPanel';
 import SessionEntryPanel from '@/components/admin/tournament/SessionEntryPanel';
+import TournamentDebriefsPanel from '@/features/admin/tournaments/ui/TournamentDebriefsPanel';
 import type { StaffProps } from '@/types/admin';
 import { withAdminQuery } from '@/features/admin/_shared/query';
 import nsAdminTournamentNav from '@/lib/i18n/locales/admin-fr/adminTournamentNav';
@@ -47,6 +49,8 @@ function AdminTournamentStatsPage(_: StaffProps) {
     // Le vote du PUBLIC (cockpit caster) : tables et règle de dépouillement
     // à part, même écran de suivi.
     { id: 'mvp-public', label: nav.subStatsMvpPublic },
+    // Fin de tournoi : ce que les équipes ont répondu au bot (staff seulement).
+    { id: 'debriefs', label: nav.subStatsDebriefs },
   ];
   const [active, setActive] = useQueryTab(tabs);
 
@@ -82,6 +86,9 @@ function AdminTournamentStatsPage(_: StaffProps) {
             {active === 'podium' && <StatsPodiumPanel />}
             {active === 'mvp' && <StatsMvpPanel />}
             {active === 'mvp-public' && <StatsMvpPanel kind="public" />}
+            {active === 'debriefs' && (
+              <TournamentDebriefsPanel tournamentId={tournamentId} />
+            )}
           </div>
         </div>
       </div>

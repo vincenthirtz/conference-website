@@ -91,6 +91,9 @@ export const tournamentUrls = {
   analytics: (id: string) => `${T}/${enc(id)}/analytics`,
   podiumPreview: (id: string) => `${T}/${enc(id)}/podium-preview`,
   finalize: (id: string) => `${T}/${enc(id)}/finalize`,
+  /** Debriefs de fin de tournoi : lecture (GET) et demande au bot (POST). */
+  debriefs: (id: string) => `${T}/${enc(id)}/debriefs`,
+  debriefRequest: (id: string) => `${T}/${enc(id)}/debrief-request`,
   /** Classements MVP : `mvp-leaderboard`, `mvp-public`… (segment libre). */
   sub: (id: string, segment: string) => `${T}/${enc(id)}/${segment}`,
   overlayDay: (id: string) => `${T}/${enc(id)}/overlay-day`,
@@ -129,10 +132,58 @@ export const tournamentMatchUrls = {
   mapPool: (matchId: string) => `/api/admin/matches/${enc(matchId)}/map-pool`,
 };
 
+/**
+ * Debrief d'une équipe (conference-api, table `tournament_debriefs`) : les
+ * deux cases remplies dans Discord. L'une des deux peut être vide, jamais les
+ * deux (le serveur refuse un debrief vide).
+ */
+export type TournamentDebrief = {
+  positives: string | null;
+  negatives: string | null;
+  updated_at: string;
+};
+
+/** Une équipe ENGAGÉE dans le tournoi, qu'elle ait répondu ou non. */
+export type TournamentDebriefTeam = {
+  team_id: string;
+  name: string;
+  logo_url: string | null;
+  debrief: TournamentDebrief | null;
+};
+
+/** `GET /api/admin/tournament/[id]/debriefs`. */
+export type TournamentDebriefsResponse = { teams: TournamentDebriefTeam[] };
+
+/**
+ * `POST /api/admin/tournament/[id]/debrief-request` : `requested` équipes
+ * engagées, dont `withChannel` ont un salon privé Discord (les autres ne
+ * reçoivent rien, le bot les ignore).
+ */
+export type TournamentDebriefRequestResult = {
+  requested: number;
+  withChannel: number;
+};
+
 export const tournamentsClient = {
   pool: (id: string) => adminRequest<AdminPoolView>(tournamentUrls.pool(id)),
   templates: () =>
     adminRequest<{ templates?: TournamentTemplate[] }>(
       tournamentsUrls.templates
+    ),
+  debriefs: (id: string) =>
+    adminRequest<TournamentDebriefsResponse>(tournamentUrls.debriefs(id)),
+  /**
+   * La clé d'idempotence vient de l'appelant : elle tient le temps d'UNE
+   * intention (un nouvel essai après une coupure rejoue la réponse au lieu de
+   * renvoyer le message dans chaque salon).
+   */
+  requestDebrief: (id: string, idempotencyKey: string) =>
+    adminRequest<TournamentDebriefRequestResult>(
+      tournamentUrls.debriefRequest(id),
+      {
+        method: 'POST',
+        idempotent: true,
+        headers: { 'Idempotency-Key': idempotencyKey },
+      }
     ),
 };

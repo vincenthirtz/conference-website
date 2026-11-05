@@ -50,6 +50,7 @@ export default adminNs('adminTournamentNav', {
   subStatsPodium: 'Podium',
   subStatsMvp: 'Votes MVP',
   subStatsMvpPublic: 'MVP du public',
+  subStatsDebriefs: 'Debriefs',
 
   // Conservées : d'autres écrans s'en servent comme titre de page.
   tabStats: 'Résultats',
