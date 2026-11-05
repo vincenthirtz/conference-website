@@ -277,8 +277,9 @@ function DemandesListRow({
         )}
       </Link>
 
-      {/* Quick actions for pending demandes */}
-      {d.status === 'pending' && (
+      {/* Quick actions for pending demandes — jamais sur une notification
+          système (restée `pending` en base, ce n'est pas une demande). */}
+      {d.status === 'pending' && !isNotification && (
         <div className="hidden shrink-0 items-center gap-1 md:flex">
           {actions.onAssign && (
             <AdminButton

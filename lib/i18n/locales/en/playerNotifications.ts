@@ -58,6 +58,15 @@ export default {
   pendingHeading: 'Pending',
   allUpToDate: 'All caught up ✓',
   noPending: 'You have no pending actions.',
+  teamHeading: 'Team notifications',
+  teamEmpty: 'No notifications for your team in the last 30 days.',
+  teamNew: 'New',
+  teamLoadError: 'Could not load your team notifications.',
+  teamKindLabels: {
+    scrim_accepted: 'Scrim accepted',
+    scrim_acknowledged: 'Scrim request acknowledged',
+  },
+  teamKindFallback: 'Team notification',
   prefsHeading: 'Notification preferences',
   prefsFootnote:
     'These settings apply to browser push notifications. Enable notifications above first to receive them.',

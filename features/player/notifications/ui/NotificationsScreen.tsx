@@ -2,9 +2,12 @@
 // « Notifications » sur l'archétype FIL (lot P15) :
 //   (a) invitations reçues (masquées en lecture seule) ;
 //   (b) « En attente » : compteurs actionnables (GET /api/player/notifications) ;
+//   (b') « Notifications de l'équipe » : scrim accepté, scrim pris en compte,
+//       30 derniers jours (GET/POST /api/player/notifications/team) — lues dès
+//       l'affichage, jamais en inspection (hooks/useTeamNotifications) ;
 //   (c) préférences : opt-in push de l'appareil + grille par canal + annonces
 //       (GET/PUT /api/player/push/prefs).
-// Pas d'historique : la PWA ne stocke pas les notifications passées.
+// Pas d'historique push : la PWA ne stocke pas les notifications passées.
 //
 // INSPECTION (player-view admin) : les COMPTEURS suivent le sujet ; les
 // préférences, personnelles (appareil + consentement), ne le suivent pas —
@@ -28,9 +31,11 @@ import {
   useNotificationPrefs,
   useToggleNotificationPref,
 } from '../hooks/useNotifications';
+import { useTeamNotifications } from '../hooks/useTeamNotifications';
 import type { NotificationChannel } from '../schemas';
 import PendingActions from './PendingActions';
 import NotificationPrefsPanel from './NotificationPrefsPanel';
+import TeamNotificationsList from './TeamNotificationsList';
 
 const LOGIN = '/login?next=/player/notifications';
 const H2 = 'mb-4 text-lg font-semibold text-[var(--t1,#f4edf7)]';
@@ -54,6 +59,11 @@ export default function NotificationsScreen() {
   const counters = useNotificationCounters(ready);
   const prefs = useNotificationPrefs(ready && !isInspecting);
   const toggle = useToggleNotificationPref();
+  const team = useTeamNotifications({
+    enabled: ready,
+    readOnly,
+    realtimeTeamId: counters.data?.captainTeamId ?? null,
+  });
   // Passe à vrai dès qu'une invitation est acceptée : propose alors la
   // vérification Battle.net (personnelle, donc attrapée ici).
   const [justJoined, setJustJoined] = useState(false);
@@ -135,6 +145,18 @@ export default function NotificationsScreen() {
           <h2 className={H2}>{t.pendingHeading}</h2>
           <PendingActions counters={counters.data} />
         </section>
+
+        {/* Sans équipe : rien à montrer (la route rend teamId: null). */}
+        {(team.query.data?.teamId || team.query.isError) && (
+          <section>
+            <h2 className={H2}>{t.teamHeading}</h2>
+            <TeamNotificationsList
+              notifications={team.query.data?.notifications ?? []}
+              fresh={team.fresh}
+              error={team.query.isError && !team.query.data}
+            />
+          </section>
+        )}
 
         {!isInspecting && (
           <section>

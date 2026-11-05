@@ -19,4 +19,6 @@ export default ns('playerBell', {
   scrims_other: '{count} scrims',
   candidatures_one: '{count} candidature',
   candidatures_other: '{count} candidatures',
+  teamNotifications_one: '{count} notification d’équipe',
+  teamNotifications_other: '{count} notifications d’équipe',
 });

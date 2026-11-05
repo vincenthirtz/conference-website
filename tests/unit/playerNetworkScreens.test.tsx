@@ -15,13 +15,23 @@ import {
   waitFor,
 } from '@testing-library/react';
 
-vi.mock('@/utils/supabaseBrowser', () => ({
-  supabaseClient: {
-    auth: {
-      getSession: async () => ({ data: { session: { access_token: 't' } } }),
+vi.mock('@/utils/supabaseBrowser', () => {
+  // Écoute temps réel des notifications d'équipe (salon de l'équipe gérée) :
+  // un canal inerte suffit ici.
+  const channel = {
+    on: () => channel,
+    subscribe: () => channel,
+  };
+  return {
+    supabaseClient: {
+      auth: {
+        getSession: async () => ({ data: { session: { access_token: 't' } } }),
+      },
+      channel: () => channel,
+      removeChannel: () => {},
     },
-  },
-}));
+  };
+});
 vi.mock('next/router', () => ({
   default: { asPath: '/player/notifications', replace: vi.fn() },
   useRouter: () => ({
@@ -100,7 +110,26 @@ const NOVA = {
   followerCount: 3,
 };
 
+const TEAM_FEED = {
+  teamId: 't1',
+  unread: 1,
+  notifications: [
+    {
+      id: 'n1',
+      kind: 'scrim_acknowledged',
+      text: "Votre demande de scrim contre Aurora a été prise en compte : l'organisation se fait directement entre les équipes.",
+      createdAt: '2026-11-05T14:00:00.000Z',
+      read: false,
+      fromTeamName: 'Phenix',
+      targetTeamName: 'Aurora',
+    },
+  ],
+};
+
 function reply(url: string, method: string, body: any): unknown {
+  if (url.startsWith('/api/player/notifications/team')) {
+    return method === 'POST' ? { marked: 1 } : TEAM_FEED;
+  }
   if (url.startsWith('/api/player/notifications')) return COUNTERS;
   if (url.startsWith('/api/player/push/prefs')) {
     if (method === 'PUT') {
@@ -174,6 +203,23 @@ describe('Notifications (Fil)', () => {
     expect(calls.every((c) => !c.url.includes('as='))).toBe(true);
   });
 
+  it('soi : les notifications de l’équipe, marquées lues pour elle à l’affichage', async () => {
+    render(<NotificationsScreen />);
+    await screen.findByRole('heading', { name: 'Notifications de l’équipe' });
+    expect(screen.getByText(TEAM_FEED.notifications[0].text)).toBeTruthy();
+    expect(screen.getByText('Demande de scrim prise en compte')).toBeTruthy();
+    expect(screen.getByText('Nouveau')).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (c) =>
+            c.method === 'POST' &&
+            c.url.startsWith('/api/player/notifications/team')
+        )
+      ).toBe(true)
+    );
+  });
+
   it('inspection : compteurs du SUJET, préférences ni lues ni montrées', async () => {
     render(<NotificationsScreen />, { subjectId: SUBJECT, readOnly: true });
     await screen.findByRole('link', { name: /Messages non lus/ });
@@ -185,6 +231,14 @@ describe('Notifications (Fil)', () => {
       false
     );
     expect(screen.queryByRole('switch')).toBe(null);
+    // Le fil de l'équipe du SUJET se lit (`?as=`), mais rien n'est marqué lu
+    // à sa place.
+    await screen.findByText(TEAM_FEED.notifications[0].text);
+    const feed = calls.find((c) =>
+      c.url.startsWith('/api/player/notifications/team')
+    );
+    expect(feed?.url).toContain(`as=${SUBJECT}`);
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
   });
 });
 

@@ -16,6 +16,8 @@ type Notifications = {
   pendingScrims: number;
   pendingJoinRequests: number;
   checkinPending: 0 | 1;
+  /** Notifications d'équipe non lues (scrim accepté, pris en compte). */
+  teamNotifications?: number;
   total: number;
 };
 
@@ -91,6 +93,14 @@ export default function PlayerBell(): JSX.Element | null {
             )
           : null,
         data.checkinPending ? t.checkinPending : null,
+        data.teamNotifications
+          ? format(
+              data.teamNotifications > 1
+                ? t.teamNotifications_other
+                : t.teamNotifications_one,
+              { count: data.teamNotifications }
+            )
+          : null,
       ]
         .filter(Boolean)
         .join(' · ') || t.empty
@@ -98,7 +108,9 @@ export default function PlayerBell(): JSX.Element | null {
 
   return (
     <Link
-      href="/player"
+      // Une notification d'équipe à lire : elle s'affiche (et se lit) sur
+      // l'écran Notifications, pas sur le tableau de bord.
+      href={data?.teamNotifications ? '/player/notifications' : '/player'}
       title={tooltip}
       aria-label={format(t.ariaLabel, { tooltip })}
       className="group/bell relative ml-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-neutral-200 backdrop-blur-md transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"

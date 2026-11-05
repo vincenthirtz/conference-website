@@ -1,8 +1,8 @@
 {
   "$commentaire": "Lectures directes de la base par fichier, sources propres du site (lot 1d de docs/D1-MIGRATION.md). Regeler : npm run db:reads -- --write",
-  "total": 147,
+  "total": 148,
   "reads": {
-    "features/admin/demandes/listLoader.ts": 3,
+    "features/admin/demandes/listLoader.ts": 4,
     "features/player/team/repository/pageEditor.ts": 2,
     "pages/about.tsx": 1,
     "pages/actualites.tsx": 2,

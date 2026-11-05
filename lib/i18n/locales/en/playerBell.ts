@@ -20,4 +20,6 @@ export default {
   scrims_other: '{count} scrims',
   candidatures_one: '{count} application',
   candidatures_other: '{count} applications',
+  teamNotifications_one: '{count} team notification',
+  teamNotifications_other: '{count} team notifications',
 };

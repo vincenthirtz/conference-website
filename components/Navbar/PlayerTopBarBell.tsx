@@ -20,6 +20,7 @@ import type { PlayerNotificationsPayload } from '@/features/player/notifications
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useDocumentVisible } from '@/hooks/useDocumentVisible';
 import { useActiveTeam } from '@/components/player/ActiveTeamContext';
+import { PLAYER_NOTIFICATIONS_CHANGED } from '@/utils/player/notificationsEvents';
 import { useT, format } from '@/lib/i18n/useT';
 import nsPlayerTopBar from '@/lib/i18n/locales/fr/playerTopBar';
 
@@ -57,6 +58,17 @@ export function usePlayerNotificationCount(): number | null {
     const interval = setInterval(poll, POLL_MS);
     return () => clearInterval(interval);
   }, [poll, visible]);
+
+  // Notifications d'équipe marquées lues sur /player/notifications : le
+  // compteur se relit tout de suite (utils/player/notificationsEvents.ts).
+  useEffect(() => {
+    const onChanged = () => {
+      void poll();
+    };
+    window.addEventListener(PLAYER_NOTIFICATIONS_CHANGED, onChanged);
+    return () =>
+      window.removeEventListener(PLAYER_NOTIFICATIONS_CHANGED, onChanged);
+  }, [poll]);
 
   return total;
 }

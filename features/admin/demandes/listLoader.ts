@@ -6,6 +6,12 @@
 // période, tri, page — et `assigned` (`me` / `unassigned`). Les compteurs par
 // statut appliquent tous les filtres SAUF le statut.
 //
+// « En attente » = des demandes à traiter : les notifications système (scrim
+// accepté / pris en compte, relance de tournoi — `payload.notification_type`,
+// restées `pending` en base) en sont retirées, liste ET tuile. Elles restent
+// dans « toutes » (badge « Notification ») et dans la tuile Total, qui compte
+// toutes les lignes, comme la liste « toutes ».
+//
 // Assignation (`assigned_staff_id`, `assigned_at`) : sans la migration
 // add_staff_assignment_to_demandes_and_support_tickets, la liste se relit
 // sans ces colonnes ni le filtre, et `assignmentAvailable` vaut false.
@@ -18,6 +24,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ParsedUrlQuery } from 'querystring';
 import { logger } from '@/utils/logger';
 import type { DemandeStatus } from '@/components/admin/demandes/demandeChips';
+import { withoutSystemNotifications } from '@/utils/demandes/teamNotifications';
 import {
   ASSIGNMENT_COLUMNS,
   loadStaffBriefs,
@@ -123,12 +130,24 @@ export async function loadDemandesList(
   }
 
   function countFor(targetStatus: DemandeStatus, withAssignment: boolean) {
-    return filtered(
+    const q = filtered(
       db
         .from('demandes')
         .select('id', { count: 'exact', head: true })
         .eq('tenant_id', tenantId)
         .eq('status', targetStatus),
+      withAssignment
+    );
+    return targetStatus === 'pending' ? withoutSystemNotifications(q) : q;
+  }
+
+  /** Toutes les lignes des filtres (notifications comprises) : la tuile Total. */
+  function countAll(withAssignment: boolean) {
+    return filtered(
+      db
+        .from('demandes')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId),
       withAssignment
     );
   }
@@ -159,7 +178,8 @@ export async function loadDemandesList(
       .order(orderBy, { ascending: orderDir === 'asc' })
       .range(offset, offset + DEMANDES_PAGE_SIZE - 1);
     if (statusRaw) q = q.eq('status', statusRaw);
-    const [page, pending, approved, rejected, cancelled, acknowledged] =
+    if (statusRaw === 'pending') q = withoutSystemNotifications(q);
+    const [page, pending, approved, rejected, cancelled, acknowledged, all] =
       await Promise.all([
         q,
         countFor('pending', withAssignment),
@@ -167,6 +187,7 @@ export async function loadDemandesList(
         countFor('rejected', withAssignment),
         countFor('cancelled', withAssignment),
         countFor('acknowledged', withAssignment),
+        countAll(withAssignment),
       ]);
     return {
       page,
@@ -175,6 +196,7 @@ export async function loadDemandesList(
       rejected,
       cancelled,
       acknowledged,
+      all,
       error: page.error as unknown,
     };
   });
@@ -257,7 +279,11 @@ export async function loadDemandesList(
     tournaments,
     statusCounts: {
       ...c,
-      total: c.pending + c.approved + c.rejected + c.cancelled + c.acknowledged,
+      // Toutes les lignes (notifications comprises), comme la liste « toutes ».
+      // Repli sur la somme des statuts si ce compte manque.
+      total:
+        listed.all.count ??
+        c.pending + c.approved + c.rejected + c.cancelled + c.acknowledged,
     },
     initialError: null,
     assignmentAvailable: listed.assignmentAvailable,

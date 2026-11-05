@@ -57,6 +57,16 @@ export default ns('playerNotifications', {
   pendingHeading: 'En attente',
   allUpToDate: 'Tout est à jour ✓',
   noPending: 'Tu n’as aucune action en attente.',
+  // Notifications de l'équipe (scrim accepté, scrim pris en compte).
+  teamHeading: 'Notifications de l’équipe',
+  teamEmpty: 'Aucune notification pour ton équipe ces 30 derniers jours.',
+  teamNew: 'Nouveau',
+  teamLoadError: 'Impossible de charger les notifications de l’équipe.',
+  teamKindLabels: {
+    scrim_accepted: 'Scrim accepté',
+    scrim_acknowledged: 'Demande de scrim prise en compte',
+  },
+  teamKindFallback: 'Notification de l’équipe',
   prefsHeading: 'Préférences de notifications',
   prefsFootnote:
     'Ces réglages s’appliquent aux notifications push du navigateur. Active d’abord les notifications ci-dessus pour les recevoir.',
