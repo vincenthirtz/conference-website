@@ -33,8 +33,40 @@ export type PlayerNotificationsPayload = {
   checkinPending: 0 | 1;
   /** Grilles de planning de scrim ouvertes qui attendent ses dispos. */
   pendingPlannings: number;
+  /**
+   * Notifications de son équipe (scrim accepté, scrim pris en compte) qu'ELLE
+   * n'a pas encore lues, sur les 30 derniers jours.
+   */
+  teamNotifications: number;
   total: number;
 };
+
+/**
+ * Une notification adressée à l'équipe (GET /api/player/notifications/team).
+ * `text` : le texte rangé avec la notification, en français.
+ */
+export type TeamNotification = {
+  id: string;
+  /** `scrim_accepted` | `scrim_acknowledged` (d'autres pourront s'ajouter). */
+  kind: string;
+  text: string;
+  createdAt: string;
+  /** Lue par l'appelante (le « lu » est propre à chaque membre). */
+  read: boolean;
+  fromTeamName: string | null;
+  targetTeamName: string | null;
+};
+
+/** GET /api/player/notifications/team — les notifications de l'équipe. */
+export type TeamNotificationsPayload = {
+  /** Équipe dont les notifications sont rendues ; `null` = aucune équipe. */
+  teamId: string | null;
+  notifications: TeamNotification[];
+  unread: number;
+};
+
+/** POST /api/player/notifications/team — marque tout comme lu. */
+export type TeamNotificationsReadResult = { marked: number };
 
 export type NotificationChannel = 'push' | 'email';
 
