@@ -17,12 +17,15 @@ import { formatSiteDate } from '@/utils/timezone';
 import type { SeoProps } from '@/components/Seo/DefaultSeo';
 // Serveur seulement, comme renderNewsMarkdown (appelé dans getStaticProps).
 import { buildNewsArticleSeo } from '@/utils/news/newsArticleSeo';
+// Serveur seulement, comme renderNewsMarkdown (appelé dans getStaticProps).
+import { extractNewsVideoIds } from '@/utils/news/newsVideos';
 
 import { logger } from '../../utils/logger';
 import nsNewsDetail from '@/lib/i18n/locales/fr/newsDetail';
 import nsNewsTags from '@/lib/i18n/locales/fr/newsTags';
 import { newsTagLabel } from '@/utils/news/newsTag';
 import ArticleHero from '@/components/News/ArticleHero';
+import ArticleVideo from '@/components/News/ArticleVideo';
 import ShareArticle from '@/components/News/ShareArticle';
 import RelatedNews, { type RelatedItem } from '@/components/News/RelatedNews';
 
@@ -71,6 +74,8 @@ type NewsPageProps = {
    * Chaîne vide si l'article n'a pas de contenu.
    */
   contentHtml: string;
+  /** Vidéos YouTube citées dans le texte : un lecteur sous l'article pour chacune. */
+  videos?: string[];
   slug?: string | null;
   tag?: string | null;
   imageUrl?: string | null;
@@ -135,14 +140,18 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
     .limit(3);
 
   const related: RelatedItem[] = ((relatedRows ?? []) as NewsListRow[]).map(
-    (row) => ({
-      id: row.id,
-      slug: row.slug,
-      title: row.title,
-      tag: row.tag ?? null,
-      imageUrl: resolveNewsImage(row.image_url, row.teams).url,
-      publishedAt: row.published_at ?? null,
-    })
+    (row) => {
+      const image = resolveNewsImage(row.image_url, row.teams);
+      return {
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        tag: row.tag ?? null,
+        imageUrl: image.url,
+        imageFitContain: image.fitContain,
+        publishedAt: row.published_at ?? null,
+      };
+    }
   );
 
   const heroImage = resolveNewsImage(data.image_url, data.teams);
@@ -160,6 +169,7 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
       }),
       title: data.title || '',
       contentHtml: await renderNewsMarkdown(data.content),
+      videos: extractNewsVideoIds(data.content),
       slug: data.slug || null,
       tag: data.tag || 'general',
       imageUrl: heroImage.url || '',
@@ -176,6 +186,7 @@ export const getStaticProps: GetStaticProps<NewsPageProps> = async (
 export default function NewsSlugPage({
   title,
   contentHtml,
+  videos = [],
   slug,
   tag,
   imageUrl,
@@ -269,6 +280,21 @@ export default function NewsSlugPage({
               {t.noContent}
             </div>
           )}
+
+          {videos.map((videoId, index) => {
+            const label =
+              videos.length > 1
+                ? `${title} (${index + 1}/${videos.length})`
+                : title;
+            return (
+              <ArticleVideo
+                key={videoId}
+                videoId={videoId}
+                playLabel={format(t.videoPlay, { title: label })}
+                playerTitle={format(t.videoPlayerTitle, { title: label })}
+              />
+            );
+          })}
 
           <ShareArticle
             url={canonical ?? null}

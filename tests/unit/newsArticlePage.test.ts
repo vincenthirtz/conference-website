@@ -128,6 +128,24 @@ describe('news/[slug] getStaticProps — corps rendu au build', () => {
     expect(html).not.toContain(t.noContent);
   });
 
+  it('pose un lecteur pour la vidéo citée, sans rien charger de YouTube avant le clic', async () => {
+    seedNews({
+      content:
+        'Revoir le scrim en vidéo : https://www.youtube.com/watch?v=DGN4olmhb2Q',
+    });
+    const props = await propsFor();
+    expect(props.videos).toEqual(['DGN4olmhb2Q']);
+    const html = renderToString(
+      createElement(ToastProvider, null, createElement(NewsSlugPage, props))
+    );
+    // La façade : un bouton et la miniature passée par l'optimiseur de Next.
+    expect(html).toContain('aria-label="Lire la vidéo « Annonce »"');
+    expect(html).toContain(
+      encodeURIComponent('https://i.ytimg.com/vi/DGN4olmhb2Q/hqdefault.jpg')
+    );
+    expect(html).not.toContain('<iframe');
+  });
+
   it('affiche « pas de contenu » pour un article vide', async () => {
     seedNews({ content: '' });
     const props = await propsFor();
@@ -169,6 +187,44 @@ describe('news/[slug] — SEO et dates', () => {
     );
     expect(html).toContain('01/09/2026');
     expect(html).not.toContain('31/08/2026');
+  });
+});
+
+describe('news/[slug] — « À lire aussi »', () => {
+  async function renderWithRelated(related: Record<string, unknown>) {
+    seedNews();
+    seedNews({
+      id: 'news-2',
+      slug: 'autre',
+      title: 'Autre',
+      published_at: '2026-08-01T18:30:00Z',
+      ...related,
+    });
+    const props = await propsFor();
+    return {
+      props,
+      html: renderToString(
+        createElement(ToastProvider, null, createElement(NewsSlugPage, props))
+      ),
+    };
+  }
+
+  it('un article sans visuel montre le logo du site, pas un fond vide', async () => {
+    const { html } = await renderWithRelated({ image_url: null, teams: null });
+    expect(html).toContain(encodeURIComponent('/img/logos/2026-logo.png'));
+    expect(html).not.toContain('tl-mesh');
+  });
+
+  it('le logo d’une équipe liée est montré entier (contain), pas rogné', async () => {
+    const { props, html } = await renderWithRelated({
+      image_url: null,
+      teams: { logo_url: 'https://media.owwomenscup.fr/team.png' },
+    });
+    expect(props.related?.[0]).toMatchObject({
+      imageUrl: 'https://media.owwomenscup.fr/team.png',
+      imageFitContain: true,
+    });
+    expect(html).toContain('object-contain');
   });
 });
 

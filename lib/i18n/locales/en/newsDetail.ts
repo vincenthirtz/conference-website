@@ -23,6 +23,8 @@ export default {
   shareCopied: 'Link copied',
   allNews: 'All news',
   relatedTitle: 'Read next',
+  videoPlay: 'Play the video “{title}”',
+  videoPlayerTitle: 'YouTube player: {title}',
   commentsTitle: 'Comments',
   commentContentSrLabel: 'Your comment',
   commentPlaceholder: 'Share your thoughts...',

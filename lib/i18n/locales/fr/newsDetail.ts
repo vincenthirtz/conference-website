@@ -22,6 +22,8 @@ export default ns('newsDetail', {
   shareCopied: 'Lien copié',
   allNews: 'Toutes les actualités',
   relatedTitle: 'À lire aussi',
+  videoPlay: 'Lire la vidéo « {title} »',
+  videoPlayerTitle: 'Lecteur YouTube : {title}',
   commentsTitle: 'Commentaires',
   commentContentSrLabel: 'Votre commentaire',
   commentPlaceholder: 'Partage ton avis...',
