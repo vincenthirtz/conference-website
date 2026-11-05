@@ -27,10 +27,12 @@ import { logger } from '../../../utils/logger';
 import nsAdminDemandesList from '@/lib/i18n/locales/admin-fr/adminDemandesList';
 import { BATTLE_TAG_REGEX } from '@/utils/teams/roleKind';
 import {
+  canAcknowledgeScrim,
   isBattleTagFlagged,
   resolveDemandeBattleTag,
   type Demande,
 } from '@/features/admin/demandes/listModel';
+import { useScrimAcknowledge } from '@/features/admin/demandes/ui/ScrimAcknowledge';
 import {
   DEMANDES_PAGE_SIZE,
   type DemandesListProps,
@@ -308,6 +310,29 @@ function AdminDemandesPage({
     }
   }
 
+  // « Pris en compte » (scrims en attente) : confirmation, appel et toast dans
+  // features/admin/demandes/ui/ScrimAcknowledge.tsx ; ici, sélection + relecture.
+  const scrimAck = useScrimAcknowledge();
+  async function handleAcknowledge(targets: Demande[], batch: boolean) {
+    const done = await scrimAck.acknowledge(targets, (busy) =>
+      batch
+        ? setBatchProcessing(busy)
+        : setSingleProcessing(busy ? targets[0].id : null)
+    );
+    if (!done) return;
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const d of targets) next.delete(d.id);
+      return next;
+    });
+    refresh();
+  }
+  const selectedDemandes = demandes.filter((d) => selected.has(d.id));
+  const selectionIsPendingScrims =
+    selectedDemandes.length > 0 &&
+    selectedDemandes.length === selected.size &&
+    selectedDemandes.every(canAcknowledgeScrim);
+
   // Confirm approval from the BattleTag modal. The corrected tag (if any) is
   // sent as a per-demande override. We DON'T hard-block on an invalid tag —
   // staff can approve anyway (a warning toast surfaces the issue).
@@ -520,6 +545,11 @@ function AdminDemandesPage({
             processing={batchProcessing}
             onApprove={() => handleBatchAction('approved')}
             onReject={() => handleBatchAction('rejected')}
+            onAcknowledge={
+              selectionIsPendingScrims
+                ? () => handleAcknowledge(selectedDemandes, true)
+                : undefined
+            }
             onClear={() => setSelected(new Set())}
           />
         )}
@@ -538,6 +568,7 @@ function AdminDemandesPage({
             onNotifyCaptains: handleNotifyCaptains,
             onApprove: (id) => handleSingleAction(id, 'approved'),
             onReject: (id) => handleSingleAction(id, 'rejected'),
+            onAcknowledge: (d) => handleAcknowledge([d], false),
             onAssign: assignmentAvailable ? handleAssign : undefined,
           }}
         />
@@ -563,6 +594,9 @@ function AdminDemandesPage({
         onClose={() => setTagModal(null)}
         onConfirm={confirmTagApproval}
       />
+
+      {/* Confirmation « Pris en compte » */}
+      {scrimAck.dialog}
 
       {/* "Demander plus d'infos" modal */}
       <DemandesListInfoModal

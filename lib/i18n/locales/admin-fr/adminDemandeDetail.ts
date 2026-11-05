@@ -28,6 +28,7 @@ export default adminNs('adminDemandeDetail', {
   statusApproved: 'Approuvée',
   statusRejected: 'Refusée',
   statusCancelled: 'Annulée',
+  statusAcknowledged: 'Pris en compte',
   idLabel: 'ID :',
   createdOn: 'Créée le {date}',
   message: 'Message',

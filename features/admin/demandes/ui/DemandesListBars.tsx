@@ -6,6 +6,7 @@
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import nsAdminDemandesList from '@/lib/i18n/locales/admin-fr/adminDemandesList';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
+import { AcknowledgeScrimButton } from '@/features/admin/demandes/ui/ScrimAcknowledge';
 
 export function DemandesListErrorBanner({
   message,
@@ -33,12 +34,18 @@ export function DemandesListBulkBar({
   processing,
   onApprove,
   onReject,
+  onAcknowledge,
   onClear,
 }: {
   count: number;
   processing: boolean;
   onApprove: () => void;
   onReject: () => void;
+  /**
+   * « Pris en compte » en lot : passé par la page SEULEMENT quand toute la
+   * sélection est faite de scrims en attente (l'API refuserait un lot mêlé).
+   */
+  onAcknowledge?: () => void;
   onClear: () => void;
 }) {
   const t = useAdminT(nsAdminDemandesList);
@@ -53,6 +60,9 @@ export function DemandesListBulkBar({
         })}
       </span>
       <div className="flex-1" />
+      {onAcknowledge && (
+        <AcknowledgeScrimButton onClick={onAcknowledge} disabled={processing} />
+      )}
       <AdminButton
         variant="secondary"
         size="xs"

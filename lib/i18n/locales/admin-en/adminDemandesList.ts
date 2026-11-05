@@ -24,6 +24,7 @@ export default {
   statApproved: 'Approved',
   statRejected: 'Rejected',
   statCancelled: 'Cancelled',
+  statAcknowledged: 'Acknowledged',
   filterType: 'Type',
   filterStatus: 'Status',
   filterTournament: 'Tournament',
@@ -43,6 +44,7 @@ export default {
   statusApproved: 'Approved',
   statusRejected: 'Rejected',
   statusCancelled: 'Cancelled',
+  statusAcknowledged: 'Acknowledged',
   tournamentAll: 'All tournaments',
   searchPlaceholder: 'Comment, staff note...',
   sortDateRecent: 'Newest first',
@@ -119,4 +121,18 @@ export default {
   waitingHours: 'Waiting {count} h',
   waitingDays: 'Waiting {count} d',
   waitingTitle: 'Received on {date} — amber after 24 h, red after 72 h',
+  acknowledge: 'Acknowledged',
+  acknowledgeTitle:
+    'Mark this scrim as handled between the teams (nothing on Discord)',
+  ackConfirmTitle_one: 'Mark this scrim as “Acknowledged”?',
+  ackConfirmTitle_other: 'Mark these {count} scrims as “Acknowledged”?',
+  ackConfirmBody:
+    'The scrim will be marked as handled between the teams. No message will be sent on Discord. The requesting team will be notified on the site.',
+  ackConfirmBodyExternal:
+    'The scrim will be marked as handled between the teams. No message will be sent on Discord. External request: no team on the site to notify.',
+  ackConfirmBodyBatch:
+    'The scrims will be marked as handled between the teams. No message will be sent on Discord. Each requesting team registered on the site will be notified on the site.',
+  ackConfirmYes: 'Acknowledged',
+  toastAcknowledged: 'Scrim marked as “Acknowledged”.',
+  toastBatchAcknowledged: '{count} scrim(s) marked as “Acknowledged”.',
 };

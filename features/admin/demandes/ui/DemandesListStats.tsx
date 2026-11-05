@@ -1,4 +1,4 @@
-// features/admin/demandes/ui/DemandesListStats.tsx — les cinq tuiles de
+// features/admin/demandes/ui/DemandesListStats.tsx — les six tuiles de
 // décompte de la liste des demandes (total + un statut chacune), en « Le Ruban ».
 //
 // Chaque tuile est un BOUTON qui filtre sur son statut : même allure que
@@ -71,10 +71,18 @@ export default function DemandesListStats({
       tone: 'neutral',
       statusValue: 'cancelled',
     },
+    {
+      // Scrims classés « Pris en compte » (gérés entre les équipes).
+      key: 'acknowledged',
+      label: t.statAcknowledged,
+      value: counts.acknowledged,
+      tone: 'brand',
+      statusValue: 'acknowledged',
+    },
   ];
 
   return (
-    <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
       {cards.map((card) => {
         const active =
           (card.statusValue ?? '') === (statusFilter ?? 'pending') ||

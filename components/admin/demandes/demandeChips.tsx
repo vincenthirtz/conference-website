@@ -25,7 +25,13 @@ export type DemandeType =
   | 'scrim'
   | 'other';
 
-export type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+/** `acknowledged` = « Pris en compte » (scrim géré entre les équipes). */
+export type DemandeStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled'
+  | 'acknowledged';
 
 export function formatDateTime(iso: string | null) {
   if (!iso) return '—';
@@ -73,6 +79,8 @@ export function statusLabel(status: DemandeStatus, t: Dict) {
       return t.statusRejected;
     case 'cancelled':
       return t.statusCancelled;
+    case 'acknowledged':
+      return t.statusAcknowledged;
     default:
       return status;
   }

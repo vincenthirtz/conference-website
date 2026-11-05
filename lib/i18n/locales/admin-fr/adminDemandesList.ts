@@ -23,6 +23,7 @@ export default adminNs('adminDemandesList', {
   statApproved: 'Approuvées',
   statRejected: 'Refusées',
   statCancelled: 'Annulées',
+  statAcknowledged: 'Pris en compte',
   filterType: 'Type',
   filterStatus: 'Statut',
   filterTournament: 'Tournoi',
@@ -42,6 +43,7 @@ export default adminNs('adminDemandesList', {
   statusApproved: 'Approuvée',
   statusRejected: 'Refusée',
   statusCancelled: 'Annulée',
+  statusAcknowledged: 'Pris en compte',
   tournamentAll: 'Tous les tournois',
   searchPlaceholder: 'Commentaire, note staff...',
   sortDateRecent: 'Plus récentes d’abord',
@@ -120,4 +122,20 @@ export default adminNs('adminDemandesList', {
   waitingDays: 'En attente depuis {count} j',
   waitingTitle:
     'Reçue le {date} — orange au-delà de 24 h, rouge au-delà de 72 h',
+  // « Pris en compte » : scrim classé comme géré entre les équipes, sans
+  // Discord (statut `acknowledged`, scrim seulement).
+  acknowledge: 'Pris en compte',
+  acknowledgeTitle:
+    'Classer ce scrim comme géré entre les équipes (rien sur Discord)',
+  ackConfirmTitle_one: 'Classer ce scrim « Pris en compte » ?',
+  ackConfirmTitle_other: 'Classer ces {count} scrims « Pris en compte » ?',
+  ackConfirmBody:
+    "Le scrim sera classé comme géré entre les équipes. Aucun message ne sera envoyé sur Discord. L'équipe demandeuse sera prévenue sur le site.",
+  ackConfirmBodyExternal:
+    'Le scrim sera classé comme géré entre les équipes. Aucun message ne sera envoyé sur Discord. Demande externe : aucune équipe du site à prévenir.',
+  ackConfirmBodyBatch:
+    'Les scrims seront classés comme gérés entre les équipes. Aucun message ne sera envoyé sur Discord. Chaque équipe demandeuse inscrite sur le site sera prévenue sur le site.',
+  ackConfirmYes: 'Pris en compte',
+  toastAcknowledged: 'Scrim classé « Pris en compte ».',
+  toastBatchAcknowledged: '{count} scrim(s) classé(s) « Pris en compte ».',
 });

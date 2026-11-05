@@ -29,6 +29,7 @@ export default {
   statusApproved: 'Approved',
   statusRejected: 'Rejected',
   statusCancelled: 'Cancelled',
+  statusAcknowledged: 'Acknowledged',
   idLabel: 'ID:',
   createdOn: 'Created on {date}',
   message: 'Message',

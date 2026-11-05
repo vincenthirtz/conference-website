@@ -71,8 +71,20 @@ export type StatusCounts = {
   approved: number;
   rejected: number;
   cancelled: number;
+  acknowledged: number;
   total: number;
 };
+
+/**
+ * « Pris en compte » (`acknowledged`) : proposé pour une demande de SCRIM
+ * encore en attente, et pour elle seule — l'API refuse tout autre type (400).
+ */
+export function canAcknowledgeScrim(d: {
+  type: string;
+  status: string;
+}): boolean {
+  return d.type === 'scrim' && d.status === 'pending';
+}
 
 export function sanitizeSearchInput(raw: string) {
   // Strip characters that break PostgREST `or(...)` parsing

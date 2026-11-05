@@ -125,6 +125,7 @@ export default function DemandesListFilters({
                 { value: 'approved', label: t.statusApproved },
                 { value: 'rejected', label: t.statusRejected },
                 { value: 'cancelled', label: t.statusCancelled },
+                { value: 'acknowledged', label: t.statusAcknowledged },
               ]}
             />
             <FilterSelect

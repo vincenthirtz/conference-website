@@ -11,6 +11,11 @@ import { withAdminQuery } from '@/features/admin/_shared/query';
 import { useHydrateOnce } from '@/features/admin/_shared/useHydrateOnce';
 import { useActiveTeamOptions } from '@/features/admin/_shared/teamOptions';
 import { demandesClient } from '@/features/admin/demandes/client';
+import { canAcknowledgeScrim } from '@/features/admin/demandes/listModel';
+import {
+  AcknowledgeScrimButton,
+  useScrimAcknowledge,
+} from '@/features/admin/demandes/ui/ScrimAcknowledge';
 import {
   useDemande,
   useDemandeTournamentFields,
@@ -83,6 +88,7 @@ function AdminDemandeDetailPage() {
     setStaffNote(d.staff_note || '')
   );
   const [processing, setProcessing] = useState(false);
+  const scrimAck = useScrimAcknowledge();
   const [forwardOpen, setForwardOpen] = useState(false);
   const [forwardTargetId, setForwardTargetId] = useState('');
   const [forwarding, setForwarding] = useState(false);
@@ -179,6 +185,7 @@ function AdminDemandeDetailPage() {
       <Head>
         <title>{format(t.pageTitle, { id: demande.id.slice(0, 8) })}</title>
       </Head>
+      {scrimAck.dialog}
 
       <div className="min-h-screen px-4 pt-header pb-12 sm:px-6 lg:px-[30px]">
         <Link
@@ -380,6 +387,23 @@ function AdminDemandeDetailPage() {
                     >
                       {t.reject}
                     </AdminButton>
+                    {canAcknowledgeScrim(demande) && (
+                      <AcknowledgeScrimButton
+                        size="md"
+                        disabled={processing}
+                        onClick={async () => {
+                          const note = staffNote.trim() || null;
+                          if (
+                            await scrimAck.acknowledge(
+                              [demande],
+                              setProcessing,
+                              note
+                            )
+                          )
+                            await fetchDemande();
+                        }}
+                      />
+                    )}
                   </div>
                 ) : (
                   <div className="mt-4 text-sm text-[var(--t3,#a39ba6)]">

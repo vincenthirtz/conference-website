@@ -16,7 +16,8 @@ export type { DemandeDetail };
 
 export type DemandeStatusUpdate = {
   ids: string[];
-  newStatus: 'approved' | 'rejected';
+  /** `acknowledged` (« Pris en compte ») : scrims seulement, 400 sinon. */
+  newStatus: 'approved' | 'rejected' | 'acknowledged';
   staffComment?: string | null;
   battleTagOverrides?: Record<string, string>;
 };

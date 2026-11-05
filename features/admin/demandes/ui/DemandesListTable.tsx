@@ -27,9 +27,11 @@ import Chip from '@/features/admin/_shared/ui/Chip';
 import WaitingChip from '@/features/admin/_shared/queue/WaitingChip';
 import { statusChipTone } from '@/features/admin/demandes/ui/DemandeDetailBlocks';
 import {
+  canAcknowledgeScrim,
   isBattleTagFlagged,
   type Demande,
 } from '@/features/admin/demandes/listModel';
+import { AcknowledgeScrimButton } from '@/features/admin/demandes/ui/ScrimAcknowledge';
 
 const CHECKBOX =
   'h-4 w-4 shrink-0 rounded-[3px] border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] accent-[var(--or,#b467d1)]';
@@ -68,6 +70,8 @@ export type DemandeRowActions = {
   onNotifyCaptains: (id: string) => void;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  /** « Pris en compte » : scrim en attente seulement (cf. canAcknowledgeScrim). */
+  onAcknowledge?: (d: Demande) => void;
   /** « Je prends » / « Libérer » ; absent = assignation indisponible. */
   onAssign?: (id: string, action: 'claim' | 'release') => void;
 };
@@ -176,8 +180,13 @@ function DemandesListRow({
                     </span>
                     <span className="text-[var(--t4,#807984)]">→</span>
                     <span>
-                      {d.team?.name ||
-                        d.payload.target_team_name ||
+                      {/* Une notification n'est pas forcément rangée chez
+                          l'équipe CIBLE : « Pris en compte » prévient
+                          l'équipe demandeuse (team_id = demandeuse). Le
+                          payload dit alors la vraie cible. */}
+                      {(isNotification
+                        ? d.payload.target_team_name || d.team?.name
+                        : d.team?.name || d.payload.target_team_name) ||
                         t.targetTeamFallback}
                     </span>
                   </span>
@@ -311,6 +320,13 @@ function DemandesListRow({
             >
               <Icon d={ICON_CHAT} />
             </AdminButton>
+          )}
+          {/* « Pris en compte » : scrim géré entre les équipes, sans Discord. */}
+          {actions.onAcknowledge && canAcknowledgeScrim(d) && (
+            <AcknowledgeScrimButton
+              onClick={() => actions.onAcknowledge?.(d)}
+              disabled={disabled}
+            />
           )}
           <AdminButton
             variant="secondary"

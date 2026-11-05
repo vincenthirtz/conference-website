@@ -40,6 +40,7 @@ export const EMPTY_STATUS_COUNTS: StatusCounts = {
   approved: 0,
   rejected: 0,
   cancelled: 0,
+  acknowledged: 0,
   total: 0,
 };
 
@@ -158,19 +159,22 @@ export async function loadDemandesList(
       .order(orderBy, { ascending: orderDir === 'asc' })
       .range(offset, offset + DEMANDES_PAGE_SIZE - 1);
     if (statusRaw) q = q.eq('status', statusRaw);
-    const [page, pending, approved, rejected, cancelled] = await Promise.all([
-      q,
-      countFor('pending', withAssignment),
-      countFor('approved', withAssignment),
-      countFor('rejected', withAssignment),
-      countFor('cancelled', withAssignment),
-    ]);
+    const [page, pending, approved, rejected, cancelled, acknowledged] =
+      await Promise.all([
+        q,
+        countFor('pending', withAssignment),
+        countFor('approved', withAssignment),
+        countFor('rejected', withAssignment),
+        countFor('cancelled', withAssignment),
+        countFor('acknowledged', withAssignment),
+      ]);
     return {
       page,
       pending,
       approved,
       rejected,
       cancelled,
+      acknowledged,
       error: page.error as unknown,
     };
   });
@@ -243,6 +247,7 @@ export async function loadDemandesList(
     approved: listed.approved.count ?? 0,
     rejected: listed.rejected.count ?? 0,
     cancelled: listed.cancelled.count ?? 0,
+    acknowledged: listed.acknowledged.count ?? 0,
   };
 
   return {
@@ -252,7 +257,7 @@ export async function loadDemandesList(
     tournaments,
     statusCounts: {
       ...c,
-      total: c.pending + c.approved + c.rejected + c.cancelled,
+      total: c.pending + c.approved + c.rejected + c.cancelled + c.acknowledged,
     },
     initialError: null,
     assignmentAvailable: listed.assignmentAvailable,

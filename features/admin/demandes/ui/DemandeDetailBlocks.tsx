@@ -25,7 +25,13 @@ type DemandeType =
   | 'scrim'
   | 'other';
 
-export type DemandeStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+/** `acknowledged` = « Pris en compte » (scrim géré entre les équipes). */
+export type DemandeStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled'
+  | 'acknowledged';
 
 export type Demande = {
   id: string;
@@ -125,6 +131,8 @@ export function statusLabel(status: DemandeStatus, t: Dict) {
       return t.statusRejected;
     case 'cancelled':
       return t.statusCancelled;
+    case 'acknowledged':
+      return t.statusAcknowledged;
     default:
       return status;
   }
@@ -138,6 +146,10 @@ export function statusChipTone(status: DemandeStatus): ChipTone {
       return 'ok';
     case 'rejected':
       return 'err';
+    // Traité, mais hors du circuit Discord : un ton à part, distinct d'une
+    // acceptation (aucun scrim n'a été créé).
+    case 'acknowledged':
+      return 'brand';
     default:
       return 'neutral';
   }
