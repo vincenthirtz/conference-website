@@ -1,6 +1,6 @@
 {
-  "apiCommit": "0ed9cfd852d20d062f8b6f664b2b26f500f03881",
-  "syncedAt": "2026-11-05T16:17:39.829Z",
+  "apiCommit": "53bd8b41fe9ae48d6ebaaa93105a54e5d00a0b00",
+  "syncedAt": "2026-11-06T06:43:34.149Z",
   "files": [
     "components/admin/users/manageFormat.ts",
     "config/circuitPartnerOffer.ts",
@@ -176,6 +176,7 @@
     "utils/db/d1/write.ts",
     "utils/db/errors.ts",
     "utils/db/rpc.ts",
+    "utils/demandes/teamNotifications.ts",
     "utils/discord.ts",
     "utils/discord/channels.ts",
     "utils/discord/discordConfigFields.ts",

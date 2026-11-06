@@ -43,7 +43,9 @@ export type PlayerNotificationsPayload = {
 
 /**
  * Une notification adressée à l'équipe (GET /api/player/notifications/team).
- * `text` : le texte rangé avec la notification, en français.
+ * `text` : le texte rangé avec la notification, en français — le REPLI de
+ * l'écran, qui compose sinon sa phrase dans la langue de la joueuse depuis
+ * `kind` et `opponentTeamName`.
  */
 export type TeamNotification = {
   id: string;
@@ -55,6 +57,10 @@ export type TeamNotification = {
   read: boolean;
   fromTeamName: string | null;
   targetTeamName: string | null;
+  /** L'équipe en face de celle qui reçoit la notification ; `null` = inconnue. */
+  opponentTeamName: string | null;
+  /** Créneau du scrim porté par la notification (ISO), ou `null`. */
+  scrimDate: string | null;
 };
 
 /** GET /api/player/notifications/team — les notifications de l'équipe. */

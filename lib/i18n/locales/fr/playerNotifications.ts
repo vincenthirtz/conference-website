@@ -67,6 +67,14 @@ export default ns('playerNotifications', {
     scrim_acknowledged: 'Demande de scrim prise en compte',
   },
   teamKindFallback: 'Notification de l’équipe',
+  // Phrase composée à l'affichage ({opponent} = l'équipe adverse). Repli : le
+  // texte rangé avec la notification.
+  teamText: {
+    scrim_accepted: 'Scrim accepté contre {opponent}.',
+    scrim_accepted_dated: 'Scrim accepté contre {opponent}, prévu le {date}.',
+    scrim_acknowledged:
+      'La demande de scrim de ton équipe contre {opponent} a été prise en compte : l’organisation se fait directement entre les équipes.',
+  },
   prefsHeading: 'Préférences de notifications',
   prefsFootnote:
     'Ces réglages s’appliquent aux notifications push du navigateur. Active d’abord les notifications ci-dessus pour les recevoir.',

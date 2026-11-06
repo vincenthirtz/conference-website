@@ -67,6 +67,13 @@ export default {
     scrim_acknowledged: 'Scrim request acknowledged',
   },
   teamKindFallback: 'Team notification',
+  teamText: {
+    scrim_accepted: 'Scrim accepted against {opponent}.',
+    scrim_accepted_dated:
+      'Scrim accepted against {opponent}, scheduled for {date}.',
+    scrim_acknowledged:
+      'Your team’s scrim request against {opponent} has been acknowledged: the teams are organising it directly between themselves.',
+  },
   prefsHeading: 'Notification preferences',
   prefsFootnote:
     'These settings apply to browser push notifications. Enable notifications above first to receive them.',

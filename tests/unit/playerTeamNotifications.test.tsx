@@ -69,7 +69,10 @@ vi.mock('@/hooks/useAuthSession', () => ({
 
 import { PlayerAreaProvider } from '@/components/player/PlayerAreaContext';
 import { ActiveTeamProvider } from '@/components/player/ActiveTeamContext';
-import TeamNotificationsList from '@/features/player/notifications/ui/TeamNotificationsList';
+import TeamNotificationsList, {
+  teamNotificationText,
+} from '@/features/player/notifications/ui/TeamNotificationsList';
+import enPlayerNotifications from '@/lib/i18n/locales/en/playerNotifications';
 import { useTeamNotifications } from '@/features/player/notifications/hooks/useTeamNotifications';
 import type {
   TeamNotification,
@@ -94,6 +97,8 @@ const ACK: TeamNotification = {
   read: false,
   fromTeamName: 'Les Demandeuses',
   targetTeamName: 'Les Invitées',
+  opponentTeamName: 'Les Invitées',
+  scrimDate: null,
 };
 const ACC: TeamNotification = {
   id: 'n-acc',
@@ -103,6 +108,8 @@ const ACC: TeamNotification = {
   read: true,
   fromTeamName: 'Les Demandeuses',
   targetTeamName: 'Les Invitées',
+  opponentTeamName: 'Les Demandeuses',
+  scrimDate: null,
 };
 
 const payload = (
@@ -148,7 +155,10 @@ describe('TeamNotificationsList', () => {
     const cards = screen.getAllByTestId('team-notification');
     expect(cards).toHaveLength(2);
     expect(cards[0].textContent).toContain(t.teamKindLabels.scrim_acknowledged);
-    expect(cards[0].textContent).toContain(ACK.text);
+    // Phrase composée dans la langue de l'écran (ici FR), pas le texte rangé.
+    expect(cards[0].textContent).toContain(
+      'La demande de scrim de ton équipe contre Les Invitées a été prise en compte : l’organisation se fait directement entre les équipes.'
+    );
     expect(cards[0].textContent).toContain(t.teamNew);
     expect(cards[0].querySelector('time')?.getAttribute('dateTime')).toBe(
       ACK.createdAt
@@ -157,7 +167,7 @@ describe('TeamNotificationsList', () => {
     expect(cards[1].textContent).not.toContain(t.teamNew);
   });
 
-  it('type inconnu : titre générique', () => {
+  it('type inconnu : titre générique, texte rangé', () => {
     render(
       <TeamNotificationsList
         notifications={[{ ...ACC, kind: 'future_kind' }]}
@@ -165,6 +175,17 @@ describe('TeamNotificationsList', () => {
       />
     );
     expect(screen.getByText(t.teamKindFallback)).toBeTruthy();
+    expect(screen.getByText(ACC.text)).toBeTruthy();
+  });
+
+  it('équipe adverse inconnue (ancienne ligne) : le texte rangé', () => {
+    render(
+      <TeamNotificationsList
+        notifications={[{ ...ACK, opponentTeamName: null }]}
+        fresh={new Set()}
+      />
+    );
+    expect(screen.getByText(ACK.text)).toBeTruthy();
   });
 
   it('vide : le dit', () => {
@@ -177,6 +198,63 @@ describe('TeamNotificationsList', () => {
       <TeamNotificationsList notifications={[]} fresh={new Set()} error />
     );
     expect(screen.getByRole('alert').textContent).toBe(t.teamLoadError);
+  });
+});
+
+describe('teamNotificationText — dans la langue de la joueuse', () => {
+  const en = enPlayerNotifications as unknown as typeof t;
+
+  it('FR : pris en compte, accepté, accepté avec date', () => {
+    expect(teamNotificationText(ACK, t, 'fr-FR')).toBe(
+      'La demande de scrim de ton équipe contre Les Invitées a été prise en compte : l’organisation se fait directement entre les équipes.'
+    );
+    expect(teamNotificationText(ACC, t, 'fr-FR')).toBe(
+      'Scrim accepté contre Les Demandeuses.'
+    );
+    expect(
+      teamNotificationText(
+        { ...ACC, scrimDate: '2026-11-20T19:00:00.000Z' },
+        t,
+        'fr-FR'
+      )
+    ).toBe(
+      'Scrim accepté contre Les Demandeuses, prévu le vendredi 20 novembre.'
+    );
+  });
+
+  it('EN : the same notifications, in English', () => {
+    expect(teamNotificationText(ACK, en, 'en-GB')).toBe(
+      'Your team’s scrim request against Les Invitées has been acknowledged: the teams are organising it directly between themselves.'
+    );
+    expect(teamNotificationText(ACC, en, 'en-GB')).toBe(
+      'Scrim accepted against Les Demandeuses.'
+    );
+    expect(
+      teamNotificationText(
+        { ...ACC, scrimDate: '2026-11-20T19:00:00.000Z' },
+        en,
+        'en-GB'
+      )
+    ).toBe(
+      'Scrim accepted against Les Demandeuses, scheduled for Friday 20 November.'
+    );
+  });
+
+  it('repli sur le texte rangé : équipe adverse inconnue, type inconnu', () => {
+    for (const dict of [t, en]) {
+      expect(
+        teamNotificationText({ ...ACK, opponentTeamName: null }, dict, 'fr-FR')
+      ).toBe(ACK.text);
+      expect(
+        teamNotificationText({ ...ACC, kind: 'future_kind' }, dict, 'en-GB')
+      ).toBe(ACC.text);
+    }
+  });
+
+  it('date illisible : la phrase sans date', () => {
+    expect(
+      teamNotificationText({ ...ACC, scrimDate: 'mardi soir' }, t, 'fr-FR')
+    ).toBe('Scrim accepté contre Les Demandeuses.');
   });
 });
 

@@ -122,9 +122,14 @@ const TEAM_FEED = {
       read: false,
       fromTeamName: 'Phenix',
       targetTeamName: 'Aurora',
+      opponentTeamName: 'Aurora',
+      scrimDate: null,
     },
   ],
 };
+// Ce que l'écran affiche : la phrase composée dans la langue de la joueuse.
+const TEAM_FEED_SENTENCE =
+  'La demande de scrim de ton équipe contre Aurora a été prise en compte : l’organisation se fait directement entre les équipes.';
 
 function reply(url: string, method: string, body: any): unknown {
   if (url.startsWith('/api/player/notifications/team')) {
@@ -206,7 +211,7 @@ describe('Notifications (Fil)', () => {
   it('soi : les notifications de l’équipe, marquées lues pour elle à l’affichage', async () => {
     render(<NotificationsScreen />);
     await screen.findByRole('heading', { name: 'Notifications de l’équipe' });
-    expect(screen.getByText(TEAM_FEED.notifications[0].text)).toBeTruthy();
+    expect(screen.getByText(TEAM_FEED_SENTENCE)).toBeTruthy();
     expect(screen.getByText('Demande de scrim prise en compte')).toBeTruthy();
     expect(screen.getByText('Nouveau')).toBeTruthy();
     await waitFor(() =>
@@ -233,7 +238,7 @@ describe('Notifications (Fil)', () => {
     expect(screen.queryByRole('switch')).toBe(null);
     // Le fil de l'équipe du SUJET se lit (`?as=`), mais rien n'est marqué lu
     // à sa place.
-    await screen.findByText(TEAM_FEED.notifications[0].text);
+    await screen.findByText(TEAM_FEED_SENTENCE);
     const feed = calls.find((c) =>
       c.url.startsWith('/api/player/notifications/team')
     );
