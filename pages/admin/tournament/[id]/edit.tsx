@@ -33,6 +33,8 @@ import {
   type FirstMapRule,
 } from '@/utils/matches/firstMapRule';
 import FirstMapRuleSelect from '@/components/admin/tournaments/FirstMapRuleSelect';
+import TournamentRulesToggle from '@/features/admin/tournaments/ui/TournamentRulesToggle';
+import TournamentRulesSection from '@/features/admin/tournaments/ui/TournamentRulesSection';
 import nsAdminTournamentEdit from '@/lib/i18n/locales/admin-fr/adminTournamentEdit';
 import nsAdminRegistrationFields from '@/lib/i18n/locales/admin-fr/adminRegistrationFields';
 import nsAdminFiche from '@/lib/i18n/locales/admin-fr/adminFiche';
@@ -126,6 +128,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
     schedule_rules: string;
     format_details: string;
     first_map_rule: FirstMapRule;
+    rules_acceptance_required: boolean;
   }>({
     name: '',
     slug: '',
@@ -154,6 +157,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
     schedule_rules: '',
     format_details: '',
     first_map_rule: DEFAULT_FIRST_MAP_RULE,
+    rules_acceptance_required: false,
   });
 
   function updateField<K extends keyof typeof form>(
@@ -219,6 +223,11 @@ function AdminTournamentEditPage(_props: StaffProps) {
         schedule_rules: tour.schedule_rules || '',
         format_details: tour.format_details || '',
         first_map_rule: toFirstMapRule(tour.first_map_rule),
+        // Colonne ajoutée par conference-api (copie `types/admin.ts` pas
+        // encore synchronisée) : absente = éteint.
+        rules_acceptance_required:
+          (tour as { rules_acceptance_required?: boolean })
+            .rules_acceptance_required === true,
       };
       const nextFields = Array.isArray(tour.registration_fields)
         ? tour.registration_fields
@@ -298,6 +307,7 @@ function AdminTournamentEditPage(_props: StaffProps) {
       schedule_rules: form.schedule_rules.trim() || null,
       format_details: form.format_details.trim() || null,
       first_map_rule: form.first_map_rule,
+      rules_acceptance_required: form.rules_acceptance_required,
       registration_fields: registrationFields,
       expected_updated_at: lock.version,
     };
@@ -619,6 +629,9 @@ function AdminTournamentEditPage(_props: StaffProps) {
                       presets={registrationPresets}
                       presetsGameLabel={gameConfig?.label}
                     />
+
+                    {/* Règlement à valider : dépôt autonome des versions. */}
+                    <TournamentRulesSection tournamentId={tournamentId} />
                   </>
                 }
                 aside={
@@ -663,6 +676,13 @@ function AdminTournamentEditPage(_props: StaffProps) {
                         </label>
                       </div>
                     </FicheSection>
+
+                    <TournamentRulesToggle
+                      checked={form.rules_acceptance_required}
+                      onChange={(v) =>
+                        updateField('rules_acceptance_required', v)
+                      }
+                    />
 
                     {/* Playlist « Reviews » : sauvegarde autonome. */}
                     <TournamentReviewsPlaylistSection

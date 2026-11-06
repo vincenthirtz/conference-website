@@ -10,6 +10,7 @@ import type { TournamentTeam } from '@/components/admin/tournament/overview/type
 import TeamRow from '@/components/admin/tournament/overview/TeamRow';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import StatTile from '@/features/admin/_shared/ui/StatTile';
+import { useTournamentRulesOverview } from '../hooks/useTournamentRules';
 import TournamentDashboardCard, { DASH_MUTED } from './TournamentDashboardCard';
 import type { TournamentDashboardDict } from './TournamentDashboardHeader';
 
@@ -18,6 +19,7 @@ type OverviewDict = typeof nsAdminTournamentOverview.fr;
 export default function TournamentDashboardTeams({
   tx,
   tov,
+  tournamentId,
   summary: s,
   pendingTeamsCount,
   loadingTeams,
@@ -29,6 +31,8 @@ export default function TournamentDashboardTeams({
 }: {
   tx: TournamentDashboardDict;
   tov: OverviewDict;
+  /** Pour la pastille « Règlement X/Y » (tournoi au réglage allumé). */
+  tournamentId?: string;
   summary: DashboardData['summary'];
   pendingTeamsCount: number;
   loadingTeams: boolean;
@@ -38,6 +42,14 @@ export default function TournamentDashboardTeams({
   onBulkAdd: () => void;
   onRemove: (tournamentTeamId: string) => void;
 }) {
+  // Règlement à valider : décompte par équipe, lu seulement si le tournoi le
+  // demande (sinon aucune pastille).
+  const rules = useTournamentRulesOverview(tournamentId, !!tournamentId);
+  const rulesNoVersion =
+    rules.required && (rules.versions.data?.versions.length ?? 0) === 0;
+  const rulesByTeam = new Map(
+    (rules.status.data?.teams ?? []).map((x) => [x.teamId, x])
+  );
   return (
     <TournamentDashboardCard title={tx.teamsTitle} badge={`${s.totalTeams}`}>
       <div className="mb-3 flex flex-wrap justify-end gap-2">
@@ -107,6 +119,8 @@ export default function TournamentDashboardTeams({
                 registrationFields={registrationFields}
                 onRemove={onRemove}
                 tx={tov}
+                rules={rules.required ? rulesByTeam.get(tt.team_id) : null}
+                rulesNoVersion={rulesNoVersion}
               />
             ))}
         </div>

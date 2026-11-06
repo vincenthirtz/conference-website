@@ -33,6 +33,8 @@ import {
   type Demande,
 } from '@/features/admin/demandes/listModel';
 import { useScrimAcknowledge } from '@/features/admin/demandes/ui/ScrimAcknowledge';
+import { rulesBlockMessage } from '@/features/admin/tournaments/rulesGate';
+import nsAdminTournamentRules from '@/lib/i18n/locales/admin-fr/adminTournamentRules';
 import {
   DEMANDES_PAGE_SIZE,
   type DemandesListProps,
@@ -96,6 +98,7 @@ function AdminDemandesPage({
   assignmentAvailable,
 }: Props) {
   const t = useAdminT(nsAdminDemandesList);
+  const tRules = useAdminT(nsAdminTournamentRules);
   const { addToast } = useToast();
   const { adminFetch } = useAdminFetch();
   const invalidateDemandes = useInvalidateDemandes();
@@ -201,11 +204,18 @@ function AdminDemandesPage({
     newStatus: 'approved' | 'rejected',
     battleTagOverrides?: Record<string, string>
   ) {
-    return demandesClient.updateStatus({
-      ids,
-      newStatus,
-      battleTagOverrides,
-    });
+    try {
+      return await demandesClient.updateStatus({
+        ids,
+        newStatus,
+        battleTagOverrides,
+      });
+    } catch (err) {
+      // 409 `rules_not_accepted` : un message qui nomme les équipes à qui il
+      // manque des validations du règlement, plutôt que le texte brut.
+      const rulesMsg = rulesBlockMessage(err, tRules);
+      throw rulesMsg ? new Error(rulesMsg) : err;
+    }
   }
 
   async function handleBatchAction(newStatus: 'approved' | 'rejected') {

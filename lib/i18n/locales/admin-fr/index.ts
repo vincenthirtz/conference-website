@@ -33,6 +33,7 @@ import nsAdminRegistrationFields from './adminRegistrationFields';
 import nsAdminTournamentMatches from './adminTournamentMatches';
 import nsAdminTournamentPodium from './adminTournamentPodium';
 import nsAdminTournamentDebriefs from './adminTournamentDebriefs';
+import nsAdminTournamentRules from './adminTournamentRules';
 import nsAdminTournamentMvpVotes from './adminTournamentMvpVotes';
 import nsAdminTournamentStats from './adminTournamentStats';
 import nsAdminTournamentAnalytics from './adminTournamentAnalytics';
@@ -234,6 +235,7 @@ export const frDict = {
   adminTournamentMatches: nsAdminTournamentMatches.fr,
   adminTournamentPodium: nsAdminTournamentPodium.fr,
   adminTournamentDebriefs: nsAdminTournamentDebriefs.fr,
+  adminTournamentRules: nsAdminTournamentRules.fr,
   adminTournamentMvpVotes: nsAdminTournamentMvpVotes.fr,
   adminTournamentStats: nsAdminTournamentStats.fr,
   adminTournamentAnalytics: nsAdminTournamentAnalytics.fr,

@@ -93,6 +93,13 @@ export const tournamentUrls = {
   finalize: (id: string) => `${T}/${enc(id)}/finalize`,
   /** Debriefs de fin de tournoi : lecture (GET) et demande au bot (POST). */
   debriefs: (id: string) => `${T}/${enc(id)}/debriefs`,
+  /** Règlement à valider : versions (GET), dépôt d'une version (POST). */
+  rules: (id: string) => `${T}/${enc(id)}/rules`,
+  /** Validations du règlement, équipe par équipe. */
+  rulesStatus: (id: string) => `${T}/${enc(id)}/rules/status`,
+  /** Le PDF d'une version (route PUBLIQUE, même origine). */
+  rulesFile: (id: string, version: number) =>
+    `/api/tournaments/${enc(id)}/rules/file?version=${enc(String(version))}`,
   debriefRequest: (id: string) => `${T}/${enc(id)}/debrief-request`,
   /** Classements MVP : `mvp-leaderboard`, `mvp-public`… (segment libre). */
   sub: (id: string, segment: string) => `${T}/${enc(id)}/${segment}`,
@@ -164,8 +171,78 @@ export type TournamentDebriefRequestResult = {
   withChannel: number;
 };
 
+/** Une version déposée du règlement (les anciennes sont gardées : preuve). */
+export type TournamentRulesVersion = {
+  id: string;
+  number: number;
+  fileName: string | null;
+  sizeBytes: number | null;
+  /** `true` : « changement important », tout le monde a dû revalider. */
+  requiresRevalidation: boolean;
+  note: string | null;
+  createdAt: string;
+  /** Nom du membre du staff qui a déposé (ou son id), `null` si inconnu. */
+  createdBy: string | null;
+};
+
+/** `GET /api/admin/tournament/[id]/rules`. */
+export type TournamentRulesAdminView = {
+  /** Réglage « Règlement à valider par chaque membre ». */
+  required: boolean;
+  versions: TournamentRulesVersion[];
+};
+
+export type TournamentRulesMember = {
+  /** `null` : membre sans compte — ne peut pas valider, compte manquant. */
+  userId: string | null;
+  name: string;
+  role: string | null;
+  accepted: boolean;
+  acceptedAt: string | null;
+};
+
+export type TournamentRulesTeamStatus = {
+  teamId: string;
+  name: string;
+  complete: boolean;
+  validated: number;
+  total: number;
+  members: TournamentRulesMember[];
+};
+
+/** `GET /api/admin/tournament/[id]/rules/status`. */
+export type TournamentRulesStatusView = { teams: TournamentRulesTeamStatus[] };
+
+/** Corps du dépôt d'une version (PDF en data URL, comme `/api/admin/upload`). */
+export type TournamentRulesUploadBody = {
+  /** `data:application/pdf;base64,…` */
+  data: string;
+  mimeType: 'application/pdf';
+  filename: string;
+  requiresRevalidation: boolean;
+  note: string | null;
+};
+
 export const tournamentsClient = {
   pool: (id: string) => adminRequest<AdminPoolView>(tournamentUrls.pool(id)),
+  rules: (id: string) =>
+    adminRequest<TournamentRulesAdminView>(tournamentUrls.rules(id)),
+  rulesStatus: (id: string) =>
+    adminRequest<TournamentRulesStatusView>(tournamentUrls.rulesStatus(id)),
+  /** La clé d'idempotence tient le temps d'UN dépôt (nouvel essai = rejeu). */
+  uploadRules: (
+    id: string,
+    body: TournamentRulesUploadBody,
+    idempotencyKey: string
+  ) =>
+    adminRequest<
+      { version?: TournamentRulesVersion } & Partial<TournamentRulesVersion>
+    >(tournamentUrls.rules(id), {
+      method: 'POST',
+      json: body,
+      idempotent: true,
+      headers: { 'Idempotency-Key': idempotencyKey },
+    }),
   templates: () =>
     adminRequest<{ templates?: TournamentTemplate[] }>(
       tournamentsUrls.templates

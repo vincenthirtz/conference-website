@@ -4,6 +4,8 @@ import RegistrationAnswers, {
   hasRenderableAnswers,
 } from '@/components/admin/RegistrationAnswers';
 import type { RegistrationField } from '@/utils/registrationFields';
+import type { TournamentRulesTeamStatus } from '@/features/admin/tournaments/client';
+import { TournamentRulesChip } from '@/features/admin/tournaments/ui/TournamentRulesLists';
 import type { Dict, TournamentTeam } from './types';
 
 type TeamRowProps = {
@@ -11,6 +13,12 @@ type TeamRowProps = {
   registrationFields: RegistrationField[];
   onRemove: (tournamentTeamId: string) => void;
   tx: Dict;
+  /**
+   * Règlement à valider (tournoi au réglage allumé) : le décompte de
+   * l'équipe, ou `rulesNoVersion` quand aucune version n'est déposée.
+   */
+  rules?: TournamentRulesTeamStatus | null;
+  rulesNoVersion?: boolean;
 };
 
 /**
@@ -18,7 +26,14 @@ type TeamRowProps = {
  * Memoized so unrelated page re-renders (e.g. typing in a modal) don't
  * reconcile every team row.
  */
-function TeamRow({ tt, registrationFields, onRemove, tx }: TeamRowProps) {
+function TeamRow({
+  tt,
+  registrationFields,
+  onRemove,
+  tx,
+  rules,
+  rulesNoVersion = false,
+}: TeamRowProps) {
   const showAnswers =
     registrationFields.length > 0 &&
     hasRenderableAnswers(tt.field_values, registrationFields);
@@ -44,6 +59,9 @@ function TeamRow({ tt, registrationFields, onRemove, tx }: TeamRowProps) {
           <span className="truncate text-sm font-medium">
             {tt.team?.name || tx.unknownTeam}
           </span>
+          {(rules || rulesNoVersion) && (
+            <TournamentRulesChip team={rules} noVersion={rulesNoVersion} />
+          )}
         </div>
         <button
           onClick={() => onRemove(tt.id)}

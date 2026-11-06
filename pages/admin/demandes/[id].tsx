@@ -21,6 +21,8 @@ import {
   useDemandeTournamentFields,
   useInvalidateDemandes,
 } from '@/features/admin/demandes/hooks/useDemandesQueries';
+import { useRegistrationApproval } from '@/features/admin/demandes/hooks/useRegistrationRulesGate';
+import * as RulesGate from '@/features/admin/demandes/ui/RegistrationRulesGate';
 import { useAdminT, format } from '@/lib/i18n/useAdminT';
 import type { RegistrationField } from '@/utils/registrationFields';
 import nsAdminDemandeDetail from '@/lib/i18n/locales/admin-fr/adminDemandeDetail';
@@ -92,6 +94,7 @@ function AdminDemandeDetailPage() {
   const [forwardOpen, setForwardOpen] = useState(false);
   const [forwardTargetId, setForwardTargetId] = useState('');
   const [forwarding, setForwarding] = useState(false);
+  const rules = useRegistrationApproval(demande); // règlement à valider
 
   // Équipes actives, en cache partagé avec les modales de scrim ; chargées à
   // la première ouverture du panneau.
@@ -157,7 +160,7 @@ function AdminDemandeDetailPage() {
       );
       await fetchDemande();
     } catch (err) {
-      setErrorMsg((err as Error)?.message ?? t.error);
+      setErrorMsg(rules.errorText(err) ?? (err as Error)?.message ?? t.error);
     } finally {
       setProcessing(false);
     }
@@ -350,6 +353,7 @@ function AdminDemandeDetailPage() {
                   tournamentFields={tournamentFields}
                 />
               )}
+              <RulesGate.Panel demande={demande} />
 
               {demande.type === 'captain_request' && (
                 <CaptainRequestDetails payload={payload} />
@@ -376,7 +380,8 @@ function AdminDemandeDetailPage() {
                     <AdminButton
                       variant="primary"
                       onClick={() => updateStatus('approved')}
-                      disabled={processing}
+                      disabled={processing || !!rules.reason}
+                      aria-describedby={rules.describedBy}
                     >
                       {t.approve}
                     </AdminButton>
@@ -404,6 +409,7 @@ function AdminDemandeDetailPage() {
                         }}
                       />
                     )}
+                    <RulesGate.Reason reason={rules.reason} />
                   </div>
                 ) : (
                   <div className="mt-4 text-sm text-[var(--t3,#a39ba6)]">

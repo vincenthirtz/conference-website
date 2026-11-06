@@ -32,6 +32,10 @@ import {
   type Demande,
 } from '@/features/admin/demandes/listModel';
 import { AcknowledgeScrimButton } from '@/features/admin/demandes/ui/ScrimAcknowledge';
+import {
+  RegistrationRulesChip,
+  RulesGatedApproveButton,
+} from '@/features/admin/demandes/ui/RegistrationRulesGate';
 
 const CHECKBOX =
   'h-4 w-4 shrink-0 rounded-[3px] border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] accent-[var(--or,#b467d1)]';
@@ -238,6 +242,13 @@ function DemandesListRow({
                 <span>•</span>
               </>
             )}
+            {/* Règlement à valider : « Règlement X/Y » de l'équipe. */}
+            {d.type === 'team_registration' && d.tournament_id && (
+              <RegistrationRulesChip
+                tournamentId={d.tournament_id}
+                teamId={d.team_id}
+              />
+            )}
             {/* En attente : l'ancienneté plutôt qu'une date à recompter de
                 tête ; la date exacte reste dans l'info-bulle. */}
             {d.status === 'pending' ? (
@@ -329,15 +340,29 @@ function DemandesListRow({
               disabled={disabled}
             />
           )}
-          <AdminButton
-            variant="secondary"
-            size="xs"
-            onClick={() => actions.onApprove(d.id)}
-            disabled={disabled}
-            title={t.approveTitle}
-          >
-            <Icon d={ICON_CHECK} />
-          </AdminButton>
+          {/* Inscription : bloquée tant qu'un membre n'a pas validé le
+              règlement (tournoi au réglage allumé). */}
+          {d.type === 'team_registration' && d.tournament_id ? (
+            <RulesGatedApproveButton
+              tournamentId={d.tournament_id}
+              teamId={d.team_id}
+              disabled={disabled}
+              onApprove={() => actions.onApprove(d.id)}
+              title={t.approveTitle}
+            >
+              <Icon d={ICON_CHECK} />
+            </RulesGatedApproveButton>
+          ) : (
+            <AdminButton
+              variant="secondary"
+              size="xs"
+              onClick={() => actions.onApprove(d.id)}
+              disabled={disabled}
+              title={t.approveTitle}
+            >
+              <Icon d={ICON_CHECK} />
+            </AdminButton>
+          )}
           <AdminButton
             variant="danger"
             size="xs"

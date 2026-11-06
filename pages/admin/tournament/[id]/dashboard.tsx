@@ -43,6 +43,8 @@ import {
 } from '@/utils/dashboard/buildTournamentDashboard';
 import nsAdminTournamentDashboard from '@/lib/i18n/locales/admin-fr/adminTournamentDashboard';
 import nsAdminTournamentOverview from '@/lib/i18n/locales/admin-fr/adminTournamentOverview';
+import nsAdminTournamentRules from '@/lib/i18n/locales/admin-fr/adminTournamentRules';
+import { rulesBlockMessage } from '@/features/admin/tournaments/rulesGate';
 import TournamentDashboardHeader, {
   getTournamentStatusLabels,
   jDayLabel,
@@ -133,6 +135,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
   // Dict overview pour les sections restées dans le dashboard (statut cliquable,
   // gestion d'équipes, création de phase + leurs modales/composants).
   const tov = useAdminT(nsAdminTournamentOverview);
+  const tRules = useAdminT(nsAdminTournamentRules);
   const STATUS_LABEL = getTournamentStatusLabels(tx);
   const QUICK_LINKS = getQuickLinks(tx);
   const STAGE_TYPE_OPTIONS = getStageTypeOptions(tov);
@@ -339,7 +342,10 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
         });
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));
-          throw new Error(json.error || tov.errorAddTeam);
+          // 409 `rules_not_accepted` : les validations du règlement manquent.
+          throw new Error(
+            rulesBlockMessage(json, tRules) ?? (json.error || tov.errorAddTeam)
+          );
         }
         addToast(tov.toastTeamAdded, 'success');
         fetchTournamentTeams();
@@ -349,7 +355,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
         return false;
       }
     },
-    [tournamentId, addTeamMutate, tov, addToast, fetchTournamentTeams]
+    [tournamentId, addTeamMutate, tov, tRules, addToast, fetchTournamentTeams]
   );
 
   const handleBulkAddSubmit = useCallback(
@@ -360,18 +366,25 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
       if (teamIds.length === 0 || !tournamentId) return;
       setActionError(null);
       let failCount = 0;
+      let rulesMsg: string | null = null;
       for (let i = 0; i < teamIds.length; i++) {
         try {
           const res = await addTeamMutate(tournamentUrls.teams(tournamentId), {
             method: 'POST',
             body: JSON.stringify({ team_id: teamIds[i] }),
           });
-          if (!res.ok) failCount++;
+          if (!res.ok) {
+            failCount++;
+            const json = await res.json().catch(() => null);
+            rulesMsg ??= rulesBlockMessage(json, tRules);
+          }
         } catch {
           failCount++;
         }
         onProgress(i + 1, teamIds.length);
       }
+      // Refus pour le règlement : dit lesquelles, en plus du décompte.
+      if (rulesMsg) setActionError(rulesMsg);
       if (failCount === 0) {
         addToast(
           format(tov.toastBulkTeamsAdded, { count: teamIds.length }),
@@ -389,7 +402,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
       }
       fetchTournamentTeams();
     },
-    [tournamentId, addTeamMutate, tov, addToast, fetchTournamentTeams]
+    [tournamentId, addTeamMutate, tov, tRules, addToast, fetchTournamentTeams]
   );
 
   const handleRemoveTeam = useCallback((tournamentTeamId: string) => {
@@ -601,6 +614,7 @@ function MegaDashboardPage({ staff, initialData, initialError }: Props) {
                   <TournamentDashboardTeams
                     tx={tx}
                     tov={tov}
+                    tournamentId={tournamentId}
                     summary={s}
                     pendingTeamsCount={sig.pendingTeamsCount}
                     loadingTeams={loadingTeams}
