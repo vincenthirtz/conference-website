@@ -465,6 +465,25 @@ export const PERSONAL_DATA_TABLES: readonly PersonalDataTable[] = [
     },
   },
   {
+    table: 'tournament_rules_acceptances',
+    columns: ['user_id'],
+    // La FK vers auth_user est en cascade ; la suppression explicite ne dépend
+    // pas de l'ordre dans lequel le compte disparaît.
+    policy: { kind: 'delete' },
+    why: 'Ses validations du règlement des tournois (version, équipe, rôle, date) ne servent qu’à l’inscription de son équipe : sans son compte, elle n’en est plus membre. Elles sont supprimées.',
+    export: {
+      columns: [
+        'id',
+        'tenant_id',
+        'tournament_id',
+        'team_id',
+        'rules_version_id',
+        'member_role',
+        'accepted_at',
+      ],
+    },
+  },
+  {
     table: 'free_players',
     columns: ['auth_user_id'],
     // La FK est ON DELETE SET NULL : sans suppression explicite, l'annonce de

@@ -10,6 +10,11 @@
 //   - `tournament_open` (type `captain_message`) — relance des capitaines
 //     (features/admin/tournaments/service/teams.ts) : déjà lue, comme tout
 //     message, par la messagerie des capitaines.
+//   - `rules_validation_requested` / `rules_reminder` (type `other`) — le
+//     règlement d'un tournoi à valider (utils/tournaments/rulesAcceptance.ts) :
+//     inscription en cours, nouvelle version importante, relance de la
+//     capitaine. ADRESSÉES : `payload.recipient_user_ids` liste les seuls
+//     membres qui la voient (ceux qui doivent encore valider).
 //
 // Deux règles en découlent :
 //   1. Ce ne sont PAS des demandes. Elles ne comptent jamais « en attente » :
@@ -34,6 +39,8 @@ export const NOTIFICATION_TYPE_PATH = 'payload->>notification_type';
 export const TEAM_NOTIFICATION_TYPES = [
   'scrim_accepted',
   'scrim_acknowledged',
+  'rules_validation_requested',
+  'rules_reminder',
 ] as const;
 
 export type TeamNotificationType = (typeof TEAM_NOTIFICATION_TYPES)[number];
@@ -53,6 +60,19 @@ export function withoutSystemNotifications<Q extends Filterable<Q>>(
   query: Q
 ): Q {
   return query.filter(NOTIFICATION_TYPE_PATH, 'is', null);
+}
+
+/**
+ * La notification s'adresse-t-elle à `userId` ? Sans
+ * `payload.recipient_user_ids` (tableau), elle s'adresse à toute l'équipe ;
+ * avec, aux seuls comptes listés.
+ */
+export function isAddressedTo(payload: unknown, userId: string): boolean {
+  const raw =
+    payload && typeof payload === 'object'
+      ? (payload as Record<string, unknown>).recipient_user_ids
+      : undefined;
+  return Array.isArray(raw) ? raw.includes(userId) : true;
 }
 
 /** Les membres qui ont déjà lu la notification (`payload.read_by`). */

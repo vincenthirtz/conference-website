@@ -9528,6 +9528,145 @@ export type Database = {
           },
         ]
       }
+      tournament_rules_acceptances: {
+        Row: {
+          accepted_at: string
+          id: string
+          member_role: string
+          rules_version_id: string
+          team_id: string
+          tenant_id: string
+          tournament_id: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          member_role: string
+          rules_version_id: string
+          team_id: string
+          tenant_id: string
+          tournament_id: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          member_role?: string
+          rules_version_id?: string
+          team_id?: string
+          tenant_id?: string
+          tournament_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_rules_acceptances_rules_version_id_fkey"
+            columns: ["rules_version_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_rules_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_rules_acceptances_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_rules_acceptances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_rules_acceptances_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_rules_acceptances_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_user"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_rules_versions: {
+        Row: {
+          created_at: string
+          created_by_staff_id: string | null
+          file_key: string
+          file_name: string | null
+          id: string
+          note: string | null
+          page_count: number | null
+          requires_revalidation: boolean
+          sha256: string
+          size_bytes: number | null
+          tenant_id: string
+          tournament_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by_staff_id?: string | null
+          file_key: string
+          file_name?: string | null
+          id?: string
+          note?: string | null
+          page_count?: number | null
+          requires_revalidation?: boolean
+          sha256: string
+          size_bytes?: number | null
+          tenant_id: string
+          tournament_id: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by_staff_id?: string | null
+          file_key?: string
+          file_name?: string | null
+          id?: string
+          note?: string | null
+          page_count?: number | null
+          requires_revalidation?: boolean
+          sha256?: string
+          size_bytes?: number | null
+          tenant_id?: string
+          tournament_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_rules_versions_created_by_staff_id_fkey"
+            columns: ["created_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_rules_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_rules_versions_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament_stages: {
         Row: {
           bracket_format: string | null
@@ -9699,6 +9838,7 @@ export type Database = {
           reviews_playlist_id: string | null
           roster_locked_at: string | null
           roster_unlocked_until: string | null
+          rules_acceptance_required: boolean
           rules_url: string | null
           schedule_details: string | null
           schedule_rules: string | null
@@ -9740,6 +9880,7 @@ export type Database = {
           reviews_playlist_id?: string | null
           roster_locked_at?: string | null
           roster_unlocked_until?: string | null
+          rules_acceptance_required?: boolean
           rules_url?: string | null
           schedule_details?: string | null
           schedule_rules?: string | null
@@ -9781,6 +9922,7 @@ export type Database = {
           reviews_playlist_id?: string | null
           roster_locked_at?: string | null
           roster_unlocked_until?: string | null
+          rules_acceptance_required?: boolean
           rules_url?: string | null
           schedule_details?: string | null
           schedule_rules?: string | null

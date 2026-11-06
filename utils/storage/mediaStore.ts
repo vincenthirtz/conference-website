@@ -18,6 +18,8 @@
 //     (`utils/uploads/storageCache.ts`) ;
 //   - suppression : un DELETE par clé (un objet absent est un succès, comme
 //     sur Supabase) ;
+//   - lecture serveur (`downloadMedia`) : un GET signé, pour servir un fichier
+//     depuis la même origine que le site (règlement PDF des tournois) ;
 //   - preuves de match (bucket PRIVÉ) : lien GET présigné, à durée bornée.
 //   Configuration INCOMPLÈTE (clés, compte, ou adresse publique des médias) :
 //   l'appel rend une erreur, journalisée une fois — jamais un repli silencieux
@@ -210,6 +212,41 @@ export async function uploadMedia(
   });
 }
 
+/**
+ * Lit un fichier du bucket PUBLIC, côté serveur : pour le servir depuis la
+ * même origine que le site (règlement PDF lu par la liseuse, sans CORS vers
+ * l'adresse publique des médias). Objet absent : `error.message` commence par
+ * `not_found`.
+ */
+export async function downloadMedia(
+  path: string
+): Promise<StorageResult<{ body: Uint8Array; contentType: string | null }>> {
+  const backend = resolveBackend();
+  if (backend.kind === 'invalid') return failure(backend.message);
+  if (backend.kind === 'supabase') {
+    const { data, error } = await supabaseAdmin.storage
+      .from(MEDIA_SUPABASE_BUCKET)
+      .download(path);
+    if (error || !data) {
+      const message = error?.message ?? '';
+      const status = (error as { statusCode?: unknown } | null)?.statusCode;
+      return failure(
+        !error || String(status) === '404' || /not.?found/i.test(message)
+          ? `not_found : ${message}`
+          : message
+      );
+    }
+    return {
+      data: {
+        body: new Uint8Array(await data.arrayBuffer()),
+        contentType: data.type || null,
+      },
+      error: null,
+    };
+  }
+  return r2Get(backend.config, backend.config.mediaBucket, path);
+}
+
 /** Supprime des fichiers du bucket PUBLIC. Un fichier absent n'est pas une erreur. */
 export async function removeMedia(
   paths: string[]
@@ -382,6 +419,36 @@ async function r2Put(
     return { data: { path: key }, error: null };
   } catch (err) {
     return failure(`R2 PUT ${bucket}/${key} : ${errorText(err)}`);
+  }
+}
+
+async function r2Get(
+  config: R2Config,
+  bucket: string,
+  path: string
+): Promise<StorageResult<{ body: Uint8Array; contentType: string | null }>> {
+  const key = objectKey(path);
+  if (!key) return failure(`R2 GET : chemin invalide (« ${path} »).`);
+  try {
+    const res = await r2Client(config).fetch(objectUrl(config, bucket, key), {
+      method: 'GET',
+      signal: AbortSignal.timeout(R2_TIMEOUT_MS),
+    });
+    if (res.status === 404) {
+      return failure(`not_found : R2 GET ${bucket}/${key}`);
+    }
+    if (!res.ok) {
+      return failure(await describeFailure('GET', `${bucket}/${key}`, res));
+    }
+    return {
+      data: {
+        body: new Uint8Array(await res.arrayBuffer()),
+        contentType: res.headers.get('content-type'),
+      },
+      error: null,
+    };
+  } catch (err) {
+    return failure(`R2 GET ${bucket}/${key} : ${errorText(err)}`);
   }
 }
 

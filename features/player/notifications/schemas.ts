@@ -49,7 +49,11 @@ export type PlayerNotificationsPayload = {
  */
 export type TeamNotification = {
   id: string;
-  /** `scrim_accepted` | `scrim_acknowledged` (d'autres pourront s'ajouter). */
+  /**
+   * `scrim_accepted` | `scrim_acknowledged` | `rules_validation_requested`
+   * | `rules_reminder` (règlement d'un tournoi à valider : adressées aux seuls
+   * membres qui doivent encore valider). D'autres pourront s'ajouter.
+   */
   kind: string;
   text: string;
   createdAt: string;
@@ -61,6 +65,12 @@ export type TeamNotification = {
   opponentTeamName: string | null;
   /** Créneau du scrim porté par la notification (ISO), ou `null`. */
   scrimDate: string | null;
+  /**
+   * Tournoi porté par la notification (règlement à valider : lien vers la
+   * liseuse, nom dans la phrase), ou `null`.
+   */
+  tournamentId: string | null;
+  tournamentName: string | null;
 };
 
 /** GET /api/player/notifications/team — les notifications de l'équipe. */

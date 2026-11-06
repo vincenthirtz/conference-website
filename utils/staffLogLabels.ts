@@ -35,6 +35,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   finalize_tournament: 'Clôture tournoi (podium gelé)',
   unfinalize_tournament: 'Déverrouillage tournoi',
   request_tournament_debrief: 'Demande de debrief aux équipes',
+  upload_tournament_rules: 'Dépôt du règlement du tournoi',
   update_public_page: 'Modification page publique',
   update_tournament_template: 'Modification template de tournoi',
   apply_template: 'Application template',

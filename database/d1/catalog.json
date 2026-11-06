@@ -20200,6 +20200,283 @@
         }
       ]
     },
+    "tournament_rules_acceptances": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": "uuid"
+        },
+        {
+          "name": "tenant_id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "tournament_id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "team_id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "rules_version_id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "member_role",
+          "type": "text",
+          "pg": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "accepted_at",
+          "type": "timestamptz",
+          "pg": "timestamp with time zone",
+          "nullable": false,
+          "default": "now"
+        }
+      ],
+      "primaryKey": [
+        "id"
+      ],
+      "uniques": [
+        {
+          "name": "tournament_rules_acceptances_unique_key",
+          "columns": [
+            "tournament_id",
+            "team_id",
+            "user_id",
+            "rules_version_id"
+          ],
+          "expressions": null,
+          "where": null
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "tournament_rules_acceptances_rules_version_id_fkey",
+          "columns": [
+            "rules_version_id"
+          ],
+          "table": "tournament_rules_versions",
+          "references": [
+            "id"
+          ],
+          "onDelete": "no action"
+        },
+        {
+          "name": "tournament_rules_acceptances_team_id_fkey",
+          "columns": [
+            "team_id"
+          ],
+          "table": "teams",
+          "references": [
+            "id"
+          ],
+          "onDelete": "cascade"
+        },
+        {
+          "name": "tournament_rules_acceptances_tenant_id_fkey",
+          "columns": [
+            "tenant_id"
+          ],
+          "table": "tenants",
+          "references": [
+            "id"
+          ],
+          "onDelete": "cascade"
+        },
+        {
+          "name": "tournament_rules_acceptances_tournament_id_fkey",
+          "columns": [
+            "tournament_id"
+          ],
+          "table": "tournaments",
+          "references": [
+            "id"
+          ],
+          "onDelete": "cascade"
+        },
+        {
+          "name": "tournament_rules_acceptances_user_id_fkey",
+          "columns": [
+            "user_id"
+          ],
+          "table": "auth_user",
+          "references": [
+            "id"
+          ],
+          "onDelete": "cascade"
+        }
+      ]
+    },
+    "tournament_rules_versions": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": "uuid"
+        },
+        {
+          "name": "tenant_id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "tournament_id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "version",
+          "type": "integer",
+          "pg": "integer",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "file_key",
+          "type": "text",
+          "pg": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "file_name",
+          "type": "text",
+          "pg": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "size_bytes",
+          "type": "integer",
+          "pg": "integer",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "sha256",
+          "type": "text",
+          "pg": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "page_count",
+          "type": "integer",
+          "pg": "integer",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "requires_revalidation",
+          "type": "boolean",
+          "pg": "boolean",
+          "nullable": false,
+          "default": "1"
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "pg": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "created_by_staff_id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "pg": "timestamp with time zone",
+          "nullable": false,
+          "default": "now"
+        }
+      ],
+      "primaryKey": [
+        "id"
+      ],
+      "uniques": [
+        {
+          "name": "tournament_rules_versions_tournament_version_key",
+          "columns": [
+            "tournament_id",
+            "version"
+          ],
+          "expressions": null,
+          "where": null
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "tournament_rules_versions_created_by_staff_id_fkey",
+          "columns": [
+            "created_by_staff_id"
+          ],
+          "table": "staff",
+          "references": [
+            "id"
+          ],
+          "onDelete": "set null"
+        },
+        {
+          "name": "tournament_rules_versions_tenant_id_fkey",
+          "columns": [
+            "tenant_id"
+          ],
+          "table": "tenants",
+          "references": [
+            "id"
+          ],
+          "onDelete": "cascade"
+        },
+        {
+          "name": "tournament_rules_versions_tournament_id_fkey",
+          "columns": [
+            "tournament_id"
+          ],
+          "table": "tournaments",
+          "references": [
+            "id"
+          ],
+          "onDelete": "cascade"
+        }
+      ]
+    },
     "tournament_stages": {
       "columns": [
         {
@@ -20762,6 +21039,13 @@
           "pg": "text",
           "nullable": false,
           "default": "'imposed'"
+        },
+        {
+          "name": "rules_acceptance_required",
+          "type": "boolean",
+          "pg": "boolean",
+          "nullable": false,
+          "default": "0"
         }
       ],
       "primaryKey": [
