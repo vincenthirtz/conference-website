@@ -398,6 +398,7 @@ export const STAFF_LOG_ACTION_LABELS: Record<StaffLogAction, string> = {
   task_move: 'Déplacement tâche',
   task_assign: 'Assignation tâche',
   task_comment_create: 'Commentaire de tâche ajouté',
+  task_comment_update: 'Commentaire de tâche modifié',
   task_comment_delete: 'Commentaire de tâche supprimé',
   task_label_create: 'Création label Kanban',
   task_label_update: 'Modification label Kanban',

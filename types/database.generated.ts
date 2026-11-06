@@ -7107,6 +7107,7 @@ export type Database = {
           created_by: string | null
           deleted_at: string | null
           description: string | null
+          done_at: string | null
           due_date: string | null
           id: string
           labels: string[]
@@ -7124,6 +7125,7 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           description?: string | null
+          done_at?: string | null
           due_date?: string | null
           id?: string
           labels?: string[]
@@ -7141,6 +7143,7 @@ export type Database = {
           created_by?: string | null
           deleted_at?: string | null
           description?: string | null
+          done_at?: string | null
           due_date?: string | null
           id?: string
           labels?: string[]

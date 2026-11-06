@@ -462,6 +462,7 @@ export type StaffLogAction =
   | 'task_move'
   | 'task_assign'
   | 'task_comment_create'
+  | 'task_comment_update'
   | 'task_comment_delete'
   | 'task_label_create'
   | 'task_label_update'

@@ -15106,6 +15106,13 @@
           "pg": "timestamp with time zone",
           "nullable": false,
           "default": "now"
+        },
+        {
+          "name": "done_at",
+          "type": "timestamptz",
+          "pg": "timestamp with time zone",
+          "nullable": true,
+          "default": null
         }
       ],
       "primaryKey": [
