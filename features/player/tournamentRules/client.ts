@@ -9,7 +9,9 @@
 //   POST /api/player/tournaments/[id]/rules/remind   → { notified }
 //        429 `remind_too_soon` + `retryAt`
 //   GET  /api/tournaments/[id]/rules/file[?version=n] → le PDF, MÊME ORIGINE
-//        (public : un règlement est un document public)
+//        tournoi public : lisible par tous ; tournoi non public (brouillon,
+//        privé) : staff (cookie) ou joueuse authentifiée membre d'une équipe
+//        concernée (Bearer), sinon 404
 //
 // Les formes de réponse vivent ICI, pas dans un `schemas.ts` / `model.ts` :
 // ces noms-là sont ceux des copies synchronisées depuis l'API
@@ -17,7 +19,11 @@
 // par la synchro le jour où l'API publie les siens.
 
 import { ApiHttpError } from '@/utils/http/authedRequest';
-import { playerRequest, type PlayerScope } from '@/utils/player/playerHttp';
+import {
+  playerBytesRequest,
+  playerRequest,
+  type PlayerScope,
+} from '@/utils/player/playerHttp';
 
 const enc = encodeURIComponent;
 
@@ -139,23 +145,25 @@ export const tournamentRulesClient = {
       idempotent: true,
     }),
   /**
-   * Les octets du PDF (version précise : celle qu'on validera). Lecture
-   * publique, même origine : aucune session à porter, aucun CORS.
+   * Les octets du PDF (version précise : celle qu'on validera), même origine.
+   * Porte la session de la joueuse comme tout appel joueuse (Bearer, jeton
+   * renouvelé par la porte d'identité) : c'est elle qui ouvre le règlement
+   * d'un tournoi non public. Sans session, la requête part quand même — un
+   * tournoi public reste lisible — et une 404 reste une erreur de fichier.
    */
   file: async (
     tournamentId: string,
     version: number | null
-  ): Promise<Uint8Array> => {
-    let res: Response;
+  ): Promise<Uint8Array<ArrayBuffer>> => {
     try {
-      res = await fetch(tournamentRulesUrls.file(tournamentId, version), {
-        credentials: 'same-origin',
-      });
-    } catch {
-      throw new RulesFileError(null);
+      return await playerBytesRequest(
+        tournamentRulesUrls.file(tournamentId, version),
+        { sessionOptional: true, skipAuthRedirect: true }
+      );
+    } catch (err) {
+      // HTTP → son statut ; réseau coupé → `null` (« injoignable »).
+      throw new RulesFileError(err instanceof ApiHttpError ? err.status : null);
     }
-    if (!res.ok) throw new RulesFileError(res.status);
-    return new Uint8Array(await res.arrayBuffer());
   },
   /** Tournois publics en cours d'inscription ou en cours. */
   activeTournaments: async (): Promise<PublicTournamentLite[]> => {

@@ -55,6 +55,14 @@ export default ns('playerTournamentRules', {
     "La validation reste bloquée tant que le règlement ne s'affiche pas en entier.",
   endMarker: 'Fin du règlement',
 
+  zoomGroup: 'Zoom du règlement',
+  zoomOut: 'Zoom arrière',
+  zoomIn: 'Zoom avant',
+  zoomFit: 'Ajuster à la largeur',
+  zoomFitShort: 'Ajuster',
+  zoomLevelPrefix: 'Zoom :',
+  zoomLevel: '{percent} %',
+
   scrollHint: "Fais défiler le règlement jusqu'en bas pour pouvoir le valider.",
   reachedEnd: 'Tu as atteint la fin du règlement : tu peux cocher la case.',
   checkboxLabel: "J'ai bien lu le règlement et je m'engage dans ce tournoi",

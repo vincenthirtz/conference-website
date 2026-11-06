@@ -18,7 +18,12 @@
 //     version LUE, puis confirmation datée ;
 //   - PDF en erreur : message + Réessayer, case jamais active ;
 //   - 409 version périmée : nouvelle version chargée, lecture à refaire ;
-//   - déjà validé : le dire, permettre de relire.
+//   - déjà validé : le dire, permettre de relire ;
+//   - le PDF part avec la session (Bearer), et sans session pour un tournoi
+//     public ; 404 → erreur ;
+//   - « Télécharger » enregistre les octets déjà chargés, sans requête ;
+//   - zoom : bornes, annonce, pages nettes près de la vue seulement, et
+//     JAMAIS de déblocage par un changement d'échelle (contre-épreuves).
 
 import {
   afterAll,
@@ -39,10 +44,11 @@ import {
 } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+const auth = vi.hoisted(() => ({ token: 'player-token' as string | null }));
 vi.mock('@/utils/identityBrowser', () => ({
   identityBrowser: {
     getSession: async () => ({
-      data: { session: { access_token: 'player-token' } },
+      data: { session: auth.token ? { access_token: auth.token } : null },
     }),
   },
 }));
@@ -62,7 +68,7 @@ vi.mock('next/router', () => ({
 type FakePage = {
   width: number;
   height: number;
-  renderToBlob: () => Promise<Blob>;
+  renderToBlob: (pixelWidth: number) => Promise<Blob>;
   text: () => Promise<string>;
   release: () => void;
 };
@@ -93,6 +99,9 @@ function deferred(): Deferred {
   return { resolve, promise };
 }
 
+/** Chaque rendu demandé : page (1…n) et largeur en pixels réels. */
+let renders: { page: number; pixelWidth: number }[] = [];
+
 /** Un document de `n` pages ; `hold[k]` retient le rendu de la page k. */
 function fakeDoc(n: number, hold: Record<number, Deferred> = {}) {
   const destroy = vi.fn();
@@ -103,7 +112,8 @@ function fakeDoc(n: number, hold: Record<number, Deferred> = {}) {
       page: async (k: number): Promise<FakePage> => ({
         width: 595,
         height: 842,
-        renderToBlob: async () => {
+        renderToBlob: async (pixelWidth: number) => {
+          renders.push({ page: k, pixelWidth });
           if (hold[k]) await hold[k].promise;
           return new Blob([`page-${k}`], { type: 'image/png' });
         },
@@ -165,6 +175,46 @@ function setEndVisible(visible: boolean) {
   });
 }
 
+/** Pages près de la vue (indices 0…n-1), comme les voit l'observateur des pages. */
+function setPagesNear(indices: number[]) {
+  const pages = screen.getAllByTestId('rules-page');
+  act(() => {
+    for (const o of observers) {
+      if (!o.targets.some((el) => pages.includes(el as HTMLElement))) continue;
+      o.cb(
+        o.targets.map((el) => ({
+          isIntersecting: indices.includes(pages.indexOf(el as HTMLElement)),
+          target: el,
+        })) as unknown as IntersectionObserverEntry[],
+        o as unknown as IntersectionObserver
+      );
+    }
+  });
+}
+
+function rect(top: number, bottom: number): DOMRect {
+  return {
+    top,
+    bottom,
+    height: bottom - top,
+    left: 0,
+    right: 360,
+    width: 360,
+    x: 0,
+    y: top,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
+
+/** happy-dom ne met rien en page : la zone mesure `px` de large. */
+function zoneWidth(px: number) {
+  return vi
+    .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+    .mockImplementation(function (this: HTMLElement) {
+      return this.dataset?.testid === 'rules-reader-zone' ? px : 0;
+    });
+}
+
 // ── réseau simulé ─────────────────────────────────────────────────────────
 
 const V2: RulesVersionView = {
@@ -206,7 +256,13 @@ const pdfBytes = () =>
     headers: { 'Content-Type': 'application/pdf' },
   });
 
-type Call = { url: string; method: string; body: string | null };
+type Call = {
+  url: string;
+  method: string;
+  body: string | null;
+  authorization: string | null;
+  credentials: RequestCredentials | undefined;
+};
 let calls: Call[] = [];
 let rulesQueue: PlayerRulesView[] = [];
 let onAccept: () => Response;
@@ -219,6 +275,8 @@ let blobCounter = 0;
 beforeEach(() => {
   calls = [];
   observers = [];
+  renders = [];
+  auth.token = 'player-token';
   rulesQueue = [PENDING];
   onAccept = () => json({ acceptedAt: '2026-11-06T14:04:00.000Z' });
   onFile = () => pdfBytes();
@@ -236,6 +294,8 @@ beforeEach(() => {
         url,
         method,
         body: typeof init.body === 'string' ? init.body : null,
+        authorization: new Headers(init.headers).get('Authorization'),
+        credentials: init.credentials,
       });
       if (url === `/api/player/tournaments/${TOUR}/rules/accept`)
         return onAccept();
@@ -260,7 +320,11 @@ beforeEach(() => {
     }
   ) as unknown as typeof fetch;
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
 afterAll(() => {
   globalThis.fetch = realFetch;
   globalThis.IntersectionObserver = realIO;
@@ -281,6 +345,10 @@ const checkbox = () =>
   screen.getByRole('checkbox', { name: t.checkboxLabel }) as HTMLInputElement;
 const acceptButton = () =>
   screen.getByRole('button', { name: t.accept }) as HTMLButtonElement;
+const button = (name: string) =>
+  screen.getByRole('button', { name }) as HTMLButtonElement;
+const fileCalls = () =>
+  calls.filter((c) => c.url.startsWith(`/api/tournaments/${TOUR}/rules/file`));
 
 /** Attend que toutes les pages soient rendues (une image par page). */
 async function allPagesRendered(n = 3) {
@@ -582,5 +650,305 @@ describe('liseuse — versions et états', () => {
     expect(screen.getByText(t.noVersionRequired)).toBeTruthy();
     expect(screen.queryByRole('checkbox')).toBeNull();
     expect(openRulesPdf).not.toHaveBeenCalled();
+  });
+});
+
+describe('liseuse — le PDF part avec la session de la joueuse', () => {
+  it('Bearer de la session, même origine, version précise', async () => {
+    renderReader();
+    await allPagesRendered();
+    const file = fileCalls();
+    expect(file).toHaveLength(1);
+    expect(file[0].url).toBe(`/api/tournaments/${TOUR}/rules/file?version=2`);
+    expect(file[0].authorization).toBe('Bearer player-token');
+    expect(file[0].credentials).toBe('same-origin');
+  });
+
+  it('sans session : la requête part quand même, sans Bearer (tournoi public)', async () => {
+    auth.token = null;
+    render(<RulesPdfReader tournamentId={TOUR} versionNumber={2} t={t} />);
+    await allPagesRendered();
+    expect(fileCalls()).toHaveLength(1);
+    expect(fileCalls()[0].authorization).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('404 (tournoi non public, pas concernée) : erreur + Réessayer, case inactive', async () => {
+    onFile = () => json({ error: 'Introuvable', code: 'not_found' }, 404);
+    renderReader();
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain(t.pdfErrorFile);
+    expect(alert.textContent).toContain(t.pdfErrorLocked);
+    expect(screen.getByRole('button', { name: t.retry })).toBeTruthy();
+    expect(checkbox().disabled).toBe(true);
+    expect(openRulesPdf).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('rules-end')).toBeNull();
+  });
+});
+
+describe('liseuse — « Télécharger » enregistre le fichier déjà chargé', () => {
+  it('Blob des octets lus, nom de la version, URL révoquée après usage, aucune requête', async () => {
+    const clicked: { href: string; download: string }[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement
+    ) {
+      clicked.push({ href: this.href, download: this.download });
+    });
+    renderReader();
+    await allPagesRendered();
+    expect(fileCalls()).toHaveLength(1);
+    // Plus de lien vers l'API : il partirait sans la session.
+    expect(document.querySelector('a[href*="/rules/file"]')).toBeNull();
+
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    fireEvent.click(button(t.download));
+
+    expect(clicked).toHaveLength(1);
+    expect(clicked[0].download).toBe('reglement-owwc-2027-v2.pdf');
+    const url = clicked[0].href;
+    // Le lien d'aide ne reste pas dans le DOM ; l'URL vit le temps de partir.
+    expect(document.querySelector(`a[href="${url}"]`)).toBeNull();
+    expect(URL.revokeObjectURL).not.toHaveBeenCalledWith(url);
+    vi.advanceTimersByTime(10_000);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith(url);
+    vi.useRealTimers();
+
+    // C'est le PDF chargé — ses octets, intacts — qui part, sans requête.
+    const pdf = vi
+      .mocked(URL.createObjectURL)
+      .mock.calls.map((c) => c[0])
+      .find(
+        (b): b is Blob => b instanceof Blob && b.type === 'application/pdf'
+      );
+    expect(pdf).toBeTruthy();
+    expect(
+      Array.from(new Uint8Array(await (pdf as Blob).arrayBuffer()))
+    ).toEqual([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31]);
+    expect(fileCalls()).toHaveLength(1);
+  });
+
+  it('inactif tant que le PDF n’est pas chargé', async () => {
+    let release = () => {};
+    onFile = () => pdfBytes();
+    openRulesPdf.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve(fakeDoc(3).doc);
+        })
+    );
+    renderReader();
+    await waitFor(() => expect(openRulesPdf).toHaveBeenCalled());
+    expect(button(t.download).disabled).toBe(true);
+    await act(async () => {
+      release();
+    });
+    await allPagesRendered();
+    expect(button(t.download).disabled).toBe(false);
+  });
+});
+
+describe('liseuse — zoom', () => {
+  it('−, +, Ajuster à la largeur : niveau affiché, annoncé poliment, bornes désactivées', async () => {
+    renderReader();
+    await allPagesRendered();
+    const level = screen.getByTestId('rules-zoom-level');
+    expect(level.getAttribute('aria-live')).toBe('polite');
+    // Par défaut : ajusté à la largeur, rien d'annoncé.
+    expect(level.textContent).toBe('100 %');
+    expect(button(t.zoomOut).disabled).toBe(true);
+    expect(button(t.zoomFit).disabled).toBe(true);
+    expect(button(t.zoomIn).disabled).toBe(false);
+    expect(screen.getByRole('group', { name: t.zoomGroup })).toBeTruthy();
+
+    fireEvent.click(button(t.zoomIn));
+    expect(level.textContent).toBe('Zoom : 125 %');
+    expect(button(t.zoomOut).disabled).toBe(false);
+    expect(button(t.zoomFit).disabled).toBe(false);
+
+    // Au clavier : arrivé à 300 %, « + » se désactive et rend le focus à « − ».
+    button(t.zoomIn).focus();
+    for (let i = 0; i < 5; i++) fireEvent.click(button(t.zoomIn));
+    expect(level.textContent).toBe('Zoom : 300 %');
+    expect(button(t.zoomIn).disabled).toBe(true);
+    expect(document.activeElement).toBe(button(t.zoomOut));
+    fireEvent.click(button(t.zoomIn));
+    expect(level.textContent).toBe('Zoom : 300 %');
+
+    fireEvent.click(button(t.zoomOut));
+    expect(level.textContent).toBe('Zoom : 250 %');
+
+    fireEvent.click(button(t.zoomFit));
+    expect(level.textContent).toBe('Zoom : 100 %');
+    expect(button(t.zoomOut).disabled).toBe(true);
+    expect(button(t.zoomFit).disabled).toBe(true);
+  });
+
+  it('les pages grandissent avec le zoom, relatif à la largeur de la zone', async () => {
+    zoneWidth(360);
+    renderReader();
+    await allPagesRendered();
+    const sheet = screen.getByTestId('rules-sheet');
+    expect(sheet.style.width).toBe('360px');
+    fireEvent.click(button(t.zoomIn));
+    expect(sheet.style.width).toBe('450px');
+    for (let i = 0; i < 5; i++) fireEvent.click(button(t.zoomIn));
+    expect(sheet.style.width).toBe('1080px');
+    expect(screen.getByTestId('rules-reader-zone').dataset.zoom).toBe('300');
+  });
+
+  it('mémoire : seules les pages près de la vue sont rendues net (au plus 3), puis rendues', async () => {
+    zoneWidth(360);
+    openRulesPdf.mockImplementation(async () => fakeDoc(5).doc);
+    renderReader();
+    await allPagesRendered(5);
+    // Rendu de base : chaque page une fois, à la largeur ajustée.
+    expect(renders).toHaveLength(5);
+    expect(new Set(renders.map((r) => r.pixelWidth))).toEqual(new Set([360]));
+    const baseSrc = screen
+      .getAllByRole('img')
+      .map((i) => i.getAttribute('src'));
+
+    // À 100 %, l'image de base suffit : aucun rendu net.
+    setPagesNear([0, 1]);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(renders).toHaveLength(5);
+
+    setPagesNear([]);
+    for (let i = 0; i < 6; i++) fireEvent.click(button(t.zoomIn));
+    setPagesNear([0, 1, 2, 3, 4]);
+    await waitFor(() => expect(renders).toHaveLength(8));
+    const sharp = renders.slice(5);
+    // Les 3 du milieu de la vue, à la largeur affichée (300 % de 360 px).
+    expect(sharp.map((r) => r.page).sort()).toEqual([2, 3, 4]);
+    expect(new Set(sharp.map((r) => r.pixelWidth))).toEqual(new Set([1080]));
+    await waitFor(() =>
+      expect(screen.getAllByRole('img')[2].getAttribute('src')).not.toBe(
+        baseSrc[2]
+      )
+    );
+    const sharpSrc = screen.getAllByRole('img')[2].getAttribute('src');
+    // Pas plus de 3 : les pages 1 et 5 gardent leur image de base.
+    expect(screen.getAllByRole('img')[0].getAttribute('src')).toBe(baseSrc[0]);
+    expect(screen.getAllByRole('img')[4].getAttribute('src')).toBe(baseSrc[4]);
+
+    // La vue s'éloigne : l'image HD est libérée, la page retombe sur la base.
+    setPagesNear([4]);
+    await waitFor(() =>
+      expect(screen.getAllByRole('img')[2].getAttribute('src')).toBe(baseSrc[2])
+    );
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith(sharpSrc);
+    await waitFor(() => expect(renders).toHaveLength(9));
+    expect(renders[8]).toEqual({ page: 5, pixelWidth: 1080 });
+  });
+});
+
+describe('liseuse — le zoom ne débloque JAMAIS la case', () => {
+  it('contre-épreuve : un repère que le zoom fait apparaître ne compte pas, tant qu’il n’est pas sorti puis revenu', async () => {
+    renderReader();
+    await allPagesRendered();
+    fireEvent.click(button(t.zoomIn));
+
+    // Mise en page simulée : après le zoom arrière, le repère est dans la zone
+    // (il n'y était pas : l'observateur ne l'a jamais signalé).
+    vi.spyOn(
+      screen.getByTestId('rules-reader-zone'),
+      'getBoundingClientRect'
+    ).mockReturnValue(rect(0, 600));
+    vi.spyOn(
+      screen.getByTestId('rules-end'),
+      'getBoundingClientRect'
+    ).mockReturnValue(rect(500, 560));
+    fireEvent.click(button(t.zoomOut));
+
+    // L'observateur constate le repère apparu par le zoom : rien ne se débloque.
+    setEndVisible(true);
+    expect(checkbox().disabled).toBe(true);
+
+    // Il ne compte qu'une fois sorti de la zone puis revenu — un défilement.
+    setEndVisible(false);
+    expect(checkbox().disabled).toBe(true);
+    setEndVisible(true);
+    expect(checkbox().disabled).toBe(false);
+  });
+
+  it('contre-épreuve (sans IntersectionObserver) : le zoom arrière qui ramène tout en bas ne débloque pas', async () => {
+    globalThis.IntersectionObserver =
+      undefined as unknown as typeof IntersectionObserver;
+    const reached = vi.fn();
+    render(
+      <RulesPdfReader
+        tournamentId={TOUR}
+        versionNumber={2}
+        onReachedEnd={reached}
+        t={t}
+      />
+    );
+    await allPagesRendered();
+    // Une zone de 600 px sur 3 pages de 500 px à 100 % : le contenu grandit
+    // avec le zoom ; le navigateur borne le défilement (scrollTop) au contenu.
+    const zone = screen.getByTestId('rules-reader-zone');
+    const contentHeight = () => 1500 * (Number(zone.dataset.zoom) / 100);
+    let top = 0;
+    Object.defineProperty(zone, 'clientHeight', {
+      value: 600,
+      configurable: true,
+    });
+    Object.defineProperty(zone, 'scrollHeight', {
+      get: contentHeight,
+      configurable: true,
+    });
+    Object.defineProperty(zone, 'scrollTop', {
+      get: () => top,
+      set: (v: number) => {
+        top = Math.min(Math.max(0, v), contentHeight() - 600);
+      },
+      configurable: true,
+    });
+    const scrollTo = (v: number) => {
+      zone.scrollTop = v;
+      act(() => {
+        zone.dispatchEvent(new Event('scroll'));
+      });
+    };
+
+    for (let i = 0; i < 6; i++) fireEvent.click(button(t.zoomIn));
+    // À 300 % (4 500 px), au milieu du règlement : pas en bas.
+    scrollTo(1800);
+    expect(reached).not.toHaveBeenCalled();
+
+    // Retour à 100 % : contenu de 1 500 px, le défilement est ramené à 900 —
+    // tout en bas, sans que la joueuse ait défilé jusque-là.
+    fireEvent.click(button(t.zoomFit));
+    act(() => {
+      zone.dispatchEvent(new Event('scroll'));
+    });
+    expect(zone.scrollTop + 600).toBeGreaterThanOrEqual(1496);
+    expect(reached).not.toHaveBeenCalled();
+
+    // Remonter, puis redescendre : là, c'est un vrai défilement.
+    scrollTo(0);
+    expect(reached).not.toHaveBeenCalled();
+    scrollTo(900);
+    expect(reached).toHaveBeenCalledTimes(1);
+  });
+
+  it('une case débloquée le reste au zoom (et cochée, elle reste cochée)', async () => {
+    renderReader();
+    await allPagesRendered();
+    setEndVisible(true);
+    expect(checkbox().disabled).toBe(false);
+    fireEvent.click(checkbox());
+
+    fireEvent.click(button(t.zoomIn));
+    fireEvent.click(button(t.zoomIn));
+    setEndVisible(false);
+    fireEvent.click(button(t.zoomFit));
+    fireEvent.click(button(t.zoomIn));
+
+    expect(checkbox().disabled).toBe(false);
+    expect(checkbox().checked).toBe(true);
+    expect(acceptButton().disabled).toBe(false);
   });
 });

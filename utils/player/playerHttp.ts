@@ -17,8 +17,10 @@
 import Router from 'next/router';
 import {
   ApiHttpError,
+  authedBytesRequest,
   authedRequest,
   errorMessageWithRef,
+  type AuthedRequestConfig,
   type AuthedRequestInit,
 } from '@/utils/http/authedRequest';
 import { withSubjectParam } from '@/utils/subjectParam';
@@ -73,16 +75,38 @@ export type PlayerRequestInit = AuthedRequestInit & {
   scope?: PlayerScope;
 };
 
+const PLAYER_CONFIG: AuthedRequestConfig = {
+  defaultLoginPath: () => loginHrefFor(currentPath()),
+  makeError: (message, status, payload) =>
+    new PlayerHttpError(message, status, payload),
+};
+
 export function playerRequest<T>(
   url: string,
   init: PlayerRequestInit = {}
 ): Promise<T> {
   const { scope, ...rest } = init;
-  return authedRequest<T>(scope ? scopedUrl(url, scope) : url, rest, {
-    defaultLoginPath: () => loginHrefFor(currentPath()),
-    makeError: (message, status, payload) =>
-      new PlayerHttpError(message, status, payload),
-  });
+  return authedRequest<T>(
+    scope ? scopedUrl(url, scope) : url,
+    rest,
+    PLAYER_CONFIG
+  );
+}
+
+/**
+ * `playerRequest` pour une réponse binaire (le PDF du règlement) : mêmes
+ * Bearer, portée, redirection et erreur typée ; rend les octets.
+ */
+export function playerBytesRequest(
+  url: string,
+  init: PlayerRequestInit = {}
+): Promise<Uint8Array<ArrayBuffer>> {
+  const { scope, ...rest } = init;
+  return authedBytesRequest(
+    scope ? scopedUrl(url, scope) : url,
+    rest,
+    PLAYER_CONFIG
+  );
 }
 
 /**

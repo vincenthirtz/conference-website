@@ -16,21 +16,24 @@
 //
 // LES OCTETS ARRIVENT DÉJÀ LUS (client.ts, même origine) : pdf.js ne fait
 // aucune requête lui-même — l'erreur HTTP est la nôtre, avec son « Réessayer ».
+// pdf.js TRANSFÈRE leur ArrayBuffer à son worker (le tableau passé est vidé) :
+// qui veut les garder (le bouton « Télécharger ») en fait une copie AVANT.
 //
 // Pas d'eval : `isEvalSupported` n'existe plus depuis pdf.js 5 et rien ici ne
 // demande `'unsafe-eval'` à la page.
 
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
-
-/** Largeur maximale du rendu en pixels réels : au-delà, la mémoire explose. */
-const MAX_PIXEL_WIDTH = 1800;
+import { cappedPixelWidth } from './zoom';
 
 export type RulesPdfPage = {
   /** Dimensions à l'échelle 1 (points PDF) : rapport hauteur / largeur. */
   width: number;
   height: number;
-  /** La page en image PNG, à la largeur CSS demandée. */
-  renderToBlob: (cssWidth: number, pixelRatio: number) => Promise<Blob>;
+  /**
+   * La page en image PNG, large de `pixelWidth` pixels RÉELS — plafonnée
+   * (`cappedPixelWidth`, zoom.ts) : au-delà, la mémoire explose.
+   */
+  renderToBlob: (pixelWidth: number) => Promise<Blob>;
   /** Le texte de la page, pour les lecteurs d'écran. */
   text: () => Promise<string>;
   /** Libère les ressources de la page côté pdf.js. */
@@ -70,9 +73,9 @@ function wrapPage(page: PDFPageProxy): RulesPdfPage {
   return {
     width: base.width,
     height: base.height,
-    renderToBlob: async (cssWidth, pixelRatio) => {
-      const wanted = (cssWidth / base.width) * Math.max(1, pixelRatio);
-      const scale = Math.min(wanted, MAX_PIXEL_WIDTH / base.width);
+    renderToBlob: async (pixelWidth) => {
+      const scale =
+        cappedPixelWidth(base.width, base.height, pixelWidth) / base.width;
       const viewport = page.getViewport({ scale });
       const canvas = document.createElement('canvas');
       canvas.width = Math.max(1, Math.floor(viewport.width));

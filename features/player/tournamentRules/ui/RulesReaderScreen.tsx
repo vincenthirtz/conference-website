@@ -29,7 +29,7 @@ import {
 import { format, useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsPlayerTournamentRules from '@/lib/i18n/locales/fr/playerTournamentRules';
-import { rulesErrorCode, tournamentRulesUrls } from '../client';
+import { rulesErrorCode } from '../client';
 import { formatRulesDate, formatRulesDateTime } from '../format';
 import {
   useAcceptTournamentRules,
@@ -225,6 +225,7 @@ export default function RulesReaderScreen({
             key={version.id}
             tournamentId={tournamentId}
             versionNumber={version.number}
+            fileName={version.fileName}
             onReachedEnd={() => setReachedEnd(true)}
             t={t}
           />
@@ -243,14 +244,9 @@ export default function RulesReaderScreen({
         />
       )}
 
+      {/* « Télécharger » vit dans la liseuse : il enregistre le fichier déjà
+          chargé (avec la session), là où un lien vers l'API partirait sans. */}
       <div className="mt-6 flex flex-wrap gap-2">
-        <ButtonLink
-          size="sm"
-          href={tournamentRulesUrls.file(tournamentId, version.number)}
-          target="_blank"
-        >
-          {t.download}
-        </ButtonLink>
         <ButtonLink size="sm" href="/player">
           {t.backToSpace}
         </ButtonLink>

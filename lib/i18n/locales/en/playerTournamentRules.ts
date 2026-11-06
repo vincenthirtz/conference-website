@@ -44,6 +44,14 @@ export default {
   pdfErrorLocked: 'Accepting stays locked until the rules are fully displayed.',
   endMarker: 'End of the rules',
 
+  zoomGroup: 'Rules zoom',
+  zoomOut: 'Zoom out',
+  zoomIn: 'Zoom in',
+  zoomFit: 'Fit to width',
+  zoomFitShort: 'Fit',
+  zoomLevelPrefix: 'Zoom:',
+  zoomLevel: '{percent}%',
+
   scrollHint: 'Scroll the rules all the way down to be able to accept them.',
   reachedEnd: 'You reached the end of the rules: you can tick the box.',
   checkboxLabel:

@@ -53,6 +53,12 @@ export type AuthedRequestInit = Omit<RequestInit, 'body'> & {
   /** Ne pas rediriger vers la connexion sur 401. */
   skipAuthRedirect?: boolean;
   loginPath?: string;
+  /**
+   * Route lisible AUSSI sans compte (le PDF du règlement d'un tournoi
+   * public) : sans session, la requête part sans Bearer au lieu d'échouer
+   * en 401 local. Avec une session, rien ne change : même Bearer.
+   */
+  sessionOptional?: boolean;
 };
 
 export type AuthedRequestConfig = {
@@ -67,28 +73,44 @@ function newKey(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export async function authedRequest<T>(
+/**
+ * Jeton de la session : la porte d'identité le renouvelle elle-même quand il
+ * expire. `optional` : une session illisible vaut « pas de session ».
+ */
+async function sessionToken(optional: boolean): Promise<string | null> {
+  const read = async () =>
+    (await identityBrowser.getSession()).data.session?.access_token ?? null;
+  if (!optional) return read();
+  try {
+    return await read();
+  } catch {
+    return null;
+  }
+}
+
+/** L'envoi commun : Bearer, JSON, idempotence, redirection sur 401. */
+async function send(
   url: string,
   init: AuthedRequestInit,
   config: AuthedRequestConfig
-): Promise<T> {
+): Promise<Response> {
   const {
     json,
     idempotent,
     skipAuthRedirect,
     loginPath,
+    sessionOptional = false,
     headers: rawHeaders,
     ...rest
   } = init;
 
-  const {
-    data: { session },
-  } = await identityBrowser.getSession();
-  const token = session?.access_token;
-  if (!token) throw config.makeError('Session manquante.', 401, null);
+  const token = await sessionToken(sessionOptional);
+  if (!token && !sessionOptional) {
+    throw config.makeError('Session manquante.', 401, null);
+  }
 
   const headers = new Headers(rawHeaders);
-  headers.set('Authorization', `Bearer ${token}`);
+  if (token) headers.set('Authorization', `Bearer ${token}`);
   if (json !== undefined) headers.set('Content-Type', 'application/json');
   if (idempotent && !headers.has('Idempotency-Key')) {
     headers.set('Idempotency-Key', newKey());
@@ -104,17 +126,31 @@ export async function authedRequest<T>(
   if (res.status === 401 && !skipAuthRedirect) {
     void Router.replace(loginPath ?? config.defaultLoginPath());
   }
+  return res;
+}
 
-  let payload: unknown = null;
+async function readPayload(res: Response): Promise<unknown> {
   try {
-    payload = await res.json();
+    return await res.json();
   } catch {
-    payload = null;
+    return null;
   }
-  const errMsg =
-    payload && typeof payload === 'object' && 'error' in payload
-      ? String((payload as { error: unknown }).error)
-      : null;
+}
+
+function payloadError(payload: unknown): string | null {
+  return payload && typeof payload === 'object' && 'error' in payload
+    ? String((payload as { error: unknown }).error)
+    : null;
+}
+
+export async function authedRequest<T>(
+  url: string,
+  init: AuthedRequestInit,
+  config: AuthedRequestConfig
+): Promise<T> {
+  const res = await send(url, init, config);
+  const payload = await readPayload(res);
+  const errMsg = payloadError(payload);
   if (!res.ok || errMsg) {
     throw config.makeError(
       errMsg || `Requête échouée (${res.status})`,
@@ -123,6 +159,27 @@ export async function authedRequest<T>(
     );
   }
   return payload as T;
+}
+
+/**
+ * Même appel, réponse BINAIRE (un PDF) : les octets, ou la même erreur typée
+ * que `authedRequest` — le corps JSON d'erreur est lu s'il y en a un.
+ */
+export async function authedBytesRequest(
+  url: string,
+  init: AuthedRequestInit,
+  config: AuthedRequestConfig
+): Promise<Uint8Array<ArrayBuffer>> {
+  const res = await send(url, init, config);
+  if (!res.ok) {
+    const payload = await readPayload(res);
+    throw config.makeError(
+      payloadError(payload) || `Requête échouée (${res.status})`,
+      res.status,
+      payload
+    );
+  }
+  return new Uint8Array(await res.arrayBuffer());
 }
 
 /**

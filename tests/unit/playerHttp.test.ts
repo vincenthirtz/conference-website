@@ -5,6 +5,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 const { session, router } = vi.hoisted(() => ({
   session: {
     value: { access_token: 'tok-p' } as { access_token: string } | null,
+    /** La porte d'identité lève (session illisible, réseau). */
+    throws: false,
   },
   router: {
     asPath: '/player/manage-team?teamId=t1' as string | undefined,
@@ -14,13 +16,17 @@ const { session, router } = vi.hoisted(() => ({
 vi.mock('@/utils/supabaseBrowser', () => ({
   supabaseClient: {
     auth: {
-      getSession: async () => ({ data: { session: session.value } }),
+      getSession: async () => {
+        if (session.throws) throw new Error('session illisible');
+        return { data: { session: session.value } };
+      },
     },
   },
 }));
 vi.mock('next/router', () => ({ default: router }));
 
 import {
+  playerBytesRequest,
   playerRequest,
   PlayerHttpError,
   playerErrorWithRef,
@@ -46,6 +52,7 @@ function respond(status: number, body: unknown) {
 beforeEach(() => {
   calls = [];
   session.value = { access_token: 'tok-p' };
+  session.throws = false;
   router.asPath = '/player/manage-team?teamId=t1';
   router.replace.mockClear();
 });
@@ -144,6 +151,68 @@ describe('playerRequest', () => {
       (e) => e
     )) as PlayerHttpError;
     expect(err).toBeInstanceOf(PlayerHttpError);
+    expect(err.status).toBe(401);
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe('playerBytesRequest (réponse binaire : le PDF du règlement)', () => {
+  const PDF = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d]);
+  function respondBytes(status = 200) {
+    globalThis.fetch = vi.fn(async (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      return new Response(PDF, {
+        status,
+        headers: { 'Content-Type': 'application/pdf' },
+      });
+    }) as unknown as typeof fetch;
+  }
+
+  it('même Bearer, même origine, même portée ; rend les octets', async () => {
+    respondBytes();
+    const out = await playerBytesRequest('/api/tournaments/t1/rules/file', {
+      scope: { subjectId: null, actAs: false, teamId: 'team-1' },
+    });
+    expect(Array.from(out)).toEqual(Array.from(PDF));
+    expect(calls[0].url).toBe('/api/tournaments/t1/rules/file?teamId=team-1');
+    expect(calls[0].init.credentials).toBe('same-origin');
+    expect(new Headers(calls[0].init.headers).get('Authorization')).toBe(
+      'Bearer tok-p'
+    );
+  });
+
+  it('erreur typée, corps JSON lu (404 d’un tournoi non public)', async () => {
+    respond(404, { error: 'Introuvable', code: 'not_found', requestId: 'r-1' });
+    const err = (await playerBytesRequest('/api/x', {
+      skipAuthRedirect: true,
+    }).catch((e) => e)) as PlayerHttpError;
+    expect(err).toBeInstanceOf(PlayerHttpError);
+    expect(err.status).toBe(404);
+    expect(err.code).toBe('not_found');
+  });
+
+  it('sessionOptional : sans session, la requête part SANS Bearer (route publique)', async () => {
+    session.value = null;
+    respondBytes();
+    const out = await playerBytesRequest('/api/x', { sessionOptional: true });
+    expect(out.byteLength).toBe(PDF.byteLength);
+    expect(calls).toHaveLength(1);
+    expect(new Headers(calls[0].init.headers).has('Authorization')).toBe(false);
+  });
+
+  it('sessionOptional : une session illisible vaut « sans session »', async () => {
+    session.throws = true;
+    respondBytes();
+    await playerBytesRequest('/api/x', { sessionOptional: true });
+    expect(new Headers(calls[0].init.headers).has('Authorization')).toBe(false);
+  });
+
+  it('sans sessionOptional : 401 local sans requête, comme playerRequest', async () => {
+    session.value = null;
+    respondBytes();
+    const err = (await playerBytesRequest('/api/x').catch(
+      (e) => e
+    )) as PlayerHttpError;
     expect(err.status).toBe(401);
     expect(calls).toHaveLength(0);
   });
