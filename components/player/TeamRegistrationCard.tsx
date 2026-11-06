@@ -43,6 +43,7 @@ import type {
   TeamRegistrationBlocker,
   TeamRegistrationStatus,
 } from '@/features/player/demandes/model';
+import TeamRulesCard from '@/features/player/tournamentRules/ui/TeamRulesCard';
 import { logger } from '../../utils/logger';
 import nsTeamRegistration from '@/lib/i18n/locales/fr/teamRegistration';
 
@@ -181,23 +182,41 @@ export default function TeamRegistrationCard({
 
   const tournamentName = status.tournament.name;
 
+  // Règlement à valider par chaque membre (se tait si le tournoi ne le
+  // demande pas) : sous la carte, dans les trois états de l'inscription.
+  const rulesCard = (
+    <TeamRulesCard
+      tournamentId={status.tournament.id}
+      teamId={status.team.id}
+      engaged={status.registered || Boolean(status.pendingDemandeId)}
+      registered={status.registered}
+      readOnly={readOnly}
+    />
+  );
+
   if (status.registered) {
     return (
-      <div className={CARD_CLS}>
-        <h2 className="text-lg font-semibold text-emerald-200">
-          {format(t.registeredTitle, { tournament: tournamentName })}
-        </h2>
-        <p className="mt-1 text-sm text-gray-400">{t.registeredDesc}</p>
-      </div>
+      <>
+        <div className={CARD_CLS}>
+          <h2 className="text-lg font-semibold text-emerald-200">
+            {format(t.registeredTitle, { tournament: tournamentName })}
+          </h2>
+          <p className="mt-1 text-sm text-gray-400">{t.registeredDesc}</p>
+        </div>
+        {rulesCard}
+      </>
     );
   }
 
   if (status.pendingDemandeId) {
     return (
-      <div className={CARD_CLS}>
-        <h2 className="text-lg font-semibold">{t.pendingTitle}</h2>
-        <p className="mt-1 text-sm text-gray-400">{t.pendingDesc}</p>
-      </div>
+      <>
+        <div className={CARD_CLS}>
+          <h2 className="text-lg font-semibold">{t.pendingTitle}</h2>
+          <p className="mt-1 text-sm text-gray-400">{t.pendingDesc}</p>
+        </div>
+        {rulesCard}
+      </>
     );
   }
 
@@ -240,142 +259,145 @@ export default function TeamRegistrationCard({
     : null;
 
   return (
-    <div className={CARD_CLS}>
-      <h2 className="text-lg font-semibold">
-        {format(t.notRegisteredTitle, { tournament: tournamentName })}
-      </h2>
-      <p className="mt-1 text-sm text-gray-400">{t.notRegisteredDesc}</p>
+    <>
+      <div className={CARD_CLS}>
+        <h2 className="text-lg font-semibold">
+          {format(t.notRegisteredTitle, { tournament: tournamentName })}
+        </h2>
+        <p className="mt-1 text-sm text-gray-400">{t.notRegisteredDesc}</p>
 
-      {status.lastDemande?.status === 'rejected' && rejectedAt && (
-        <p className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100/90">
-          {format(t.rejectedNotice, { date: rejectedAt })}
-        </p>
-      )}
-
-      {showRosterWarning && (
-        <div className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
-          <p className="text-sm text-amber-100">
-            {format(t.rosterWarning, {
-              missing: status.rosterShortfall,
-              min: status.minPlayers ?? 0,
-              count: status.playerCount,
-            })}
+        {status.lastDemande?.status === 'rejected' && rejectedAt && (
+          <p className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100/90">
+            {format(t.rejectedNotice, { date: rejectedAt })}
           </p>
-          <p className="mt-1 text-xs text-amber-100/80">
-            {t.rosterWarningStillOpen}
-          </p>
-          {!readOnly && (
-            <div className="mt-3">
-              <Link
-                href={rosterAnchor}
-                className="inline-flex items-center rounded-full border border-amber-500/50 bg-amber-500/15 px-4 py-2 text-xs font-semibold text-amber-100 transition hover:bg-amber-500/25"
-              >
-                {t.rosterCta}
-              </Link>
-            </div>
-          )}
-        </div>
-      )}
+        )}
 
-      {blockerLines.length > 0 && (
-        <div className="mt-4 rounded-xl border border-white/10 bg-black/30 p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-300">
-            {t.blockersTitle}
-          </h3>
-          <ul className="mt-2 space-y-1.5 text-sm text-gray-300">
-            {blockerLines.map((b) => (
-              <li key={b.code} className="flex gap-2">
-                <span aria-hidden className="text-amber-300">
-                  •
-                </span>
-                <span>{b.label}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Link
-              href="/support"
-              className="inline-flex items-center rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-gray-200 transition hover:border-white/40 hover:bg-white/10"
-            >
-              {t.contactStaffCta}
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {submitted && (
-        <p
-          role="status"
-          aria-live="polite"
-          className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200"
-        >
-          {t.submitSuccess}
-        </p>
-      )}
-
-      {readOnly ? (
-        <p className="mt-4 text-xs text-gray-500">{t.readOnlyNote}</p>
-      ) : (
-        status.canSubmit && (
-          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-            {status.fields.length > 0 && (
-              <div className="space-y-4 rounded-xl border border-white/10 bg-black/30 p-4">
-                <h3 className="text-sm font-semibold text-white">
-                  {t.customFieldsTitle}
-                </h3>
-                {status.fields.map((field) => (
-                  <CustomField
-                    key={field.key}
-                    field={field}
-                    value={fieldValues[field.key]}
-                    error={
-                      fieldErrors[field.key] === 'Ce champ est requis.'
-                        ? t.customFieldRequiredError
-                        : fieldErrors[field.key]
-                    }
-                    requiredMark={t.customFieldRequiredMark}
-                    selectPlaceholder={t.customFieldSelectPlaceholder}
-                    onChange={handleFieldChange}
-                  />
-                ))}
+        {showRosterWarning && (
+          <div className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+            <p className="text-sm text-amber-100">
+              {format(t.rosterWarning, {
+                missing: status.rosterShortfall,
+                min: status.minPlayers ?? 0,
+                count: status.playerCount,
+              })}
+            </p>
+            <p className="mt-1 text-xs text-amber-100/80">
+              {t.rosterWarningStillOpen}
+            </p>
+            {!readOnly && (
+              <div className="mt-3">
+                <Link
+                  href={rosterAnchor}
+                  className="inline-flex items-center rounded-full border border-amber-500/50 bg-amber-500/15 px-4 py-2 text-xs font-semibold text-amber-100 transition hover:bg-amber-500/25"
+                >
+                  {t.rosterCta}
+                </Link>
               </div>
             )}
+          </div>
+        )}
 
-            <div>
-              <label htmlFor="registration-message" className={LABEL_CLS}>
-                {t.messageLabel}{' '}
-                <span className="normal-case tracking-normal text-gray-500">
-                  ({t.messageOptional})
-                </span>
-              </label>
-              <textarea
-                id="registration-message"
-                rows={3}
-                maxLength={1000}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder={t.messagePlaceholder}
-                className={INPUT_CLS}
-              />
+        {blockerLines.length > 0 && (
+          <div className="mt-4 rounded-xl border border-white/10 bg-black/30 p-4">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-gray-300">
+              {t.blockersTitle}
+            </h3>
+            <ul className="mt-2 space-y-1.5 text-sm text-gray-300">
+              {blockerLines.map((b) => (
+                <li key={b.code} className="flex gap-2">
+                  <span aria-hidden className="text-amber-300">
+                    •
+                  </span>
+                  <span>{b.label}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link
+                href="/support"
+                className="inline-flex items-center rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-gray-200 transition hover:border-white/40 hover:bg-white/10"
+              >
+                {t.contactStaffCta}
+              </Link>
             </div>
+          </div>
+        )}
 
-            {submitError && (
-              <p role="alert" className="text-sm text-[var(--status-error)]">
-                {submitError}
-              </p>
-            )}
+        {submitted && (
+          <p
+            role="status"
+            aria-live="polite"
+            className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200"
+          >
+            {t.submitSuccess}
+          </p>
+        )}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex items-center justify-center rounded-full bg-[var(--color-violet-cta)] px-6 py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {submitting ? t.submitting : t.submitCta}
-            </button>
-          </form>
-        )
-      )}
-    </div>
+        {readOnly ? (
+          <p className="mt-4 text-xs text-gray-500">{t.readOnlyNote}</p>
+        ) : (
+          status.canSubmit && (
+            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+              {status.fields.length > 0 && (
+                <div className="space-y-4 rounded-xl border border-white/10 bg-black/30 p-4">
+                  <h3 className="text-sm font-semibold text-white">
+                    {t.customFieldsTitle}
+                  </h3>
+                  {status.fields.map((field) => (
+                    <CustomField
+                      key={field.key}
+                      field={field}
+                      value={fieldValues[field.key]}
+                      error={
+                        fieldErrors[field.key] === 'Ce champ est requis.'
+                          ? t.customFieldRequiredError
+                          : fieldErrors[field.key]
+                      }
+                      requiredMark={t.customFieldRequiredMark}
+                      selectPlaceholder={t.customFieldSelectPlaceholder}
+                      onChange={handleFieldChange}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="registration-message" className={LABEL_CLS}>
+                  {t.messageLabel}{' '}
+                  <span className="normal-case tracking-normal text-gray-500">
+                    ({t.messageOptional})
+                  </span>
+                </label>
+                <textarea
+                  id="registration-message"
+                  rows={3}
+                  maxLength={1000}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder={t.messagePlaceholder}
+                  className={INPUT_CLS}
+                />
+              </div>
+
+              {submitError && (
+                <p role="alert" className="text-sm text-[var(--status-error)]">
+                  {submitError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex items-center justify-center rounded-full bg-[var(--color-violet-cta)] px-6 py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {submitting ? t.submitting : t.submitCta}
+              </button>
+            </form>
+          )
+        )}
+      </div>
+      {rulesCard}
+    </>
   );
 }
 

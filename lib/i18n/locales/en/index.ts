@@ -173,6 +173,7 @@ import enScouting from './scouting';
 import enProgression from './progression';
 import enRegistrationDeadline from './registrationDeadline';
 import enTeamRegistration from './teamRegistration';
+import enPlayerTournamentRules from './playerTournamentRules';
 import enMatchLineup from './matchLineup';
 import enPlayerMatch from './playerMatch';
 import enPlayerAgenda from './playerAgenda';
@@ -352,6 +353,7 @@ const enDict = {
   progression: enProgression,
   registrationDeadline: enRegistrationDeadline,
   teamRegistration: enTeamRegistration,
+  playerTournamentRules: enPlayerTournamentRules,
   matchLineup: enMatchLineup,
   playerMatch: enPlayerMatch,
   playerAgenda: enPlayerAgenda,

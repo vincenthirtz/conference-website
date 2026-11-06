@@ -13,11 +13,16 @@
 //   2. Trois items maximum, ordre décidé par le serveur (le plus périssable
 //      d'abord) : au-delà, ce n'est plus une liste d'actions, c'est une page.
 //   3. Aucune règle métier ici — les items viennent du payload du dashboard.
+//
+// Juste au-dessus, le bandeau du RÈGLEMENT à valider (`withRules`) : lui aussi
+// une action en attente, et lui aussi muet quand il n'y a rien à faire. Il
+// lit ses propres données (features/player/tournamentRules).
 
 import Link from 'next/link';
 import { useT, format } from '@/lib/i18n/useT';
 import nsPlayerIndex from '@/lib/i18n/locales/fr/playerIndex';
 import type { TodoItem } from '@/features/player/dashboard/schemas';
+import TournamentRulesBanner from '@/features/player/tournamentRules/ui/TournamentRulesBanner';
 
 type T = typeof nsPlayerIndex.fr;
 
@@ -46,36 +51,50 @@ function labelFor(item: TodoItem, t: T): string {
   }
 }
 
-export default function TodoBanner({ items }: { items: TodoItem[] }) {
+export default function TodoBanner({
+  items,
+  withRules = false,
+}: {
+  items: TodoItem[];
+  /**
+   * Bandeau « Le règlement de <tournoi> attend ta validation » : vrai quand
+   * la joueuse a une équipe (sans équipe, aucun règlement à valider).
+   */
+  withRules?: boolean;
+}) {
   const t = useT(nsPlayerIndex);
-  if (!items || items.length === 0) return null;
+  const rules = <TournamentRulesBanner enabled={withRules} />;
+  if (!items || items.length === 0) return rules;
 
   return (
-    <section
-      aria-labelledby="todo-heading"
-      className="mb-6 rounded-2xl border border-amber-400/30 bg-amber-500/[0.07] p-5 backdrop-blur-xl"
-    >
-      <h2
-        id="todo-heading"
-        className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200"
+    <>
+      {rules}
+      <section
+        aria-labelledby="todo-heading"
+        className="mb-6 rounded-2xl border border-amber-400/30 bg-amber-500/[0.07] p-5 backdrop-blur-xl"
       >
-        {t.todoTitle}
-      </h2>
-      <ul className="mt-3 flex flex-col gap-2">
-        {items.map((item) => (
-          <li key={item.id}>
-            <Link
-              href={item.href}
-              className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm text-white transition hover:border-amber-300/40 hover:bg-black/50"
-            >
-              <span>{labelFor(item, t)}</span>
-              <span aria-hidden className="text-amber-200">
-                →
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
+        <h2
+          id="todo-heading"
+          className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200"
+        >
+          {t.todoTitle}
+        </h2>
+        <ul className="mt-3 flex flex-col gap-2">
+          {items.map((item) => (
+            <li key={item.id}>
+              <Link
+                href={item.href}
+                className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/30 px-4 py-2.5 text-sm text-white transition hover:border-amber-300/40 hover:bg-black/50"
+              >
+                <span>{labelFor(item, t)}</span>
+                <span aria-hidden className="text-amber-200">
+                  →
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </>
   );
 }

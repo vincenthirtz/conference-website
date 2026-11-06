@@ -187,7 +187,7 @@ export default function PlayerDashboardScreen() {
         >
           {/* Ce qui attend une action, avant tout le reste. Se masque de
               lui-même quand il n'y a rien à faire. */}
-          {!isInspecting && <TodoBanner items={d.todo} />}
+          {!isInspecting && <TodoBanner items={d.todo} withRules={!!team} />}
 
           {/* Date butoir des inscriptions : la seule information qui périme. */}
           {!isInspecting && user?.id && (

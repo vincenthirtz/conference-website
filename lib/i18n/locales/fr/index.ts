@@ -173,6 +173,7 @@ import nsScouting from './scouting';
 import nsProgression from './progression';
 import nsRegistrationDeadline from './registrationDeadline';
 import nsTeamRegistration from './teamRegistration';
+import nsPlayerTournamentRules from './playerTournamentRules';
 import nsMatchLineup from './matchLineup';
 import nsPlayerMatch from './playerMatch';
 import nsPlayerAgenda from './playerAgenda';
@@ -352,6 +353,7 @@ export const frDict = {
   progression: nsProgression.fr,
   registrationDeadline: nsRegistrationDeadline.fr,
   teamRegistration: nsTeamRegistration.fr,
+  playerTournamentRules: nsPlayerTournamentRules.fr,
   matchLineup: nsMatchLineup.fr,
   playerMatch: nsPlayerMatch.fr,
   playerAgenda: nsPlayerAgenda.fr,
