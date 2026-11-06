@@ -68,6 +68,7 @@ export function TaskBoardActions({
   onManageLabels,
   onOpenTrash,
   onAddColumn,
+  live = false,
 }: {
   t: Dict;
   activeBoard: BoardListItem;
@@ -77,9 +78,23 @@ export function TaskBoardActions({
   onManageLabels: () => void;
   onOpenTrash: () => void;
   onAddColumn: () => void;
+  /** Salon temps réel ouvert : le board se relit tout seul. */
+  live?: boolean;
 }) {
   return (
     <div className="mb-5 flex flex-wrap items-center gap-2">
+      {live && (
+        <span
+          className="inline-flex items-center gap-1.5 text-xs text-[var(--t3,#a39ba6)]"
+          title={t.liveTitle}
+        >
+          <span
+            aria-hidden="true"
+            className="h-2 w-2 rounded-full bg-[var(--ok,#30d07e)]"
+          />
+          {t.liveOn}
+        </span>
+      )}
       <AdminButton variant="ghost" size="sm" onClick={onRename}>
         {t.renameBoard}
       </AdminButton>

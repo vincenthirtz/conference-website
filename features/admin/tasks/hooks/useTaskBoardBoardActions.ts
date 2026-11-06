@@ -2,11 +2,13 @@
 // de ses colonnes (créer / renommer / archiver / supprimer un board ; ajouter /
 // éditer / supprimer / réordonner une colonne) et de la corbeille.
 //
-// Corps DÉPLACÉS À L'IDENTIQUE depuis pages/admin/tasks/index.tsx : seuls les
-// accès à l'état et aux outils de la page deviennent des paramètres. La page
-// reste propriétaire de tous les useState.
+// Corps d'origine DÉPLACÉS depuis pages/admin/tasks/index.tsx : la page reste
+// propriétaire des useState des formulaires. Seul ajout tenu ici : la fenêtre
+// « déplacer les cartes puis supprimer » d'une colonne non vide (état local,
+// pour ne pas grossir la page, plafonnée par adminFileSizeGuard).
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
+import { format } from '@/lib/i18n/useAdminT';
 import type {
   BoardDetail,
   BoardDetailColumn,
@@ -315,7 +317,34 @@ export function useTaskBoardBoardActions(deps: TaskBoardBoardActionsDeps) {
     }
   }
 
+  // Colonne non vide : fenêtre « déplacer les cartes vers… puis supprimer ».
+  const [columnToDelete, setColumnToDelete] =
+    useState<BoardDetailColumn | null>(null);
+  const [moveToColumnId, setMoveToColumnId] = useState('');
+  const [deletingColumn, setDeletingColumn] = useState(false);
+
+  /** Autres colonnes du board, dans l'ordre d'affichage. */
+  function otherColumns(col: BoardDetailColumn) {
+    return [...(detail?.columns ?? [])]
+      .filter((c) => c.id !== col.id)
+      .sort((a, b) => a.position - b.position);
+  }
+
+  function openMoveAndDelete(col: BoardDetailColumn) {
+    const others = otherColumns(col);
+    // Par défaut la voisine de gauche (sinon la première) : là où l'on
+    // range d'habitude ce qui n'a plus sa colonne.
+    const left = [...others].reverse().find((c) => c.position < col.position);
+    setMoveToColumnId((left ?? others[0])?.id ?? '');
+    setColumnToDelete(col);
+  }
+
   async function handleDeleteColumn(col: BoardDetailColumn) {
+    // Les cartes terminées masquées comptent : l'API les voit.
+    if (col.tasks.length + (col.archivedCount ?? 0) > 0) {
+      openMoveAndDelete(col);
+      return;
+    }
     const ok = await confirm({
       title: t.confirmDeleteColumn,
       subtitle: t.confirmDeleteColumnSubtitle,
@@ -323,7 +352,7 @@ export function useTaskBoardBoardActions(deps: TaskBoardBoardActionsDeps) {
     });
     if (!ok || !activeBoardId) return;
     try {
-      await columnMutation.mutateJson(taskBoardUrls.column(col.id), {
+      await columnMutation.mutateJson(taskBoardUrls.columnDelete(col.id), {
         method: 'DELETE',
       });
       addToast(t.columnDeleted, 'success');
@@ -332,12 +361,57 @@ export function useTaskBoardBoardActions(deps: TaskBoardBoardActionsDeps) {
     } catch (err: unknown) {
       const anyErr = err as { payload?: { code?: string }; message?: string };
       if (anyErr?.payload?.code === 'column_not_empty') {
-        addToast(t.columnNotEmpty, 'error');
+        // Une carte est arrivée entre-temps (staff, bot) : on propose le
+        // déplacement plutôt qu'un refus sec.
+        openMoveAndDelete(col);
       } else {
         addToast(anyErr?.message || t.errorGeneric, 'error');
       }
     }
   }
+
+  async function confirmMoveAndDelete() {
+    const col = columnToDelete;
+    if (!col || !moveToColumnId || !activeBoardId) return;
+    const target = detail?.columns.find((c) => c.id === moveToColumnId);
+    setDeletingColumn(true);
+    try {
+      const res = await columnMutation.mutateJson<{ moved?: number }>(
+        taskBoardUrls.columnDelete(col.id, moveToColumnId),
+        { method: 'DELETE' }
+      );
+      addToast(
+        format(t.columnDeletedMoved, {
+          count: res?.moved ?? 0,
+          name: target?.name ?? '',
+        }),
+        'success'
+      );
+      setColumnToDelete(null);
+      await fetchDetail(activeBoardId);
+      await fetchBoards({ keepActive: true });
+    } catch (err: unknown) {
+      const anyErr = err as { payload?: { code?: string }; message?: string };
+      addToast(
+        anyErr?.payload?.code === 'invalid_move_target'
+          ? t.invalidMoveTarget
+          : anyErr?.message || t.errorGeneric,
+        'error'
+      );
+    } finally {
+      setDeletingColumn(false);
+    }
+  }
+
+  const deleteColumnModal = {
+    column: columnToDelete,
+    targets: columnToDelete ? otherColumns(columnToDelete) : [],
+    moveToColumnId,
+    deleting: deletingColumn,
+    onMoveToChange: setMoveToColumnId,
+    onConfirm: confirmMoveAndDelete,
+    onClose: () => setColumnToDelete(null),
+  };
 
   async function handleReorderColumn(index: number, dir: -1 | 1) {
     if (!detail || !activeBoardId) return;
@@ -377,5 +451,6 @@ export function useTaskBoardBoardActions(deps: TaskBoardBoardActionsDeps) {
     handleSaveColumn,
     handleDeleteColumn,
     handleReorderColumn,
+    deleteColumnModal,
   };
 }

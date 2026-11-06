@@ -53,6 +53,9 @@ export function roomFor(table: string, filter?: string): string | null {
       return col === 'id' ? `caster:scene:${val}` : null;
     case 'caster_themes':
       return col ? null : 'caster:themes';
+    case 'tasks':
+      // Prévenu par conference-api (task.board_changed), pas par un déclencheur.
+      return col === 'board_id' ? `tasks:board:${val}` : null;
     default:
       return null;
   }
@@ -67,7 +70,11 @@ export const CASTER_PRESENCE_ROOM = 'caster:presence';
  */
 export function ticketPathFor(room: string): string | null {
   if (room.startsWith('demandes:team:')) return '/api/player/realtime/ticket';
-  if (room.startsWith('matches:tournament:') || room === CASTER_PRESENCE_ROOM) {
+  if (
+    room.startsWith('matches:tournament:') ||
+    room.startsWith('tasks:board:') ||
+    room === CASTER_PRESENCE_ROOM
+  ) {
     return '/api/admin/realtime/ticket';
   }
   return null;

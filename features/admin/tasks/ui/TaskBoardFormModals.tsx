@@ -1,11 +1,16 @@
 // features/admin/tasks/ui/TaskBoardFormModals.tsx — modales de formulaire du
-// tableau de tâches : board (création / renommage) et colonne (ajout /
-// édition). Présentationnelles : la page garde les valeurs saisies, l'état
-// d'enregistrement et les appels ; elle passe ici les valeurs et les gestes.
+// tableau de tâches : board (création / renommage), colonne (ajout /
+// édition) et suppression d'une colonne non vide (déplacer ses cartes).
+// Présentationnelles : la page et ses hooks gardent les valeurs saisies,
+// l'état d'enregistrement et les appels ; ici, les valeurs et les gestes.
 
 import Modal from '@/components/admin/Modal';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
-import type { Dict } from '@/components/admin/tasks/taskBoardModel';
+import { format } from '@/lib/i18n/useAdminT';
+import type {
+  BoardDetailColumn,
+  Dict,
+} from '@/components/admin/tasks/taskBoardModel';
 import {
   TB_CHECKBOX,
   TB_FIELD,
@@ -196,6 +201,92 @@ export function TaskBoardColumnModal({
           />
           {t.isDoneLabel}
         </label>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * Suppression d'une colonne qui contient encore des cartes : on choisit la
+ * colonne qui les reçoit (ajoutées à la fin, limite WIP ignorée), puis l'API
+ * déplace et supprime en un geste (`DELETE /columns/{id}?moveTo=`).
+ */
+export function TaskBoardDeleteColumnModal({
+  t,
+  column,
+  targets,
+  moveToColumnId,
+  deleting,
+  onMoveToChange,
+  onConfirm,
+  onClose,
+}: {
+  t: Dict;
+  /** Colonne à supprimer ; `null` = fenêtre fermée. */
+  column: BoardDetailColumn | null;
+  /** Autres colonnes du board, dans l'ordre d'affichage. */
+  targets: BoardDetailColumn[];
+  moveToColumnId: string;
+  deleting: boolean;
+  onMoveToChange: (columnId: string) => void;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const count = column ? column.tasks.length + (column.archivedCount ?? 0) : 0;
+  return (
+    <Modal
+      open={!!column}
+      onClose={onClose}
+      title={
+        <h2 className={TB_TITLE}>
+          {format(t.deleteColumnMoveTitle, { name: column?.name ?? '' })}
+        </h2>
+      }
+      size="lg"
+      panelChromeClassName={TB_PANEL}
+      footer={
+        <>
+          <AdminButton size="sm" onClick={onClose}>
+            {t.cancel}
+          </AdminButton>
+          <AdminButton
+            variant="danger"
+            size="sm"
+            onClick={onConfirm}
+            disabled={deleting || !moveToColumnId || targets.length === 0}
+          >
+            {deleting ? t.deleting : t.deleteColumnMoveConfirm}
+          </AdminButton>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <p className="text-sm text-[var(--t2,#c7bfca)]">
+          {format(t.deleteColumnMoveIntro, { count })}
+        </p>
+        {targets.length === 0 ? (
+          <p className="text-sm text-[var(--warn,#f5a524)]">
+            {t.deleteColumnNoTarget}
+          </p>
+        ) : (
+          <div>
+            <label htmlFor="col-move-to" className={TB_LABEL}>
+              {t.deleteColumnMoveTarget}
+            </label>
+            <select
+              id="col-move-to"
+              value={moveToColumnId}
+              onChange={(e) => onMoveToChange(e.target.value)}
+              className={TB_FIELD}
+            >
+              {targets.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
     </Modal>
   );

@@ -1,10 +1,13 @@
 // features/admin/tasks/ui/TaskBoardCard.tsx — une carte du Kanban : titre,
 // priorité, labels (couleurs du board = données), avancement de checklist,
-// commentaires, échéance et assignée. Les gestes de glisser-déposer sont ceux
-// de la page, branchés tels quels seulement si le tri est « manuel ».
+// commentaires, échéance (relative : « demain », « dans 3 jours ») et
+// assignée. Les gestes de glisser-déposer sont ceux de la page, branchés tels
+// quels seulement si le tri est « manuel » ; `dropHint` dessine le trait de
+// dépôt au-dessus ou au-dessous de la carte.
 
 import type { DragEvent } from 'react';
 import { format } from '@/lib/i18n/useAdminT';
+import { useLocale } from '@/lib/i18n/useLocale';
 import Chip from '@/features/admin/_shared/ui/Chip';
 import {
   type BoardLabel,
@@ -14,38 +17,56 @@ import {
   priorityLabel,
   priorityTone,
 } from '@/components/admin/tasks/taskBoardModel';
+import { dueInfo, dueToneClass } from '@/features/admin/tasks/taskBoardRules';
 import { LabelPill } from '@/components/admin/tasks/TaskBoardParts';
+
+const DROP_LINE =
+  "before:pointer-events-none before:absolute before:inset-x-0 before:h-0.5 before:rounded-full before:bg-[var(--or,#b467d1)] before:content-['']";
 
 export default function TaskBoardCard({
   t,
   card,
-  overdue,
+  columnIsDone,
   dndEnabled,
+  dropHint = null,
   labelDefByName,
   staffNameById,
   onOpen,
   onDragStart,
   onDragEnd,
+  onDragOver,
   onDrop,
 }: {
   t: Dict;
   card: BoardTask;
-  overdue: boolean;
+  /** Colonne terminale : l'échéance ne signale plus rien. */
+  columnIsDone: boolean;
   dndEnabled: boolean;
+  /** Trait de dépôt avant / après la carte pendant un glisser. */
+  dropHint?: 'before' | 'after' | null;
   labelDefByName: Map<string, BoardLabel>;
   staffNameById: Map<string, string>;
   onOpen: (card: BoardTask) => void;
   onDragStart: (e: DragEvent, taskId: string) => void;
   onDragEnd: () => void;
+  onDragOver: (e: DragEvent) => void;
   onDrop: (e: DragEvent) => void;
 }) {
+  const locale = useLocale();
+  const due = dueInfo(card.dueDate, columnIsDone, locale);
   const checklistComplete = card.checklist.done === card.checklist.total;
+  const hintClass =
+    dropHint === 'before'
+      ? `${DROP_LINE} before:-top-[5px]`
+      : dropHint === 'after'
+        ? `${DROP_LINE} before:-bottom-[5px]`
+        : '';
   return (
     <div
       draggable={dndEnabled}
       onDragStart={dndEnabled ? (e) => onDragStart(e, card.id) : undefined}
       onDragEnd={dndEnabled ? onDragEnd : undefined}
-      onDragOver={dndEnabled ? (e) => e.preventDefault() : undefined}
+      onDragOver={dndEnabled ? onDragOver : undefined}
       onDrop={dndEnabled ? (e) => onDrop(e) : undefined}
       onClick={() => onOpen(card)}
       role="button"
@@ -56,9 +77,9 @@ export default function TaskBoardCard({
           onOpen(card);
         }
       }}
-      className={`rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-3 shadow-[var(--sh1)] transition-colors hover:border-[var(--or,#b467d1)] ${
+      className={`relative rounded-[var(--r-ctrl,4px)] border border-[var(--line2,rgba(194,196,201,.2))] bg-[var(--s2,#1d1520)] p-3 shadow-[var(--sh1)] transition-colors hover:border-[var(--or,#b467d1)] ${
         dndEnabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
-      }`}
+      } ${hintClass}`}
     >
       <div className="flex items-start justify-between gap-2">
         <p className="flex-1 text-sm font-medium leading-snug text-[var(--t1,#f4edf7)]">
@@ -125,17 +146,16 @@ export default function TaskBoardCard({
       )}
 
       <div className="mt-2 flex items-center justify-between gap-2">
-        {card.dueDate ? (
+        {due ? (
           <span
-            className={`text-[11px] ${
-              overdue
-                ? 'font-medium text-[var(--err,#ff6b6b)]'
-                : 'text-[var(--t3,#a39ba6)]'
-            }`}
-            title={overdue ? t.overdue : undefined}
-            data-numeric
+            className={`text-[11px] ${dueToneClass(due.state)}`}
+            title={
+              due.state === 'overdue'
+                ? `${t.overdue} · ${format(t.dueTitle, { date: due.title })}`
+                : format(t.dueTitle, { date: due.title })
+            }
           >
-            {card.dueDate.slice(0, 10)}
+            <time dateTime={card.dueDate?.slice(0, 10)}>{due.label}</time>
           </span>
         ) : (
           <span />

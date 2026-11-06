@@ -6,6 +6,7 @@
 import { formatDateHeader, formatTime } from '@/utils/dateFormatters';
 import type nsAdminTaskBoard from '@/lib/i18n/locales/admin-fr/adminTaskBoard';
 import type { ChipTone } from '@/features/admin/_shared/ui/Chip';
+import { daysUntilDue } from '@/features/admin/tasks/taskBoardRules';
 
 export type Dict = typeof nsAdminTaskBoard.fr;
 
@@ -140,6 +141,8 @@ export type TaskComment = {
   authorStaffId: string | null;
   authorName: string | null;
   createdAt: string;
+  /** Date de la dernière modification ; `null` (ou absent) = jamais modifié. */
+  editedAt?: string | null;
 };
 
 export type ChecklistItem = {
@@ -193,18 +196,6 @@ export function initials(name: string | null): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export function isOverdue(
-  dueDate: string | null,
-  columnIsDone: boolean
-): boolean {
-  if (!dueDate || columnIsDone) return false;
-  const d = new Date(dueDate);
-  if (Number.isNaN(d.getTime())) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return d.getTime() < today.getTime();
-}
-
 // Tri d'affichage des cartes d'une colonne (client-side, ne touche pas
 // `position` en base). `position` reste le départage stable dans tous les cas.
 export function sortTasksForDisplay(
@@ -256,21 +247,113 @@ export function readableTextColor(hex: string): string {
   return L > 0.179 ? '#000000' : '#ffffff';
 }
 
-// Humanise une action brute de staff_logs en libellé i18n.
-export function humanizeActivity(t: Dict, action: string): string {
+/** Noms connus pour humaniser l'activité (colonnes du board, staff). */
+export type ActivityNames = {
+  columnNameById: Map<string, string>;
+  staffNameById: Map<string, string>;
+};
+
+const fillTemplate = (tpl: string, values: Record<string, string>) =>
+  tpl.replace(/\{(\w+)\}/g, (all, k: string) => values[k] ?? all);
+
+const str = (v: unknown): string | null =>
+  typeof v === 'string' && v !== '' ? v : null;
+
+function fieldLabel(t: Dict, field: string): string | null {
+  switch (field) {
+    case 'title':
+      return t.activityFieldTitle;
+    case 'description':
+      return t.activityFieldDescription;
+    case 'priority':
+      return t.activityFieldPriority;
+    case 'dueDate':
+      return t.activityFieldDueDate;
+    case 'labels':
+      return t.activityFieldLabels;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Humanise une action brute de staff_logs. Le payload (clés écrites par
+ * conference-api : `from_column_id`/`to_column_id` du déplacement,
+ * `column_id` de la création, `assignee_staff_id` de l'assignation,
+ * `fields` de l'édition) précise le libellé quand les noms sont connus ;
+ * sinon, libellé générique.
+ */
+export function humanizeActivity(
+  t: Dict,
+  action: string,
+  payload?: Record<string, unknown> | null,
+  names?: ActivityNames
+): string {
+  const p = payload ?? {};
+  const column = (id: unknown) => {
+    const key = str(id);
+    return key ? (names?.columnNameById.get(key) ?? null) : null;
+  };
   switch (action) {
-    case 'task_create':
-      return t.activityTaskCreate;
-    case 'task_update':
-      return t.activityTaskUpdate;
-    case 'task_move':
-      return t.activityTaskMove;
-    case 'task_assign':
-      return t.activityTaskAssign;
+    case 'task_create': {
+      const name = column(p.column_id);
+      return name
+        ? fillTemplate(t.activityTaskCreateIn, { column: name })
+        : t.activityTaskCreate;
+    }
+    case 'task_update': {
+      const fields = Array.isArray(p.fields)
+        ? (p.fields as unknown[])
+            .map((f) => (typeof f === 'string' ? fieldLabel(t, f) : null))
+            .filter((f): f is string => !!f)
+        : [];
+      return fields.length > 0
+        ? fillTemplate(t.activityTaskUpdateFields, {
+            fields: Array.from(new Set(fields)).join(', '),
+          })
+        : t.activityTaskUpdate;
+    }
+    case 'task_move': {
+      const fromId = str(p.from_column_id);
+      const toId = str(p.to_column_id);
+      if (fromId && toId && fromId === toId) {
+        const name = column(toId);
+        return name
+          ? fillTemplate(t.activityTaskReorder, { column: name })
+          : t.activityTaskMove;
+      }
+      const from = column(fromId);
+      const to = column(toId);
+      if (from && to) {
+        return fillTemplate(t.activityTaskMoveBetween, { from, to });
+      }
+      return to
+        ? fillTemplate(t.activityTaskMoveTo, { to })
+        : t.activityTaskMove;
+    }
+    case 'task_assign': {
+      if (!('assignee_staff_id' in p)) return t.activityTaskAssign;
+      const id = str(p.assignee_staff_id);
+      if (!id) return t.activityTaskUnassign;
+      const name = names?.staffNameById.get(id);
+      // `from_assignee_staff_id` : journalisé depuis le 2026-11-06.
+      const fromId = str(p.from_assignee_staff_id);
+      const from = fromId ? names?.staffNameById.get(fromId) : undefined;
+      if (name && from && fromId !== id) {
+        return fillTemplate(t.activityTaskReassign, { from, to: name });
+      }
+      return name
+        ? fillTemplate(t.activityTaskAssignTo, { name })
+        : t.activityTaskAssign;
+    }
+    case 'task_restore':
+      return t.activityTaskRestore;
     case 'task_delete':
       return t.activityTaskDelete;
     case 'task_comment_create':
       return t.activityTaskCommentCreate;
+    case 'task_comment_update':
+      return t.activityTaskCommentUpdate;
     case 'task_comment_delete':
       return t.activityTaskCommentDelete;
     default:
@@ -309,35 +392,37 @@ export const DEFAULT_LABEL_COLORS = [
 // Page
 // ---------------------------------------------------------------------------
 
-// Regroupe les cartes « Mes tâches » par échéance relative.
-export function groupMyTasks(tasks: MyTask[]): {
+// Regroupe les cartes « Mes tâches » par échéance relative. Les cartes d'une
+// colonne terminale forment leur propre groupe, en dernier : terminées, elles
+// ne sont ni « en retard » ni « à venir » (l'API n'envoie que celles des 30
+// derniers jours).
+export function groupMyTasks(
+  tasks: MyTask[],
+  now: Date = new Date()
+): {
   overdue: MyTask[];
   today: MyTask[];
   upcoming: MyTask[];
   noDue: MyTask[];
+  done: MyTask[];
 } {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
   const out = {
     overdue: [] as MyTask[],
     today: [] as MyTask[],
     upcoming: [] as MyTask[],
     noDue: [] as MyTask[],
+    done: [] as MyTask[],
   };
   for (const task of tasks) {
-    if (!task.dueDate) {
-      out.noDue.push(task);
+    if (task.columnIsDone) {
+      out.done.push(task);
       continue;
     }
-    const d = new Date(task.dueDate);
-    d.setHours(0, 0, 0, 0);
-    const time = d.getTime();
-    if (time === today.getTime()) out.today.push(task);
-    else if (time < today.getTime()) {
-      // Une carte dans une colonne terminale n'est jamais « en retard ».
-      if (task.columnIsDone) out.upcoming.push(task);
-      else out.overdue.push(task);
-    } else out.upcoming.push(task);
+    const days = daysUntilDue(task.dueDate, now);
+    if (days == null) out.noDue.push(task);
+    else if (days === 0) out.today.push(task);
+    else if (days < 0) out.overdue.push(task);
+    else out.upcoming.push(task);
   }
   return out;
 }

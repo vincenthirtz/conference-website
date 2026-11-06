@@ -142,6 +142,12 @@ export function useTaskBoardDerived(deps: TaskBoardDerivedDeps) {
     [detail]
   );
 
+  // Noms des colonnes du board (activité : « déplacée de X vers Y »).
+  const columnNameById = useMemo(
+    () => new Map(sortedColumns.map((c) => [c.id, c.name])),
+    [sortedColumns]
+  );
+
   // Cartes visibles par colonne, calculées UNE fois par changement réel de
   // données/tri/filtres. Avant, le tri + le filtre tournaient dans le JSX à
   // chaque rendu du composant — or celui-ci porte une quarantaine d'états (la
@@ -165,6 +171,7 @@ export function useTaskBoardDerived(deps: TaskBoardDerivedDeps) {
     hasActiveFilters,
     clearFilters,
     sortedColumns,
+    columnNameById,
     visibleTasksByColumn,
   };
 }

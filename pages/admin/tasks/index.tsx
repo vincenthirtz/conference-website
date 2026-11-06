@@ -8,19 +8,13 @@
 //
 // Vue : sélecteur de board (onglets) + actions board (renommer/archiver/
 // supprimer) + colonnes en flex horizontal scrollable, cartes drag & drop
-// natif (HTML5) avec update optimiste et rollback en cas d'erreur.
+// natif (HTML5) avec update optimiste et rollback en cas d'erreur ; le board
+// se relit tout seul quand un autre le modifie (hooks/useTaskBoardLive.ts).
 //
 // « Le Ruban » (lot 8C) : la page garde l'état, les chargements et les effets ;
 // gestes → features/admin/tasks/hooks/ (corps à l'identique), affichage → ui/.
 
-import {
-  type SetStateAction,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { withStaffPage } from '@/utils/staff';
@@ -57,14 +51,21 @@ import {
   taskBoardKeys,
   useMyTasks,
   useTaskBoardDetail,
+  useTaskBoardDetailSetter,
   useTaskBoardStaff,
   useTaskBoardsList,
 } from '@/features/admin/tasks/hooks/useTaskBoardQueries';
+import {
+  useTaskBoardLoadErrors,
+  useTaskBoardUrlSync,
+} from '@/features/admin/tasks/hooks/useTaskBoardPageEffects';
 import { useTaskBoardBoardActions } from '@/features/admin/tasks/hooks/useTaskBoardBoardActions';
 import { useTaskBoardCardActions } from '@/features/admin/tasks/hooks/useTaskBoardCardActions';
 import { useTaskBoardLabelActions } from '@/features/admin/tasks/hooks/useTaskBoardLabelActions';
 import { useTaskBoardDnd } from '@/features/admin/tasks/hooks/useTaskBoardDnd';
+import { useTaskBoardLive } from '@/features/admin/tasks/hooks/useTaskBoardLive';
 import { useTaskBoardDerived } from '@/features/admin/tasks/hooks/useTaskBoardDerived';
+import { hasAtLeastRole, type StaffRole } from '@/utils/staffRoles';
 import TaskBoardHeader from '@/features/admin/tasks/ui/TaskBoardHeader';
 import {
   TaskBoardActions,
@@ -80,6 +81,7 @@ import {
 import {
   TaskBoardBoardModal,
   TaskBoardColumnModal,
+  TaskBoardDeleteColumnModal,
 } from '@/features/admin/tasks/ui/TaskBoardFormModals';
 import {
   TaskBoardLabelsModal,
@@ -142,25 +144,16 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
     boardsQuery.isFetching || (!boardsQuery.data && !boardsQuery.isError);
   const detailQuery = useTaskBoardDetail(activeBoardId, showDoneArchive);
   const detail: BoardDetail | null = detailQuery.data ?? null;
-  const loadingDetail = detailQuery.isFetching;
+  // Relectures (en direct, après un geste) silencieuses : bandeau au 1er chargement.
+  const loadingDetail = detailQuery.isFetching && !detailQuery.data;
   const myTasksQuery = useMyTasks(viewMode === 'mine');
   const myTasks: MyTask[] = myTasksQuery.data ?? [];
   const loadingMy = myTasksQuery.isFetching;
   const staffQuery = useTaskBoardStaff(tenant?.id);
   const staff: StaffOption[] = staffQuery.data ?? [];
 
-  // Le glisser-déposer écrit le détail EN PLACE (optimiste + retour arrière) :
-  // même contrat qu'un setter d'état, appliqué à l'entrée du cache.
-  const setDetail = useCallback(
-    (next: SetStateAction<BoardDetail | null>) => {
-      if (!activeBoardId) return;
-      queryClient.setQueryData<BoardDetail | null>(
-        taskBoardKeys.board(activeBoardId, showDoneArchive),
-        (prev) => (typeof next === 'function' ? next(prev ?? null) : next)
-      );
-    },
-    [queryClient, activeBoardId, showDoneArchive]
-  );
+  // Le glisser-déposer écrit le détail EN PLACE (entrée du cache).
+  const setDetail = useTaskBoardDetailSetter(activeBoardId, showDoneArchive);
 
   // Board modale (création / renommage)
   const [boardModalOpen, setBoardModalOpen] = useState(false);
@@ -291,18 +284,11 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
     fetchBoards();
   }, [fetchBoards]);
 
-  // Échecs de lecture : mêmes toasts qu'avant la migration.
-  useEffect(() => {
-    if (detailQuery.error)
-      addToast(detailQuery.error.message || t.errorLoad, 'error');
-  }, [detailQuery.error, addToast, t]);
-  useEffect(() => {
-    if (myTasksQuery.error)
-      addToast(myTasksQuery.error.message || t.myTasksLoadError, 'error');
-  }, [myTasksQuery.error, addToast, t]);
-  useEffect(() => {
-    if (staffQuery.error) addToast(t.staffLoadError, 'error');
-  }, [staffQuery.error, addToast, t]);
+  useTaskBoardLoadErrors(t, addToast, {
+    detail: detailQuery.error,
+    mine: myTasksQuery.error,
+    staff: staffQuery.error,
+  });
 
   // Ouverture différée d'une carte arrivée depuis « Mes tâches » : une fois le
   // détail du board cible chargé, on ouvre la carte correspondante (puis on
@@ -313,28 +299,14 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
     for (const col of detail.columns) {
       const found = col.tasks.find((tk) => tk.id === pendingOpenCardId);
       if (found) {
-        openEditCard(found);
+        openEditCard(found, col.id);
         break;
       }
     }
     setPendingOpenCardId(null);
   }, [detail, pendingOpenCardId, activeBoardId]);
 
-  // Reflect the active board in the URL (?board=) — shallow, no reload — so a
-  // refresh or shared link reopens the same board. Deps intentionally limited
-  // to activeBoardId to avoid re-fetching the board list on URL changes.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: dépendances choisies à dessein (exclusion reprise d’ESLint)
-  useEffect(() => {
-    if (!activeBoardId || router.query.board === activeBoardId) return;
-    router.replace(
-      {
-        pathname: router.pathname,
-        query: { ...router.query, board: activeBoardId },
-      },
-      undefined,
-      { shallow: true }
-    );
-  }, [activeBoardId]);
+  useTaskBoardUrlSync(activeBoardId);
 
   const visibleBoards = useMemo(
     () => boards.filter((b) => showArchived || !b.isArchived),
@@ -352,6 +324,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
     hasActiveFilters,
     clearFilters,
     sortedColumns,
+    columnNameById,
     visibleTasksByColumn,
   } = useTaskBoardDerived({
     currentStaff,
@@ -385,6 +358,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
     handleSaveColumn,
     handleDeleteColumn,
     handleReorderColumn,
+    deleteColumnModal,
   } = useTaskBoardBoardActions({
     t,
     addToast,
@@ -422,13 +396,40 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
     setRestoringId,
   });
 
+  const dnd = useTaskBoardDnd({
+    t,
+    addToast,
+    moveMutation,
+    fetchBoards,
+    fetchDetail,
+    dragTaskId,
+    detail,
+    setDetail,
+    activeBoardId,
+    dndEnabled,
+  });
+
+  const { live } = useTaskBoardLive({
+    boardId: activeBoardId,
+    enabled: viewMode === 'board',
+    isBusy: dnd.isBusy,
+    onRefresh: async () => {
+      if (!activeBoardId) return;
+      await fetchDetail(activeBoardId);
+      await fetchBoards({ keepActive: true });
+    },
+  });
+
   const {
     openAddCard,
     openEditCard,
+    requestCloseCard,
+    handleQuickAddCard,
     handleAddChecklistItem,
     handleToggleChecklistItem,
     handleDeleteChecklistItem,
     handleAddComment,
+    handleEditComment,
     handleDeleteComment,
     handleSaveCard,
     handleDeleteCard,
@@ -439,6 +440,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
     cardMutation,
     checklistMutation,
     commentMutation,
+    moveMutation,
     fetchBoards,
     fetchDetail,
     activeBoardId,
@@ -504,19 +506,6 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
     setLabelBusy,
   });
 
-  const { onCardDragStart, onCardDragEnd, onDropOnCard, onDropOnColumn } =
-    useTaskBoardDnd({
-      t,
-      addToast,
-      moveMutation,
-      fetchBoards,
-      dragTaskId,
-      detail,
-      setDetail,
-      activeBoardId,
-      dndEnabled,
-    });
-
   return (
     <>
       <Head>
@@ -563,6 +552,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
                   onManageLabels={() => setLabelsPanelOpen(true)}
                   onOpenTrash={openTrash}
                   onAddColumn={openAddColumn}
+                  live={live}
                 />
               )}
 
@@ -624,17 +614,21 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
                           tasks={visibleTasksByColumn.get(col.id) ?? []}
                           hasActiveFilters={hasActiveFilters}
                           dndEnabled={dndEnabled}
+                          dropHint={dnd.dropHint}
                           labelDefByName={labelDefByName}
                           staffNameById={staffNameById}
                           onReorder={handleReorderColumn}
                           onEdit={openEditColumn}
                           onDelete={handleDeleteColumn}
                           onAddCard={openAddCard}
+                          onQuickAdd={handleQuickAddCard}
                           onOpenCard={openEditCard}
-                          onDropOnColumn={onDropOnColumn}
-                          onDropOnCard={onDropOnCard}
-                          onCardDragStart={onCardDragStart}
-                          onCardDragEnd={onCardDragEnd}
+                          onDragOverColumn={dnd.onDragOverColumn}
+                          onDragOverCard={dnd.onDragOverCard}
+                          onDropOnColumn={dnd.onDropOnColumn}
+                          onDropOnCard={dnd.onDropOnCard}
+                          onCardDragStart={dnd.onCardDragStart}
+                          onCardDragEnd={dnd.onCardDragEnd}
                           archiveShown={showDoneArchive}
                           onToggleArchive={() => setShowDoneArchive((v) => !v)}
                         />
@@ -650,6 +644,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
           {viewMode === 'mine' && (
             <MyTasksView
               t={t}
+              locale={locale}
               tasks={myTasks}
               loading={loadingMy}
               onOpen={(task) => {
@@ -688,6 +683,8 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
             onSave={handleSaveColumn}
           />
 
+          <TaskBoardDeleteColumnModal t={t} {...deleteColumnModal} />
+
           <TaskBoardCardModal
             t={t}
             open={cardModalOpen}
@@ -700,7 +697,10 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
               assignee: cardAssignee,
               labelNames: cardLabelNames,
               adHocLabel,
+              columnId: cardColumnId,
             }}
+            columns={sortedColumns}
+            onColumnChange={setCardColumnId}
             staff={staff}
             boardLabels={boardLabels}
             labelDefByName={labelDefByName}
@@ -715,7 +715,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
             onToggleLabel={toggleCardLabel}
             onAdHocLabelChange={setAdHocLabel}
             onAddAdHocLabel={handleAddAdHocLabel}
-            onClose={() => setCardModalOpen(false)}
+            onClose={() => void requestCloseCard()}
             onSave={handleSaveCard}
             onDelete={handleDeleteCard}
           >
@@ -736,8 +736,14 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
               loading={cardDetailLoading}
               input={commentInput}
               posting={commentPosting}
+              currentStaffId={currentStaff.id}
+              canModerate={hasAtLeastRole(
+                currentStaff.role as StaffRole,
+                'admin'
+              )}
               onInputChange={setCommentInput}
               onSubmit={handleAddComment}
+              onEdit={handleEditComment}
               onDelete={handleDeleteComment}
             />
             {/* Activité (timeline humanisée, repliable si longue). */}
@@ -745,6 +751,7 @@ function AdminTasksPage({ staff: currentStaff }: StaffProps) {
               t={t}
               locale={locale}
               activity={taskActivity}
+              names={{ columnNameById, staffNameById }}
               loading={activityLoading}
               expanded={activityExpanded}
               onToggleExpanded={() => setActivityExpanded((prev) => !prev)}

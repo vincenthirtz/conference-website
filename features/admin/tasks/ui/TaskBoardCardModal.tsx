@@ -1,8 +1,13 @@
 // features/admin/tasks/ui/TaskBoardCardModal.tsx — modale de carte (création /
-// édition) : titre, description, priorité, échéance, assignée, labels (retirer,
-// ajouter depuis le board, créer à la volée). En édition, les sections
-// checklist / commentaires / activité sont passées par la page en `children`.
-// Présentationnelle : aucun appel, la page fournit valeurs et gestes.
+// édition) : titre, description, colonne, priorité, échéance, assignée, labels
+// (retirer, ajouter depuis le board, créer à la volée). En édition, les
+// sections checklist / commentaires / activité sont passées par la page en
+// `children`. Présentationnelle : aucun appel, la page fournit valeurs et
+// gestes.
+//
+// Le sélecteur de colonne est le moyen de déplacer une carte sans
+// glisser-déposer (au doigt, au clavier). Entrée dans le titre, ou
+// Ctrl + Entrée dans la description, enregistre.
 
 import type { ReactNode } from 'react';
 import Modal from '@/components/admin/Modal';
@@ -33,6 +38,7 @@ export type TaskBoardCardForm = {
   assignee: string;
   labelNames: string[];
   adHocLabel: string;
+  columnId: string | null;
 };
 
 export default function TaskBoardCardModal({
@@ -40,6 +46,7 @@ export default function TaskBoardCardModal({
   open,
   editing,
   form,
+  columns,
   staff,
   boardLabels,
   labelDefByName,
@@ -48,6 +55,7 @@ export default function TaskBoardCardModal({
   adHocAdding,
   onTitleChange,
   onDescriptionChange,
+  onColumnChange,
   onPriorityChange,
   onDueChange,
   onAssigneeChange,
@@ -64,6 +72,8 @@ export default function TaskBoardCardModal({
   /** Vrai en édition d'une carte existante. */
   editing: boolean;
   form: TaskBoardCardForm;
+  /** Colonnes du board, dans l'ordre d'affichage. */
+  columns: { id: string; name: string }[];
   staff: StaffOption[];
   boardLabels: BoardLabel[];
   labelDefByName: Map<string, BoardLabel>;
@@ -72,6 +82,7 @@ export default function TaskBoardCardModal({
   adHocAdding: boolean;
   onTitleChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
+  onColumnChange: (columnId: string) => void;
   onPriorityChange: (value: Priority) => void;
   onDueChange: (value: string) => void;
   onAssigneeChange: (value: string) => void;
@@ -138,6 +149,13 @@ export default function TaskBoardCardModal({
             type="text"
             value={form.title}
             onChange={(e) => onTitleChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing && !saving) {
+                e.preventDefault();
+                onSave();
+              }
+            }}
+            maxLength={200}
             className={TB_FIELD}
             placeholder={t.cardTitlePlaceholder}
           />
@@ -150,11 +168,37 @@ export default function TaskBoardCardModal({
             id="card-desc"
             value={form.description}
             onChange={(e) => onDescriptionChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !saving) {
+                e.preventDefault();
+                onSave();
+              }
+            }}
             rows={3}
+            maxLength={5000}
             className={TB_FIELD}
             placeholder={t.cardDescPlaceholder}
           />
         </div>
+        {columns.length > 0 && (
+          <div>
+            <label htmlFor="card-column" className={TB_LABEL}>
+              {t.columnLabel}
+            </label>
+            <select
+              id="card-column"
+              value={form.columnId ?? ''}
+              onChange={(e) => onColumnChange(e.target.value)}
+              className={TB_FIELD}
+            >
+              {columns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="card-priority" className={TB_LABEL}>

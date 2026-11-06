@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
+import { format } from '@/lib/i18n/useAdminT';
 import {
   groupMyTasks,
   humanizeActivity,
@@ -17,11 +18,13 @@ import {
   priorityTone,
   readableTextColor,
   relativeTime,
+  type ActivityNames,
   type BoardLabel,
   type Dict,
   type MyTask,
   type TaskActivity,
 } from '@/components/admin/tasks/taskBoardModel';
+import { dueInfo, dueToneClass } from '@/features/admin/tasks/taskBoardRules';
 
 const SURFACE =
   'rounded-[var(--r-card,14px)] border border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s1,#100812)]';
@@ -125,14 +128,17 @@ export function LabelManagerRow({
   );
 }
 
-// Vue transverse « Mes tâches » : cartes assignées groupées par échéance.
+// Vue transverse « Mes tâches » : cartes assignées groupées par échéance, les
+// terminées (30 derniers jours) à part, en dernier.
 export function MyTasksView({
   t,
+  locale,
   tasks,
   loading,
   onOpen,
 }: {
   t: Dict;
+  locale: string;
   tasks: MyTask[];
   loading: boolean;
   onOpen: (task: MyTask) => void;
@@ -182,6 +188,12 @@ export function MyTasksView({
       items: groups.noDue,
       tone: 'text-[var(--t3,#a39ba6)]',
     },
+    {
+      key: 'done',
+      label: t.myGroupDone,
+      items: groups.done,
+      tone: 'text-[var(--ok,#30d07e)]',
+    },
   ];
   return (
     <div className="space-y-6">
@@ -223,17 +235,24 @@ export function MyTasksView({
                           {task.columnIsDone ? ` · ${t.myTaskDone}` : ''}
                         </Chip>
                       )}
-                      {task.dueDate && (
-                        <span
-                          className={
-                            s.key === 'overdue'
-                              ? 'font-medium text-[var(--err,#ff6b6b)]'
-                              : 'text-[var(--t2,#c7bfca)]'
-                          }
-                        >
-                          {task.dueDate.slice(0, 10)}
-                        </span>
-                      )}
+                      {(() => {
+                        const due = dueInfo(
+                          task.dueDate,
+                          task.columnIsDone,
+                          locale
+                        );
+                        if (!due) return null;
+                        return (
+                          <span
+                            className={dueToneClass(due.state)}
+                            title={format(t.dueTitle, { date: due.title })}
+                          >
+                            <time dateTime={task.dueDate?.slice(0, 10)}>
+                              {due.label}
+                            </time>
+                          </span>
+                        );
+                      })()}
                     </div>
                   </button>
                 </li>
@@ -245,11 +264,14 @@ export function MyTasksView({
   );
 }
 
-// Timeline d'activité humanisée d'une carte (repliable au-delà de 5 entrées).
+// Timeline d'activité humanisée d'une carte (repliable au-delà de 5 entrées) :
+// « a déplacé la carte de « À faire » vers « En cours » », « a assigné la
+// carte à … », « a modifié : titre, échéance »… quand les noms sont connus.
 export function ActivitySection({
   t,
   locale,
   activity,
+  names,
   loading,
   expanded,
   onToggleExpanded,
@@ -257,6 +279,8 @@ export function ActivitySection({
   t: Dict;
   locale: string;
   activity: TaskActivity[];
+  /** Colonnes du board et staff, pour nommer ce que le journal désigne. */
+  names?: ActivityNames;
   loading: boolean;
   expanded: boolean;
   onToggleExpanded: () => void;
@@ -286,7 +310,9 @@ export function ActivitySection({
                     {a.actorName ?? t.unknownAuthor}
                   </span>{' '}
                   <span className="text-[var(--t3,#a39ba6)]">
-                    {humanizeActivity(t, a.action)}
+                    {humanizeActivity(t, a.action, a.payload, names)}
+                    {a.payload?.via === 'discord_bot' &&
+                      ` (${t.activityViaDiscord})`}
                   </span>
                   <span className="text-[var(--t4,#807984)]"> · </span>
                   <time

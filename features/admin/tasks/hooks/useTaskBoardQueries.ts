@@ -8,8 +8,12 @@
 // ordre. On relit donc exactement quand la page le demandait avant la
 // migration : au changement de board, et via `fetchDetail` / `fetchBoards`.
 
-import { useQuery } from '@tanstack/react-query';
-import type { StaffOption } from '@/components/admin/tasks/taskBoardModel';
+import { type SetStateAction, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type {
+  BoardDetail,
+  StaffOption,
+} from '@/components/admin/tasks/taskBoardModel';
 import { adminKey, EDITOR_QUERY_OPTIONS } from '../../_shared/query';
 import { taskBoardClient } from '../client';
 
@@ -56,6 +60,27 @@ export function useTaskBoardDetail(boardId: string | null, archive = false) {
     // déplacement optimiste (et l'échec est signalé tout de suite, comme avant).
     retry: false,
   });
+}
+
+/**
+ * Le glisser-déposer écrit le détail EN PLACE (optimiste + retour arrière) :
+ * même contrat qu'un setter d'état, appliqué à l'entrée du cache.
+ */
+export function useTaskBoardDetailSetter(
+  boardId: string | null,
+  archive: boolean
+) {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (next: SetStateAction<BoardDetail | null>) => {
+      if (!boardId) return;
+      queryClient.setQueryData<BoardDetail | null>(
+        taskBoardKeys.board(boardId, archive),
+        (prev) => (typeof next === 'function' ? next(prev ?? null) : next)
+      );
+    },
+    [queryClient, boardId, archive]
+  );
 }
 
 /** « Mes tâches » : relu à chaque entrée dans la vue. */

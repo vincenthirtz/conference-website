@@ -1,20 +1,26 @@
 // features/admin/tasks/ui/TaskBoardColumn.tsx — une colonne du Kanban :
 // en-tête (nom, compteur, limite WIP, colonne terminale, réordonner/éditer/
-// supprimer), cartes visibles et bouton « + Ajouter une carte ». La colonne est
-// une zone de dépôt ; la saturation WIP se lit sur le total réel, pas filtré.
+// supprimer), cartes visibles et ajout de carte. La colonne est une zone de
+// dépôt ; la saturation WIP se lit sur le total réel, pas filtré.
+//
+// Ajout rapide : « + Ajouter une carte » ouvre un champ en bas de colonne ;
+// Entrée crée la carte (priorité moyenne, sans échéance) et laisse le champ
+// ouvert pour la suivante, Échap le ferme, « Plus d'options » ouvre la
+// fenêtre complète avec le titre déjà tapé.
 
-import type { DragEvent } from 'react';
+import { type DragEvent, useRef, useState } from 'react';
 import { format } from '@/lib/i18n/useAdminT';
 import AdminButton from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
-import {
-  type BoardDetailColumn,
-  type BoardLabel,
-  type BoardTask,
-  type Dict,
-  isOverdue,
+import type {
+  BoardDetailColumn,
+  BoardLabel,
+  BoardTask,
+  Dict,
 } from '@/components/admin/tasks/taskBoardModel';
+import type { DropHint } from '../hooks/useTaskBoardDnd';
 import TaskBoardCard from './TaskBoardCard';
+import { TB_FIELD_SM } from './taskBoardClasses';
 
 export default function TaskBoardColumn({
   t,
@@ -24,13 +30,17 @@ export default function TaskBoardColumn({
   tasks,
   hasActiveFilters,
   dndEnabled,
+  dropHint = null,
   labelDefByName,
   staffNameById,
   onReorder,
   onEdit,
   onDelete,
   onAddCard,
+  onQuickAdd,
   onOpenCard,
+  onDragOverColumn,
+  onDragOverCard,
   onDropOnColumn,
   onDropOnCard,
   onCardDragStart,
@@ -46,13 +56,20 @@ export default function TaskBoardColumn({
   tasks: BoardTask[];
   hasActiveFilters: boolean;
   dndEnabled: boolean;
+  /** Place montrée pendant un glisser (toutes colonnes confondues). */
+  dropHint?: DropHint | null;
   labelDefByName: Map<string, BoardLabel>;
   staffNameById: Map<string, string>;
   onReorder: (index: number, dir: -1 | 1) => void;
   onEdit: (col: BoardDetailColumn) => void;
   onDelete: (col: BoardDetailColumn) => void;
-  onAddCard: (columnId: string) => void;
-  onOpenCard: (card: BoardTask) => void;
+  /** Fenêtre complète de création (titre éventuellement prérempli). */
+  onAddCard: (columnId: string, title?: string) => void;
+  /** Création directe depuis le champ rapide ; `true` si la carte est créée. */
+  onQuickAdd: (columnId: string, title: string) => Promise<boolean>;
+  onOpenCard: (card: BoardTask, columnId: string) => void;
+  onDragOverColumn: (e: DragEvent, columnId: string) => void;
+  onDragOverCard: (e: DragEvent, columnId: string, taskId: string) => void;
   onDropOnColumn: (e: DragEvent, toColumnId: string) => void;
   onDropOnCard: (
     e: DragEvent,
@@ -65,6 +82,36 @@ export default function TaskBoardColumn({
   archiveShown?: boolean;
   onToggleArchive?: () => void;
 }) {
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quickTitle, setQuickTitle] = useState('');
+  const [quickBusy, setQuickBusy] = useState(false);
+  const quickInputRef = useRef<HTMLInputElement>(null);
+
+  function openQuickAdd() {
+    setQuickOpen(true);
+    // Le champ existe au rendu suivant.
+    setTimeout(() => quickInputRef.current?.focus(), 0);
+  }
+
+  function closeQuickAdd() {
+    setQuickOpen(false);
+    setQuickTitle('');
+  }
+
+  async function submitQuickAdd() {
+    const title = quickTitle.trim();
+    if (!title || quickBusy) return;
+    setQuickBusy(true);
+    const ok = await onQuickAdd(col.id, title);
+    setQuickBusy(false);
+    if (ok) {
+      setQuickTitle('');
+      quickInputRef.current?.focus();
+    }
+  }
+
+  const columnDropHint =
+    dropHint && dropHint.columnId === col.id && dropHint.taskId === null;
   const archivedCount = col.archivedCount ?? 0;
   const showArchiveToggle =
     col.isDone && !!onToggleArchive && (archiveShown || archivedCount > 0);
@@ -76,13 +123,13 @@ export default function TaskBoardColumn({
   const count = tasks.length;
   return (
     <div
-      onDragOver={(e) => e.preventDefault()}
+      onDragOver={(e) => onDragOverColumn(e, col.id)}
       onDrop={(e) => onDropOnColumn(e, col.id)}
       className={`flex max-h-[70vh] w-72 flex-shrink-0 flex-col rounded-[var(--r-card,14px)] border ${
         atLimit
           ? 'border-[rgba(255,107,107,.4)] bg-[rgba(255,107,107,.05)]'
           : 'border-[var(--line,rgba(194,196,201,.12))] bg-[var(--s1,#100812)]'
-      }`}
+      } ${columnDropHint ? 'outline outline-2 outline-[var(--or,#b467d1)]' : ''}`}
     >
       {/* Header colonne */}
       <div
@@ -193,13 +240,21 @@ export default function TaskBoardColumn({
             key={card.id}
             t={t}
             card={card}
-            overdue={isOverdue(card.dueDate, col.isDone)}
+            columnIsDone={col.isDone}
             dndEnabled={dndEnabled}
+            dropHint={
+              dropHint && dropHint.taskId === card.id
+                ? dropHint.after
+                  ? 'after'
+                  : 'before'
+                : null
+            }
             labelDefByName={labelDefByName}
             staffNameById={staffNameById}
-            onOpen={onOpenCard}
+            onOpen={(c) => onOpenCard(c, col.id)}
             onDragStart={onCardDragStart}
             onDragEnd={onCardDragEnd}
+            onDragOver={(e) => onDragOverCard(e, col.id, card.id)}
             onDrop={(e) => onDropOnCard(e, col.id, card.id)}
           />
         ))}
@@ -222,13 +277,64 @@ export default function TaskBoardColumn({
         )}
       </div>
 
-      {/* Ajouter une carte */}
-      <div className="border-t border-[var(--line,rgba(194,196,201,.12))] p-2">
-        <AdminButton
-          size="xs"
-          className="w-full"
-          onClick={() => onAddCard(col.id)}
-        >
+      {/* Ajouter une carte : champ rapide (le bouton reste en place, il sert
+          aussi de zone de dépôt « fin de colonne »). */}
+      <div className="space-y-2 border-t border-[var(--line,rgba(194,196,201,.12))] p-2">
+        {quickOpen && (
+          <div className="space-y-1.5">
+            <input
+              ref={quickInputRef}
+              type="text"
+              value={quickTitle}
+              maxLength={200}
+              onChange={(e) => setQuickTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  void submitQuickAdd();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  closeQuickAdd();
+                }
+              }}
+              placeholder={t.quickAddPlaceholder}
+              aria-label={t.quickAddLabel}
+              className={`w-full ${TB_FIELD_SM}`}
+            />
+            <div className="flex items-center gap-1">
+              <AdminButton
+                variant="primary"
+                size="xs"
+                onClick={() => void submitQuickAdd()}
+                disabled={quickBusy || !quickTitle.trim()}
+              >
+                {quickBusy ? t.adding : t.add}
+              </AdminButton>
+              <AdminButton
+                size="xs"
+                variant="ghost"
+                onClick={() => {
+                  const title = quickTitle.trim();
+                  closeQuickAdd();
+                  onAddCard(col.id, title || undefined);
+                }}
+              >
+                {t.quickAddDetails}
+              </AdminButton>
+              <AdminButton
+                size="xs"
+                variant="ghost"
+                className="ml-auto !px-2"
+                onClick={closeQuickAdd}
+                title={t.quickAddClose}
+                aria-label={t.quickAddClose}
+              >
+                ✕
+              </AdminButton>
+            </div>
+          </div>
+        )}
+        <AdminButton size="xs" className="w-full" onClick={openQuickAdd}>
           + {t.addCard}
         </AdminButton>
       </div>

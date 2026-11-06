@@ -1,12 +1,15 @@
 // features/admin/tasks/hooks/useTaskBoardCardActions.ts — gestes d'une carte :
 // ouverture (création / édition + chargement checklist, commentaires,
-// activité), checklist, commentaires, enregistrement et suppression.
+// activité), ajout rapide, checklist, commentaires (dont modification),
+// enregistrement (dont changement de colonne), fermeture protégée et
+// suppression.
 //
-// Corps DÉPLACÉS À L'IDENTIQUE depuis pages/admin/tasks/index.tsx : seuls les
-// accès à l'état et aux outils de la page deviennent des paramètres. La page
-// reste propriétaire de tous les useState.
+// Corps d'origine DÉPLACÉS depuis pages/admin/tasks/index.tsx : la page reste
+// propriétaire des useState du formulaire ; ce hook ne garde que l'instantané
+// de la carte à l'ouverture (fermeture sans perdre une saisie).
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
+import { format } from '@/lib/i18n/useAdminT';
 import type {
   BoardTask,
   ChecklistItem,
@@ -15,6 +18,10 @@ import type {
   TaskActivity,
   TaskComment,
 } from '@/components/admin/tasks/taskBoardModel';
+import {
+  type CardFormSnapshot,
+  isCardFormDirty,
+} from '@/features/admin/tasks/taskBoardRules';
 import { taskBoardUrls, taskBoardClient } from '../client';
 import type {
   AddToast,
@@ -32,6 +39,8 @@ export type TaskBoardCardActionsDeps = {
   cardMutation: Mutation;
   checklistMutation: Mutation;
   commentMutation: Mutation;
+  /** Changement de colonne à l'enregistrement (même file que le glisser). */
+  moveMutation: Mutation;
   fetchBoards: FetchBoards;
   fetchDetail: FetchDetail;
   activeBoardId: string | null;
@@ -82,6 +91,7 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
     cardMutation,
     checklistMutation,
     commentMutation,
+    moveMutation,
     fetchBoards,
     fetchDetail,
     activeBoardId,
@@ -180,32 +190,113 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
     [addToast, t]
   );
 
-  function openAddCard(columnId: string) {
+  // Ce que la fenêtre montrait à l'ouverture : la fermer après une saisie
+  // demande confirmation ; la colonne d'origine dit s'il faut déplacer.
+  const openedSnapshot = useRef<CardFormSnapshot | null>(null);
+
+  function openAddCard(columnId: string, title = '') {
     setEditingCard(null);
     setCardColumnId(columnId);
-    setCardTitle('');
+    setCardTitle(title);
     setCardDesc('');
     setCardPriority('medium');
     setCardDue('');
     setCardAssignee('');
     setCardLabelNames([]);
     resetCardDetailSections();
+    openedSnapshot.current = {
+      title: '',
+      description: '',
+      priority: 'medium',
+      due: '',
+      assignee: '',
+      labelNames: [],
+      columnId,
+    };
     setCardModalOpen(true);
   }
 
-  function openEditCard(card: BoardTask) {
+  function openEditCard(card: BoardTask, columnId: string | null = null) {
+    const snapshot: CardFormSnapshot = {
+      title: card.title,
+      description: card.description ?? '',
+      priority: card.priority,
+      due: card.dueDate ? card.dueDate.slice(0, 10) : '',
+      assignee: card.assignee?.staffId ?? '',
+      labelNames: card.labels ?? [],
+      columnId,
+    };
     setEditingCard(card);
-    setCardColumnId(null);
-    setCardTitle(card.title);
-    setCardDesc(card.description ?? '');
-    setCardPriority(card.priority);
-    setCardDue(card.dueDate ? card.dueDate.slice(0, 10) : '');
-    setCardAssignee(card.assignee?.staffId ?? '');
-    setCardLabelNames(card.labels ?? []);
+    setCardColumnId(columnId);
+    setCardTitle(snapshot.title);
+    setCardDesc(snapshot.description);
+    setCardPriority(snapshot.priority);
+    setCardDue(snapshot.due);
+    setCardAssignee(snapshot.assignee);
+    setCardLabelNames(snapshot.labelNames);
     resetCardDetailSections();
+    openedSnapshot.current = snapshot;
     setCardModalOpen(true);
     void loadCardDetail(card.id);
     void loadCardActivity(card.id);
+  }
+
+  /**
+   * Fermeture demandée (Échap, fond, Annuler, ✕) : si la saisie a changé, ou
+   * qu'un commentaire / un élément de checklist est tapé sans être envoyé, on
+   * demande avant de tout perdre.
+   */
+  async function requestCloseCard() {
+    const dirty =
+      isCardFormDirty(openedSnapshot.current, {
+        title: cardTitle,
+        description: cardDesc,
+        priority: cardPriority,
+        due: cardDue,
+        assignee: cardAssignee,
+        labelNames: cardLabelNames,
+        columnId: cardColumnId,
+      }) ||
+      commentInput.trim() !== '' ||
+      checklistInput.trim() !== '';
+    if (dirty) {
+      const ok = await confirm({
+        title: t.confirmDiscardCard,
+        subtitle: t.confirmDiscardCardSubtitle,
+        confirmLabel: t.discardChanges,
+        cancelLabel: t.cancel,
+        variant: 'danger',
+      });
+      if (!ok) return;
+    }
+    setCardModalOpen(false);
+  }
+
+  /** Ajout rapide depuis le bas d'une colonne : titre seul, priorité moyenne. */
+  async function handleQuickAddCard(
+    columnId: string,
+    title: string
+  ): Promise<boolean> {
+    if (!activeBoardId || !title.trim()) return false;
+    try {
+      await cardMutation.mutateJson(taskBoardUrls.tasks, {
+        method: 'POST',
+        body: JSON.stringify({
+          boardId: activeBoardId,
+          columnId,
+          title: title.trim(),
+          priority: 'medium',
+          labels: [],
+        }),
+      });
+      addToast(t.cardCreated, 'success');
+      await fetchDetail(activeBoardId);
+      void fetchBoards({ keepActive: true });
+      return true;
+    } catch (err: unknown) {
+      addToast((err as Error)?.message || t.errorGeneric, 'error');
+      return false;
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -295,6 +386,39 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
     }
   }
 
+  /** `403 comment_forbidden` : l'API refuse ce geste à cette personne. */
+  function isCommentForbidden(err: unknown): boolean {
+    return (
+      (err as { payload?: { code?: string } })?.payload?.code ===
+      'comment_forbidden'
+    );
+  }
+
+  async function handleEditComment(
+    comment: TaskComment,
+    body: string
+  ): Promise<boolean> {
+    try {
+      const res = await commentMutation.mutateJson<{ comment: TaskComment }>(
+        taskBoardUrls.comment(comment.id),
+        { method: 'PATCH', body: JSON.stringify({ body }) }
+      );
+      setTaskComments((prev) =>
+        prev.map((c) => (c.id === comment.id ? { ...c, ...res.comment } : c))
+      );
+      addToast(t.commentUpdated, 'success');
+      return true;
+    } catch (err: unknown) {
+      addToast(
+        isCommentForbidden(err)
+          ? t.commentEditForbidden
+          : (err as Error)?.message || t.errorGeneric,
+        'error'
+      );
+      return false;
+    }
+  }
+
   async function handleDeleteComment(comment: TaskComment) {
     const ok = await confirm({
       title: t.confirmDeleteComment,
@@ -311,7 +435,12 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
       if (activeBoardId) void fetchDetail(activeBoardId);
     } catch (err: unknown) {
       setTaskComments(snapshot); // rollback
-      addToast((err as Error)?.message || t.errorGeneric, 'error');
+      addToast(
+        isCommentForbidden(err)
+          ? t.commentDeleteForbidden
+          : (err as Error)?.message || t.errorGeneric,
+        'error'
+      );
     }
   }
 
@@ -349,7 +478,36 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
             }
           );
         }
-        addToast(t.cardUpdated, 'success');
+        // Colonne : déplacement (fin de la colonne choisie), seulement si
+        // changée. Une colonne pleine (409 wip_exceeded) n'annule pas le
+        // reste, déjà enregistré : on le dit et la carte reste où elle est.
+        const fromColumnId = openedSnapshot.current?.columnId ?? null;
+        let moveBlocked = false;
+        if (cardColumnId && fromColumnId && cardColumnId !== fromColumnId) {
+          try {
+            await moveMutation.mutateJson(
+              taskBoardUrls.taskMove(editingCard.id),
+              {
+                method: 'PATCH',
+                body: JSON.stringify({ columnId: cardColumnId }),
+              }
+            );
+          } catch (err: unknown) {
+            const anyErr = err as {
+              payload?: { code?: string; limit?: number; current?: number };
+            };
+            if (anyErr?.payload?.code !== 'wip_exceeded') throw err;
+            moveBlocked = true;
+            addToast(
+              format(t.wipExceededToast, {
+                current: anyErr.payload.current ?? 0,
+                limit: anyErr.payload.limit ?? 0,
+              }),
+              'error'
+            );
+          }
+        }
+        if (!moveBlocked) addToast(t.cardUpdated, 'success');
       } else if (cardColumnId) {
         await cardMutation.mutateJson(taskBoardUrls.tasks, {
           method: 'POST',
@@ -403,10 +561,13 @@ export function useTaskBoardCardActions(deps: TaskBoardCardActionsDeps) {
   return {
     openAddCard,
     openEditCard,
+    requestCloseCard,
+    handleQuickAddCard,
     handleAddChecklistItem,
     handleToggleChecklistItem,
     handleDeleteChecklistItem,
     handleAddComment,
+    handleEditComment,
     handleDeleteComment,
     handleSaveCard,
     handleDeleteCard,

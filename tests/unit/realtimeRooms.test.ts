@@ -46,6 +46,8 @@ describe('roomFor', () => {
     expect(roomFor('caster_scenes')).toBe('caster:scenes');
     expect(roomFor('caster_scenes', `id=eq.${ID}`)).toBe(`caster:scene:${ID}`);
     expect(roomFor('caster_themes')).toBe('caster:themes');
+    // Kanban staff : prévenu par conference-api (task.board_changed).
+    expect(roomFor('tasks', `board_id=eq.${ID}`)).toBe(`tasks:board:${ID}`);
   });
 
   it('sans salon prévu : null (l’écoute reste sur Supabase)', () => {
@@ -66,6 +68,7 @@ describe('roomFor', () => {
       roomFor('caster_scenes'),
       roomFor('caster_scenes', `id=eq.${ID}`),
       roomFor('caster_themes'),
+      roomFor('tasks', `board_id=eq.${ID}`),
     ]) {
       expect(r && isValidRoom(r), String(r)).toBe(true);
     }
@@ -81,6 +84,11 @@ describe('ticketPathFor', () => {
       '/api/admin/realtime/ticket'
     );
     expect(ticketPathFor('caster:presence')).toBe('/api/admin/realtime/ticket');
+    // Le Kanban est interne au staff : salon privé, ticket admin.
+    expect(ticketPathFor(`tasks:board:${ID}`)).toBe(
+      '/api/admin/realtime/ticket'
+    );
+    expect(isPublicRoom(`tasks:board:${ID}`)).toBe(false);
     for (const r of [
       `draft:${ID}`,
       'caster:scenes',

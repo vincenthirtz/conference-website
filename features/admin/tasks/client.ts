@@ -29,6 +29,11 @@ export const taskBoardUrls = {
   board: (id: string) => `${BASE}/boards/${enc(id)}`,
   columns: `${BASE}/columns`,
   column: (id: string) => `${BASE}/columns/${enc(id)}`,
+  /** Suppression d'une colonne ; `moveTo` = colonne qui reçoit ses cartes. */
+  columnDelete: (id: string, moveTo?: string) =>
+    moveTo
+      ? `${BASE}/columns/${enc(id)}?moveTo=${enc(moveTo)}`
+      : `${BASE}/columns/${enc(id)}`,
   tasks: `${BASE}/tasks`,
   task: (id: string) => `${BASE}/tasks/${enc(id)}`,
   taskMove: (id: string) => `${BASE}/tasks/${enc(id)}/move`,
