@@ -99,6 +99,8 @@ const ACK: TeamNotification = {
   targetTeamName: 'Les Invitées',
   opponentTeamName: 'Les Invitées',
   scrimDate: null,
+  tournamentId: null,
+  tournamentName: null,
 };
 const ACC: TeamNotification = {
   id: 'n-acc',
@@ -110,6 +112,22 @@ const ACC: TeamNotification = {
   targetTeamName: 'Les Invitées',
   opponentTeamName: 'Les Demandeuses',
   scrimDate: null,
+  tournamentId: null,
+  tournamentName: null,
+};
+const TOURNAMENT = '0b000000-0000-4000-8000-00000000000b';
+const RULES: TeamNotification = {
+  id: 'n-rules',
+  kind: 'rules_validation_requested',
+  text: 'Le règlement de OWWC 2027 attend ta validation.',
+  createdAt: '2026-11-06T09:00:00.000Z',
+  read: false,
+  fromTeamName: null,
+  targetTeamName: 'Les Demandeuses',
+  opponentTeamName: null,
+  scrimDate: null,
+  tournamentId: TOURNAMENT,
+  tournamentName: 'OWWC 2027',
 };
 
 const payload = (
@@ -188,6 +206,36 @@ describe('TeamNotificationsList', () => {
     expect(screen.getByText(ACK.text)).toBeTruthy();
   });
 
+  it('règlement à valider : phrase avec le tournoi et lien vers la liseuse ; aucun lien sur un scrim', () => {
+    render(
+      <TeamNotificationsList notifications={[RULES, ACK]} fresh={new Set()} />
+    );
+    const cards = screen.getAllByTestId('team-notification');
+    expect(cards[0].textContent).toContain(
+      t.teamKindLabels.rules_validation_requested
+    );
+    expect(cards[0].textContent).toContain(
+      'Le règlement de OWWC 2027 attend ta validation : lis-le jusqu’au bout'
+    );
+    const links = screen.getAllByTestId('team-notification-rules-link');
+    expect(links).toHaveLength(1);
+    expect(links[0].getAttribute('href')).toBe(
+      `/player/tournaments/${TOURNAMENT}/reglement`
+    );
+    expect(links[0].textContent).toBe(t.teamRulesCta);
+  });
+
+  it('règlement sans tournoi connu : texte rangé, pas de lien', () => {
+    render(
+      <TeamNotificationsList
+        notifications={[{ ...RULES, tournamentId: null, tournamentName: null }]}
+        fresh={new Set()}
+      />
+    );
+    expect(screen.getByText(RULES.text)).toBeTruthy();
+    expect(screen.queryByTestId('team-notification-rules-link')).toBeNull();
+  });
+
   it('vide : le dit', () => {
     render(<TeamNotificationsList notifications={[]} fresh={new Set()} />);
     expect(screen.getByText(t.teamEmpty)).toBeTruthy();
@@ -249,6 +297,26 @@ describe('teamNotificationText — dans la langue de la joueuse', () => {
         teamNotificationText({ ...ACC, kind: 'future_kind' }, dict, 'en-GB')
       ).toBe(ACC.text);
     }
+  });
+
+  it('règlement : FR et EN, validation demandée et relance', () => {
+    const reminder = { ...RULES, kind: 'rules_reminder' };
+    expect(teamNotificationText(RULES, t, 'fr-FR')).toBe(
+      'Le règlement de OWWC 2027 attend ta validation : lis-le jusqu’au bout puis accepte-le pour que l’inscription de ton équipe soit complète.'
+    );
+    expect(teamNotificationText(reminder, t, 'fr-FR')).toBe(
+      'Rappel de ton équipe : le règlement de OWWC 2027 attend toujours ta validation. L’inscription de ton équipe reste incomplète tant que tu ne l’as pas accepté.'
+    );
+    expect(teamNotificationText(RULES, en, 'en-GB')).toBe(
+      'The rules of OWWC 2027 are waiting for you: read them to the end, then accept them so that your team’s registration is complete.'
+    );
+    expect(teamNotificationText(reminder, en, 'en-GB')).toBe(
+      'A reminder from your team: the rules of OWWC 2027 are still waiting for you. Your team’s registration stays incomplete until you accept them.'
+    );
+    // Sans nom de tournoi : le texte rangé.
+    expect(
+      teamNotificationText({ ...RULES, tournamentName: null }, en, 'en-GB')
+    ).toBe(RULES.text);
   });
 
   it('date illisible : la phrase sans date', () => {

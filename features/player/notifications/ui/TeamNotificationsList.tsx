@@ -1,8 +1,10 @@
 // features/player/notifications/ui/TeamNotificationsList.tsx — « Notifications
 // de l'équipe » : une carte par notification adressée à l'équipe (scrim
-// accepté, scrim pris en compte), plus récentes d'abord — titre, date, texte,
-// et la pastille « Nouveau » pour celles qui n'étaient pas lues à l'arrivée
-// sur l'écran. Présentationnel : reçoit la liste (hooks/useTeamNotifications).
+// accepté, scrim pris en compte, règlement d'un tournoi à valider), plus
+// récentes d'abord — titre, date, texte, la pastille « Nouveau » pour celles
+// qui n'étaient pas lues à l'arrivée sur l'écran, et pour le règlement le
+// lien vers la liseuse. Présentationnel : reçoit la liste
+// (hooks/useTeamNotifications).
 //
 // LANGUE. Titre et phrase suivent la langue de la joueuse : la phrase est
 // composée à l'affichage depuis le type et l'équipe adverse
@@ -11,6 +13,7 @@
 // (anciennes lignes comprises).
 
 import {
+  ButtonLink,
   Card,
   Chip,
   rubanErrBox,
@@ -21,6 +24,7 @@ import {
 import { format, useT } from '@/lib/i18n/useT';
 import { useLocale } from '@/lib/i18n/useLocale';
 import nsPlayerNotifications from '@/lib/i18n/locales/fr/playerNotifications';
+import { tournamentRulesUrls } from '@/features/player/tournamentRules/client';
 import type { TeamNotification } from '../schemas';
 
 type Dict = (typeof nsPlayerNotifications)['fr'];
@@ -43,15 +47,27 @@ function scrimDateLabel(iso: string | null, locale: string): string | null {
   });
 }
 
+/** Règlement d'un tournoi à valider : phrase avec le tournoi, lien vers la liseuse. */
+const RULES_KINDS = new Set(['rules_validation_requested', 'rules_reminder']);
+
 /**
  * La phrase d'une notification, dans la langue de `t`. Repli sur le texte
- * rangé quand le type est inconnu ou que l'équipe adverse manque.
+ * rangé quand le type est inconnu ou que l'équipe adverse (scrim) ou le
+ * tournoi (règlement) manque.
  */
 export function teamNotificationText(
-  n: Pick<TeamNotification, 'kind' | 'text' | 'opponentTeamName' | 'scrimDate'>,
+  n: Pick<
+    TeamNotification,
+    'kind' | 'text' | 'opponentTeamName' | 'scrimDate' | 'tournamentName'
+  >,
   t: Dict,
   locale: string
 ): string {
+  if (n.kind === 'rules_validation_requested' || n.kind === 'rules_reminder') {
+    return n.tournamentName
+      ? format(t.teamText[n.kind], { tournament: n.tournamentName })
+      : n.text;
+  }
   const opponent = n.opponentTeamName;
   if (!opponent) return n.text;
   switch (n.kind) {
@@ -126,6 +142,18 @@ export default function TeamNotificationsList({
                 </span>
               </div>
               {text && <p className={`mt-1 text-sm ${rubanMuted}`}>{text}</p>}
+              {RULES_KINDS.has(n.kind) && n.tournamentId && (
+                <div className="mt-2">
+                  <ButtonLink
+                    href={tournamentRulesUrls.readerPage(n.tournamentId)}
+                    variant="secondary"
+                    size="sm"
+                    data-testid="team-notification-rules-link"
+                  >
+                    {t.teamRulesCta}
+                  </ButtonLink>
+                </div>
+              )}
             </Card>
           </li>
         );

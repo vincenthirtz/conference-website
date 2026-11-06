@@ -65,6 +65,8 @@ export default ns('playerNotifications', {
   teamKindLabels: {
     scrim_accepted: 'Scrim accepté',
     scrim_acknowledged: 'Demande de scrim prise en compte',
+    rules_validation_requested: 'Règlement à valider',
+    rules_reminder: 'Rappel : règlement à valider',
   },
   teamKindFallback: 'Notification de l’équipe',
   // Phrase composée à l'affichage ({opponent} = l'équipe adverse). Repli : le
@@ -74,7 +76,13 @@ export default ns('playerNotifications', {
     scrim_accepted_dated: 'Scrim accepté contre {opponent}, prévu le {date}.',
     scrim_acknowledged:
       'La demande de scrim de ton équipe contre {opponent} a été prise en compte : l’organisation se fait directement entre les équipes.',
+    // {tournament} = le nom du tournoi.
+    rules_validation_requested:
+      'Le règlement de {tournament} attend ta validation : lis-le jusqu’au bout puis accepte-le pour que l’inscription de ton équipe soit complète.',
+    rules_reminder:
+      'Rappel de ton équipe : le règlement de {tournament} attend toujours ta validation. L’inscription de ton équipe reste incomplète tant que tu ne l’as pas accepté.',
   },
+  teamRulesCta: 'Lire le règlement',
   prefsHeading: 'Préférences de notifications',
   prefsFootnote:
     'Ces réglages s’appliquent aux notifications push du navigateur. Active d’abord les notifications ci-dessus pour les recevoir.',

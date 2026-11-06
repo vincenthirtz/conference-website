@@ -65,6 +65,8 @@ export default {
   teamKindLabels: {
     scrim_accepted: 'Scrim accepted',
     scrim_acknowledged: 'Scrim request acknowledged',
+    rules_validation_requested: 'Rules to accept',
+    rules_reminder: 'Reminder: rules to accept',
   },
   teamKindFallback: 'Team notification',
   teamText: {
@@ -73,7 +75,12 @@ export default {
       'Scrim accepted against {opponent}, scheduled for {date}.',
     scrim_acknowledged:
       'Your team’s scrim request against {opponent} has been acknowledged: the teams are organising it directly between themselves.',
+    rules_validation_requested:
+      'The rules of {tournament} are waiting for you: read them to the end, then accept them so that your team’s registration is complete.',
+    rules_reminder:
+      'A reminder from your team: the rules of {tournament} are still waiting for you. Your team’s registration stays incomplete until you accept them.',
   },
+  teamRulesCta: 'Read the rules',
   prefsHeading: 'Notification preferences',
   prefsFootnote:
     'These settings apply to browser push notifications. Enable notifications above first to receive them.',
