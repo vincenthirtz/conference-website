@@ -29,6 +29,10 @@ import { logger } from '../../utils/logger';
 import MatchPredictionCard from '@/components/predictions/MatchPredictionCard';
 import nsMatchDetail from '@/lib/i18n/locales/fr/matchDetail';
 import { gameLabel } from '@/config/games';
+import {
+  getMatchStatusChipClass,
+  getMatchStatusLabel,
+} from '@/utils/publicMatchStatus';
 
 /** Recopie du `.select()` des membres composant les compositions. */
 type LineupRow = {
@@ -1291,36 +1295,6 @@ function formatMatchDate(iso: string | null, locale: string): string | null {
       minute: '2-digit',
     }) || null
   );
-}
-
-function getMatchStatusLabel(status: MatchStatus, t: MatchDict): string {
-  switch (status) {
-    case 'pending':
-      return t.statusPending;
-    case 'ongoing':
-      return t.statusOngoing;
-    case 'finished':
-      return t.statusFinished;
-    case 'cancelled':
-      return t.statusCancelled;
-    default:
-      return status;
-  }
-}
-
-function getMatchStatusChipClass(status: MatchStatus): string {
-  switch (status) {
-    case 'pending':
-      return 'px-1.5 py-[2px] rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-500/60';
-    case 'ongoing':
-      return 'px-1.5 py-[2px] rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/60';
-    case 'finished':
-      return 'px-1.5 py-[2px] rounded-full bg-gray-500/20 text-gray-200 border border-gray-500/60';
-    case 'cancelled':
-      return 'px-1.5 py-[2px] rounded-full bg-red-500/20 text-red-200 border border-red-500/60';
-    default:
-      return 'px-1.5 py-[2px] rounded-full bg-white/10 text-white border border-white/30';
-  }
 }
 
 function initials(name: string): string {

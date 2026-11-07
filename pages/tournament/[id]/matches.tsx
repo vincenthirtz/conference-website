@@ -32,6 +32,7 @@ import nsTournamentMatches from '@/lib/i18n/locales/fr/tournamentMatches';
 import { containsFfaStage } from '@/utils/stages/ffaStage';
 import { bracketTabMode } from '@/utils/stages/bracketStage';
 import { gameLabel } from '@/config/games';
+import { isFinishedForFilter } from '@/utils/publicMatchStatus';
 
 // Fuseau de référence pour placer les matchs dans la grille mensuelle.
 const MATCHES_TZ = 'Europe/Paris';
@@ -232,7 +233,11 @@ export default function TournamentMatchesPage({
     return matches.filter((m) => {
       if (statusFilter === 'pending' && m.status !== 'pending') return false;
       if (statusFilter === 'ongoing' && m.status !== 'ongoing') return false;
-      if (statusFilter === 'finished' && m.status !== 'finished') return false;
+      // « Terminés » : un forfait est un match joué jusqu'au bout du point de
+      // vue du tableau (vainqueur désigné) — il ne disparaît plus du filtre.
+      if (statusFilter === 'finished' && !isFinishedForFilter(m.status)) {
+        return false;
+      }
       if (stageFilter !== 'all' && m.stage?.id !== stageFilter) return false;
       return true;
     });
