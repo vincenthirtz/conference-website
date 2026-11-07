@@ -50,7 +50,9 @@ export async function getDiscordLinksForUsers(
 
   const { data, error } = await supabaseAdmin
     .from('user_discord_links')
-    .select('auth_user_id, discord_user_id, discord_username, discord_dm_closed_at')
+    .select(
+      'auth_user_id, discord_user_id, discord_username, discord_dm_closed_at'
+    )
     .in('auth_user_id', authUserIds);
 
   if (error) {
