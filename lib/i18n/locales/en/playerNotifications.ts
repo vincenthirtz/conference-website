@@ -103,13 +103,15 @@ export default {
   inviteNotFound: 'Invitation not found.',
   inviteForbidden: 'This invitation is not addressed to you.',
   inviteError: 'Something went wrong. Please try again later.',
+  inviteAlreadyProcessed:
+    'This invitation has already been handled (accepted, declined or withdrawn).',
   inviteRolePlayer: 'Player',
   inviteRoleSubstitute: 'Substitute',
   inviteRoleCoach: 'Coach',
   inviteRoleManager: 'Manager',
   inviteConfirmTitle: 'Join {team}?',
   inviteConfirmSubtitle:
-    'You will join this team. If you are already in a team, you will leave it.',
+    'You will join this team. You can only be on one team at a time: if you are already on another one, leave it first.',
   inviteConfirmYes: 'Join',
   inviteConfirmNo: 'Cancel',
   prefsChannelEvent: 'Event type',

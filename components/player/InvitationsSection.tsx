@@ -39,6 +39,22 @@ export type PlayerInvitation = {
 
 type InvitationsResponse = { invitations: PlayerInvitation[] };
 
+/**
+ * `code` d'un refus de POST /api/player/invitations/{id} (contrat C8 :
+ * `already_in_team` | `invitation_already_processed`). Lu à plat ou sous
+ * `error`, selon la forme d'erreur de la route ; `null` sinon.
+ */
+export function invitationErrorCode(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const p = payload as { code?: unknown; error?: unknown };
+  if (typeof p.code === 'string') return p.code;
+  if (p.error && typeof p.error === 'object') {
+    const nested = (p.error as { code?: unknown }).code;
+    if (typeof nested === 'string') return nested;
+  }
+  return null;
+}
+
 type Props = {
   /** Appelé après une acceptation réussie (invitation → membre du roster). */
   onJoined?: (teamName: string) => void;
@@ -93,8 +109,15 @@ export default function InvitationsSection({ onJoined }: Props = {}) {
     (err: unknown): string => {
       if (err instanceof AdminFetchError) {
         switch (err.status) {
-          case 409:
-            return t.alreadyInTeam;
+          // Deux 409 qui ne disent pas la même chose : le `code` les sépare.
+          case 409: {
+            const code = invitationErrorCode(err.payload);
+            if (code === 'already_in_team') return t.alreadyInTeam;
+            if (code === 'invitation_already_processed') {
+              return t.inviteAlreadyProcessed;
+            }
+            return t.inviteError;
+          }
           case 410:
             return t.inviteExpired;
           case 404:
@@ -113,7 +136,7 @@ export default function InvitationsSection({ onJoined }: Props = {}) {
   const handleAction = useCallback(
     async (invite: PlayerInvitation, action: 'accept' | 'reject') => {
       if (pendingId) return;
-      // Accepting joins the team (and leaves any current one) — confirm first.
+      // Accepting joins the team (one team at a time, checked by the API) — confirm first.
       if (action === 'accept') {
         const ok = await confirm({
           title: format(t.inviteConfirmTitle, { team: invite.teamName }),
@@ -143,11 +166,16 @@ export default function InvitationsSection({ onJoined }: Props = {}) {
         logger.error('[player/invitations] action error:', err);
         const message = mapError(err);
         addToast(message, 'error');
-        // Si l'invitation n'existe plus / a expiré, on la retire de la liste
-        // pour éviter un nouveau clic voué à échouer.
+        // Si l'invitation n'existe plus / a expiré / est déjà traitée, on la
+        // retire de la liste pour éviter un nouveau clic voué à échouer.
         if (
           err instanceof AdminFetchError &&
-          (err.status === 404 || err.status === 410 || err.status === 403)
+          (err.status === 404 ||
+            err.status === 410 ||
+            err.status === 403 ||
+            (err.status === 409 &&
+              invitationErrorCode(err.payload) ===
+                'invitation_already_processed'))
         ) {
           setInvites((prev) => prev.filter((i) => i.id !== invite.id));
         }

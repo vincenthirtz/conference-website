@@ -106,13 +106,15 @@ export default ns('playerNotifications', {
   inviteNotFound: 'Invitation introuvable.',
   inviteForbidden: "Cette invitation ne t'est pas destinée.",
   inviteError: 'Une erreur est survenue. Réessaie plus tard.',
+  inviteAlreadyProcessed:
+    'Cette invitation a déjà été traitée (acceptée, déclinée ou retirée).',
   inviteRolePlayer: 'Joueuse',
   inviteRoleSubstitute: 'Remplaçante',
   inviteRoleCoach: 'Coach',
   inviteRoleManager: 'Manager',
   inviteConfirmTitle: 'Rejoindre {team} ?',
   inviteConfirmSubtitle:
-    'Tu rejoindras cette équipe. Si tu es déjà dans une équipe, tu la quitteras.',
+    "Tu rejoindras cette équipe. On ne fait partie que d'une équipe à la fois : si tu es déjà dans une autre, quitte-la d'abord.",
   inviteConfirmYes: 'Rejoindre',
   inviteConfirmNo: 'Annuler',
   prefsChannelEvent: "Type d'événement",
