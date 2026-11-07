@@ -254,7 +254,7 @@ type StageTeamRow = {
   stage: Relation<{ tournament: Relation<Tournament> }>;
 };
 
-type MatchStatsRow = {
+export type MatchStatsRow = {
   id: string;
   status: string;
   team1_id: string | null;
@@ -262,6 +262,8 @@ type MatchStatsRow = {
   team1_score: number | null;
   team2_score: number | null;
   winner_team_id: string | null;
+  /** Lu pour le bilan seulement : équipe déclarée forfait (walkover). */
+  forfeit_team_id?: string | null;
 };
 
 type RecentMatchRow = MatchStatsRow & {
@@ -379,8 +381,15 @@ function mergeTournaments(
  *
  * `winner_team_id` fait foi quand il est posé ; la comparaison de scores n'est
  * qu'un repli pour les matchs anciens qui ne le portaient pas.
+ *
+ * Un forfait (walkover) compte comme une victoire ou une défaite : sans
+ * vainqueur posé, l'équipe déclarée forfait (`forfeit_team_id`) perd ; sans
+ * l'un ni l'autre, il n'entre ni en victoire ni en nul (score 0–0 sans sens).
  */
-function computeMatchStats(rows: MatchStatsRow[], teamId: string): MatchStats {
+export function computeMatchStats(
+  rows: MatchStatsRow[],
+  teamId: string
+): MatchStats {
   let wins = 0;
   let losses = 0;
   let draws = 0;
@@ -389,6 +398,11 @@ function computeMatchStats(rows: MatchStatsRow[], teamId: string): MatchStats {
     if (m.winner_team_id) {
       if (m.winner_team_id === teamId) wins++;
       else losses++;
+      continue;
+    }
+    if (m.status === 'walkover') {
+      if (m.forfeit_team_id === teamId) losses++;
+      else if (m.forfeit_team_id) wins++;
       continue;
     }
     const isTeam1 = m.team1_id === teamId;
@@ -542,11 +556,11 @@ export async function buildTeamPage(slug: string): Promise<TeamPageResult> {
     supabaseAdmin
       .from('matches')
       .select(
-        'id, status, team1_id, team2_id, team1_score, team2_score, winner_team_id'
+        'id, status, team1_id, team2_id, team1_score, team2_score, winner_team_id, forfeit_team_id'
       )
       .eq('tenant_id', tenantId)
       .or(`team1_id.eq.${teamId},team2_id.eq.${teamId}`)
-      .in('status', ['finished', 'completed', 'done']),
+      .in('status', ['finished', 'completed', 'done', 'walkover']),
 
     // Colonnes explicites (au lieu de `*`) : 10 lignes × table matches large →
     // on ne récupère que ce que le mapping RecentMatch consomme réellement.
