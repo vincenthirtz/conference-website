@@ -21,6 +21,7 @@ import {
 } from '@/features/admin/_shared/ui/Fiche';
 import { AdminButtonLink } from '@/features/admin/_shared/ui/AdminButton';
 import Chip from '@/features/admin/_shared/ui/Chip';
+import MemberDmClosedChip from '@/features/admin/teams/ui/MemberDmClosedChip';
 
 type StaffShape = {
   id: string;
@@ -300,6 +301,7 @@ function AdminTeamDetailPage(_props: StaffProps) {
                                     {t.battleTagMismatch}
                                   </Chip>
                                 )}
+                                <MemberDmClosedChip member={m} />
                               </div>
                               <span className="text-xs text-[var(--t3,#a39ba6)]">
                                 {m.role || '—'}

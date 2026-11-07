@@ -44,4 +44,7 @@ export default {
   battleTagMismatchTitle:
     "The player's verified Blizzard account does not match the roster BattleTag (potential impersonation or typo to investigate).",
   unverifiedCount: '{count} unverified',
+  dmClosed: 'DMs closed · {date}',
+  dmClosedTitle:
+    'Discord has refused direct messages to this person since {date}.',
 };

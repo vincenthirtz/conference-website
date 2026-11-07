@@ -43,4 +43,7 @@ export default adminNs('adminTeamDetail', {
   battleTagMismatchTitle:
     'Le compte Blizzard vérifié de la joueuse ne correspond pas au BattleTag du roster (usurpation potentielle ou faute de frappe à investiguer).',
   unverifiedCount: '{count} non vérifié(s)',
+  dmClosed: 'MP fermés · {date}',
+  dmClosedTitle:
+    'Discord refuse les messages privés de cette personne depuis le {date}.',
 });
