@@ -22,7 +22,11 @@ import ReportScoreModal, {
 import { useLang, type Lang } from '@/lib/i18n/LanguageProvider';
 import { localeTag } from '@/lib/i18n/useLocale';
 import { formatMatchDateTime } from '@/utils/dates/formatMatchDateTime';
-import { canOfferScoreReport } from '@/utils/matches/playerMatchLive';
+import {
+  canOfferScoreReport,
+  isTerminalMatchStatus,
+} from '@/utils/matches/playerMatchLive';
+import { Chip } from '@/features/ruban';
 import {
   isSessionExpiredError,
   loginHrefFor,
@@ -54,6 +58,9 @@ function formatLabel(match: PlayerMatch): string | null {
 
 function isUpcoming(match: PlayerMatch): boolean {
   if (match.status === 'pending' || match.status === 'ongoing') return true;
+  // Annulé ou forfait avant l'horaire : clos, donc rangé dans les résultats
+  // (sinon « À venir » avec un bouton de check-in sur un match qui n'aura pas lieu).
+  if (isTerminalMatchStatus(match.status)) return false;
   if (match.scheduledAt) {
     return new Date(match.scheduledAt).getTime() > Date.now();
   }
@@ -141,6 +148,10 @@ function MatchCard({
   // Statut report dérivé : état local de session sinon statut serveur "disputed".
   const reportOutcome: ReportOutcome | null =
     reportState?.outcome ?? (match.status === 'disputed' ? 'disputed' : null);
+  const isCancelled = match.status === 'cancelled';
+  // Forfait à 0–0 : pas un score, le badge « Forfait » et le résultat suffisent.
+  const blankForfeit =
+    match.status === 'walkover' && !match.score?.mine && !match.score?.opponent;
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-5">
@@ -171,6 +182,8 @@ function MatchCard({
         )}
         {match.roundName && <span>{match.roundName}</span>}
         {label && <span className="tabular-nums">{label}</span>}
+        {isCancelled && <Chip tone="err">{t.badgeCancelled}</Chip>}
+        {match.status === 'walkover' && <Chip>{t.badgeWalkover}</Chip>}
         {reportOutcome === 'awaiting_opponent' && (
           <span className="inline-flex items-center rounded-full border border-amber-400/30 bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold text-amber-100">
             {t.badgeAwaiting}
@@ -196,12 +209,15 @@ function MatchCard({
           </p>
         </div>
 
-        {!upcoming && match.score && (
+        {!upcoming && !isCancelled && (match.score || match.result) && (
           <div className="flex items-center gap-3">
-            <span className="tabular-nums text-2xl font-bold text-white">
-              {match.score.mine ?? '–'} <span className="text-white/40">–</span>{' '}
-              {match.score.opponent ?? '–'}
-            </span>
+            {match.score && !blankForfeit && (
+              <span className="tabular-nums text-2xl font-bold text-white">
+                {match.score.mine ?? '–'}{' '}
+                <span className="text-white/40">–</span>{' '}
+                {match.score.opponent ?? '–'}
+              </span>
+            )}
             <ResultBadge result={match.result} t={t} />
           </div>
         )}

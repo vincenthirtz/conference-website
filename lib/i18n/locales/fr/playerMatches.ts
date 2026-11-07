@@ -58,6 +58,8 @@ export default ns('playerMatches', {
   statusDisputedShort: 'En litige',
   badgeAwaiting: 'Score en attente',
   badgeDisputed: 'Score en litige',
+  badgeCancelled: 'Annulé',
+  badgeWalkover: 'Forfait',
   errInvalidScore: 'Score invalide. Vérifie les valeurs saisies.',
   errNotCaptain:
     "Seule la capitaine ou une manager d'une des équipes peut rapporter le score.",

@@ -57,6 +57,8 @@ export default {
   statusDisputedShort: 'Disputed',
   badgeAwaiting: 'Score pending',
   badgeDisputed: 'Score disputed',
+  badgeCancelled: 'Cancelled',
+  badgeWalkover: 'Forfeit',
   errInvalidScore: 'Invalid score. Check the values you entered.',
   errNotCaptain: 'Only a team captain or manager can report the score.',
   errBothSides:

@@ -349,15 +349,24 @@ export function MatchCard({
     match.status === 'done' ||
     match.status?.toLowerCase().includes('finish');
 
+  const isCancelled = match.status === 'cancelled';
+  const isWalkover = match.status === 'walkover';
   const ourScore = match.isTeam1 ? match.team1_score : match.team2_score;
   const theirScore = match.isTeam1 ? match.team2_score : match.team1_score;
-  const hasScores = ourScore !== null && theirScore !== null;
+  // Un forfait à 0 - 0 n'est pas un score ; un match annulé n'en a pas.
+  const hasScores =
+    !isCancelled &&
+    ourScore !== null &&
+    theirScore !== null &&
+    !(isWalkover && !ourScore && !theirScore);
 
   // Determine result: first check winner_team_id, then fallback to scores
   let result: 'win' | 'loss' | 'draw' | null = null;
 
   // Method 1: Use winner_team_id if available
-  if (match.winner_team_id) {
+  if (isCancelled) {
+    result = null;
+  } else if (match.winner_team_id) {
     if (match.winner_team_id === teamId) {
       result = 'win';
     } else {
@@ -427,7 +436,7 @@ export function MatchCard({
               {t.matchVs}{' '}
               {match.opponent?.short_name || match.opponent?.name || 'TBD'}
             </p>
-            {ourScore !== null && theirScore !== null && (
+            {hasScores && (
               <span
                 className={`text-sm font-bold font-mono ${
                   result === 'win'
@@ -443,6 +452,12 @@ export function MatchCard({
           </div>
           <div className="flex items-center gap-2 text-[10px] text-gray-500">
             {dateStr && <span>{dateStr}</span>}
+            {(isCancelled || isWalkover) && (
+              <>
+                {dateStr && <span>•</span>}
+                <span>{isCancelled ? t.matchCancelled : t.matchWalkover}</span>
+              </>
+            )}
             {match.round_name && (
               <>
                 <span>•</span>

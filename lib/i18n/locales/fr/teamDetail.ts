@@ -49,6 +49,8 @@ export default ns('teamDetail', {
   resultWin: 'V',
   resultLoss: 'D',
   resultDraw: 'N',
+  matchCancelled: 'Annulé',
+  matchWalkover: 'Forfait',
   statusRunning: 'En cours',
   statusUpcoming: 'À venir',
   statusFinished: 'Terminé',

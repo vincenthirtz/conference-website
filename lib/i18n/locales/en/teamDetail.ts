@@ -49,6 +49,8 @@ export default {
   resultWin: 'W',
   resultLoss: 'L',
   resultDraw: 'D',
+  matchCancelled: 'Cancelled',
+  matchWalkover: 'Forfeit',
   statusRunning: 'Ongoing',
   statusUpcoming: 'Upcoming',
   statusFinished: 'Finished',
