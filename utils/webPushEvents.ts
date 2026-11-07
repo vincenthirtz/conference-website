@@ -62,6 +62,12 @@ export const WEB_PUSH_EVENT_TYPES = [
   // send_captain_messages côté équipe destinataire), staff exclu — une
   // conversation entre deux équipes ne regarde pas le staff.
   'captain.message',
+  // Proposition de forfait au check-in (une seule équipe a pointé au coup
+  // d'envoi) : le staff tranche (confirmer / refuser). Audience = staff du
+  // tenant (branche par défaut du dispatcher), indépendamment du bot — le DM
+  // Discord aux admins reste, le push le double quand le bot est coupé
+  // (lot 3, 2026-11-07).
+  'match.forfeit_proposed',
 ] as const;
 
 export type WebPushEventType = (typeof WEB_PUSH_EVENT_TYPES)[number];
@@ -478,6 +484,39 @@ export function renderWebPushPayload(
           : 'Un scrim a été confirmé.',
         url,
         actions: [{ action: 'view', title: 'Voir le scrim' }],
+      };
+    }
+    case 'match.forfeit_proposed': {
+      // Charge utile : ForfeitProposedEventData (utils/matches/forfeitProposal.ts),
+      // éventuellement enveloppée dans `data`.
+      const p = unwrap(payload);
+      const side = (key: 'team1' | 'team2') => {
+        const t = p[key];
+        return t && typeof t === 'object' && !Array.isArray(t)
+          ? (t as Record<string, unknown>)
+          : null;
+      };
+      const name = (t: Record<string, unknown> | null) =>
+        t && typeof t.name === 'string' && t.name.length > 0 ? t.name : null;
+      const t1 = side('team1');
+      const t2 = side('team2');
+      const absentId = str(p, 'absentTeamId');
+      const absent =
+        absentId && t1?.id === absentId
+          ? name(t1)
+          : absentId && t2?.id === absentId
+            ? name(t2)
+            : null;
+      const label =
+        name(t1) && name(t2) ? `${name(t1)} vs ${name(t2)}` : 'Un match';
+      const matchId = str(p, 'matchId') || str(p, 'match_id');
+      return {
+        title: 'Forfait à trancher',
+        body: absent
+          ? `${label} : ${absent} n'a pas fait son check-in. Confirme ou refuse le forfait.`
+          : `${label} : une équipe n'a pas fait son check-in. Confirme ou refuse le forfait.`,
+        url: matchId ? `/admin/matches/${matchId}` : '/admin/matches',
+        actions: [{ action: 'view', title: 'Trancher' }],
       };
     }
     case 'team.forfeit': {

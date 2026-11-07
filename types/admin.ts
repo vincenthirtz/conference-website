@@ -414,4 +414,10 @@ export type TeamMemberRow = {
   specialty?: string | null;
   /** SR Overwatch déclaré par l'équipe (0-5000, `null` = non déclaré). */
   skill_rating?: number | null;
+  /**
+   * Messages privés Discord fermés constatés par le bot (ISO, lot 3
+   * 2026-11-07) ; `null` sinon ou sans compte Discord lié. Rendu par
+   * GET /api/admin/teams/{teamId}/members.
+   */
+  discordDmClosedAt?: string | null;
 };

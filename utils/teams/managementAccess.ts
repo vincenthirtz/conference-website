@@ -14,6 +14,7 @@ import {
   privilegedRoleValues,
   TEAM_PERMISSION_VALUES,
   type TeamPermission,
+  type TeamRole,
 } from '@/utils/teamRoles';
 import { DEFAULT_TENANT_ID } from '@/utils/tenant';
 
@@ -241,6 +242,32 @@ export async function getManagedTeams(
   }
 
   return accesses;
+}
+
+/**
+ * Permissions EFFECTIVES d'une personne sur UNE équipe, calculées en mémoire
+ * à partir de ce que `getManagedTeams` lit : capitanat, rôle `team_members`
+ * (config des rôles du tenant), surcharges actives. Mêmes règles, dans le
+ * même ordre canonique :
+ *   - capitaine ⇒ toutes ;
+ *   - rôle privilégié ⇒ rôle ∪ surcharges ;
+ *   - sinon ⇒ les seules surcharges (souvent aucune).
+ *
+ * Sert là où la lecture par personne coûterait trop (instantané de rafale de
+ * GET /api/bot/v1/players/by-discord/{id}/team). Le test
+ * botPlayerTeamPermissions vérifie qu'elle rend ce que rend getManagedTeam.
+ */
+export function effectiveTeamPermissions(input: {
+  isCaptain: boolean;
+  role: string | null | undefined;
+  roles: readonly TeamRole[];
+  granted: readonly TeamPermission[];
+}): TeamPermission[] {
+  if (input.isCaptain) return [...TEAM_PERMISSION_VALUES];
+  const normalized = input.role?.trim().toLowerCase() ?? '';
+  const rolePermissions =
+    input.roles.find((r) => r.value === normalized)?.permissions ?? [];
+  return mergePermissions(rolePermissions, input.granted);
 }
 
 /** Union ordonnée sur le catalogue canonique (pas d'ordre d'insertion). */

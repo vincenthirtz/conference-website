@@ -5,6 +5,12 @@ export type DiscordLink = {
   authUserId: string;
   discordUserId: string;
   discordUsername: string | null;
+  /**
+   * Messages privés fermés constatés par le bot (lot 3, 2026-11-07,
+   * `user_discord_links.discord_dm_closed_at`) ; `null` = rien de signalé.
+   * Rempli par la lecture groupée seulement (getDiscordLinksForUsers).
+   */
+  discordDmClosedAt?: string | null;
 };
 
 /**
@@ -44,7 +50,7 @@ export async function getDiscordLinksForUsers(
 
   const { data, error } = await supabaseAdmin
     .from('user_discord_links')
-    .select('auth_user_id, discord_user_id, discord_username')
+    .select('auth_user_id, discord_user_id, discord_username, discord_dm_closed_at')
     .in('auth_user_id', authUserIds);
 
   if (error) {
@@ -56,6 +62,7 @@ export async function getDiscordLinksForUsers(
       authUserId: row.auth_user_id,
       discordUserId: row.discord_user_id,
       discordUsername: row.discord_username,
+      discordDmClosedAt: row.discord_dm_closed_at ?? null,
     });
   }
   return result;

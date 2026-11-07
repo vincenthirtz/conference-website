@@ -14,6 +14,10 @@ export type NextMatchPayload =
         roundName: string | null;
         streamUrl: string | null;
         bestOf: number | null;
+        /** Équipe forfait (colonne brute) ; `null` hors forfait. */
+        forfeit_team_id: string | null;
+        /** Motif du forfait / de l'absence (colonne brute). */
+        no_show_reason: string | null;
       } | null;
       team: {
         id: string;

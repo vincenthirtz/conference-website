@@ -76,6 +76,10 @@ export type PlayerMatch = {
   format: string | null;
   bestOf: number | null;
   streamUrl: string | null;
+  /** Équipe forfait (colonne brute) ; `null` hors forfait. */
+  forfeit_team_id: string | null;
+  /** Motif du forfait / de l'absence (colonne brute). */
+  no_show_reason: string | null;
   slot: 1 | 2;
   opponent: { id: string; name: string } | null;
   score: { mine: number | null; opponent: number | null } | null;
@@ -136,6 +140,10 @@ export type PlayerMatchDetail = {
     bestOf: number | null;
     roundName: string | null;
     streamUrl: string | null;
+    /** Équipe forfait (colonne brute) ; `null` hors forfait. */
+    forfeit_team_id: string | null;
+    /** Motif du forfait / de l'absence (colonne brute). */
+    no_show_reason: string | null;
   };
   team: { id: string; name: string; slot: 1 | 2 };
   opponent: TeamRef;

@@ -1623,6 +1623,13 @@
           "pg": "uuid",
           "nullable": false,
           "default": null
+        },
+        {
+          "name": "dispatch_failures",
+          "type": "integer",
+          "pg": "integer",
+          "nullable": false,
+          "default": "0"
         }
       ],
       "primaryKey": [
@@ -21516,6 +21523,13 @@
           "pg": "timestamp with time zone",
           "nullable": false,
           "default": "now"
+        },
+        {
+          "name": "discord_dm_closed_at",
+          "type": "timestamptz",
+          "pg": "timestamp with time zone",
+          "nullable": true,
+          "default": null
         }
       ],
       "primaryKey": [

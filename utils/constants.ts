@@ -44,6 +44,25 @@ export const VALID_STAGE_TYPES: StageType[] = [
 export const MAX_TEAM_PLAYERS = 5;
 
 /**
+ * Remplaçantes acceptées en plus des titulaires (même règle que les équipes
+ * d'événement : `POOL_MAX_SUBSTITUTES`, utils/tournaments/pool.ts).
+ */
+export const MAX_TEAM_SUBSTITUTES = 3;
+
+/**
+ * Capacité RÉELLE d'un roster : titulaires + remplaçantes (5 + 3 = 8),
+ * encadrement (coach / manager) jamais compté — cf. `countPlayingMembers`.
+ *
+ * C'est elle qui dit qu'une équipe est « pleine » : liste « rejoindre »
+ * (`/api/teams?joinable=1`) et annuaire des scrims (`is_full`). Avant
+ * 2026-11-07, ces deux écrans comparaient à MAX_TEAM_PLAYERS (5) : une
+ * équipe de 5 titulaires qui cherchait une remplaçante disparaissait de la
+ * liste. Le déclencheur `enforce_team_max_players` (limite d'un tournoi)
+ * reste la seule barrière en base.
+ */
+export const MAX_TEAM_ROSTER = MAX_TEAM_PLAYERS + MAX_TEAM_SUBSTITUTES;
+
+/**
  * Plafond ABSOLU de lignes de roster acceptées en une création d'équipe,
  * encadrement compris.
  *

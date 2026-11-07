@@ -724,6 +724,7 @@ export type Database = {
         Row: {
           created_at: string
           delivered_at: string | null
+          dispatch_failures: number
           event_id: string
           event_name: string
           id: number
@@ -737,6 +738,7 @@ export type Database = {
         Insert: {
           created_at?: string
           delivered_at?: string | null
+          dispatch_failures?: number
           event_id: string
           event_name: string
           id?: number
@@ -750,6 +752,7 @@ export type Database = {
         Update: {
           created_at?: string
           delivered_at?: string | null
+          dispatch_failures?: number
           event_id?: string
           event_name?: string
           id?: number
@@ -10137,6 +10140,7 @@ export type Database = {
       user_discord_links: {
         Row: {
           auth_user_id: string
+          discord_dm_closed_at: string | null
           discord_user_id: string
           discord_username: string | null
           linked_at: string
@@ -10144,6 +10148,7 @@ export type Database = {
         }
         Insert: {
           auth_user_id: string
+          discord_dm_closed_at?: string | null
           discord_user_id: string
           discord_username?: string | null
           linked_at?: string
@@ -10151,6 +10156,7 @@ export type Database = {
         }
         Update: {
           auth_user_id?: string
+          discord_dm_closed_at?: string | null
           discord_user_id?: string
           discord_username?: string | null
           linked_at?: string

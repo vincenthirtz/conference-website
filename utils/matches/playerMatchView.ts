@@ -29,6 +29,7 @@ export const PLAYER_MATCH_SELECT = `
   team1_score, team2_score, winner_team_id,
   team1_checkin_token, team2_checkin_token,
   team1_checked_in_at, team2_checked_in_at,
+  forfeit_team_id, no_show_reason,
   team1:team1_id(id, name, slug),
   team2:team2_id(id, name, slug),
   tournament:tournament_id(id, name, slug, min_players)
@@ -61,6 +62,25 @@ export type PlayerSide = {
   tournament: TournamentRef;
   minPlayers: number | null;
 };
+
+/**
+ * Forfait d'un match, tel que le staff (ou l'auto-forfait du check-in) l'a
+ * posé, sous les NOMS BRUTS des colonnes (contrat du site, 2026-11-07) :
+ * `forfeit_team_id` = l'équipe qui a déclaré forfait / ne s'est pas
+ * présentée, `no_show_reason` = le motif saisi. Les deux à `null` hors
+ * forfait. L'écran en tire « qui a déclaré forfait » en comparant à son équipe.
+ */
+export type PlayerForfeit = {
+  forfeit_team_id: string | null;
+  no_show_reason: string | null;
+};
+
+export function readForfeit(row: Record<string, unknown>): PlayerForfeit {
+  return {
+    forfeit_team_id: (row.forfeit_team_id as string | null | undefined) ?? null,
+    no_show_reason: (row.no_show_reason as string | null | undefined) ?? null,
+  };
+}
 
 /** Les embeds PostgREST arrivent objet|tableau selon la cardinalité de la FK. */
 export function unwrap<T>(value: T | T[] | null | undefined): T | null {
