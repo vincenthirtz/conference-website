@@ -24,7 +24,8 @@ import { PlayerPageSkeleton } from '@/components/player/Skeletons';
 import ReportScoreModal, {
   type LocalReport,
 } from '@/components/player/ReportScoreModal';
-import { ButtonLink, Chip } from '@/features/ruban';
+import { ButtonLink } from '@/features/ruban';
+import MatchStatusChip from '@/features/player/matches/ui/MatchStatusChip';
 import { FilView } from '@/features/player/_shared/ui';
 import { usePlayerMatchThread } from '@/features/player/matches/hooks/usePlayerMatchThread';
 import { matchThreadState } from '@/features/player/matches/threadState';
@@ -46,13 +47,6 @@ import { loginHrefFor } from '@/utils/player/sessionExpiry';
 
 const PAGE =
   'min-h-screen bg-[var(--canvas,#07030a)] pt-header text-[var(--t1,#f4edf7)]';
-
-const STATUS_TONE = {
-  disputed: 'warn',
-  finished: 'ok',
-  ongoing: 'live',
-  upcoming: 'neutral',
-} as const;
 
 export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
   const t = useT(nsPlayerMatch);
@@ -111,12 +105,6 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
   const { match, team, opponent, tournament, report } = data;
   const canAct = !readOnly;
   const view = matchThreadState(data, thread.now, canAct);
-  const statusLabel = {
-    disputed: t.statusDisputed,
-    finished: t.statusFinished,
-    ongoing: t.statusOngoing,
-    upcoming: t.statusUpcoming,
-  }[view.status];
   const openReport = () => setReportOpen(true);
 
   const primaryAction =
@@ -145,7 +133,7 @@ export default function PlayerMatchScreen({ matchId }: { matchId: string }) {
         }
         actions={
           <>
-            <Chip tone={STATUS_TONE[view.status]}>{statusLabel}</Chip>
+            <MatchStatusChip status={view.status} t={t} />
             <ButtonLink size="sm" href="/player/matches">
               &larr; {t.back}
             </ButtonLink>

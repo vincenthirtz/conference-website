@@ -18,6 +18,20 @@ export default {
   statusOngoing: 'Live',
   statusFinished: 'Played',
   statusDisputed: 'Disputed',
+  statusCancelled: 'Cancelled',
+  statusWalkover: 'Forfeit',
+
+  stepCancelled: 'Match cancelled',
+  cancelledBody:
+    'This match was cancelled: there is no check-in, lineup or score to report.',
+  cancelledNoCheckin: 'Neither team confirmed its check-in before kick-off.',
+  walkoverMine: 'Your team was declared forfeit.',
+  walkoverOpponent: '{team} forfeited: the win goes to your team.',
+  walkoverUnknown: 'This match ended in a forfeit.',
+  forfeitReason: 'Reason: {reason}.',
+  reasonNoCheckin: 'check-in not confirmed before kick-off',
+  reasonManualDq: 'disqualification decided by the staff',
+  reasonOther: 'staff decision',
 
   stepPrepare: 'Preparation',
   stepCheckin: 'Check-in',

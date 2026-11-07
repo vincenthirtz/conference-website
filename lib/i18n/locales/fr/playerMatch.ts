@@ -26,6 +26,24 @@ export default ns('playerMatch', {
   statusOngoing: 'En cours',
   statusFinished: 'Terminé',
   statusDisputed: 'En litige',
+  statusCancelled: 'Annulé',
+  statusWalkover: 'Forfait',
+
+  // Match annulé : aucune étape à faire.
+  stepCancelled: 'Match annulé',
+  cancelledBody:
+    'Ce match a été annulé : il n’y a ni check-in, ni feuille de match, ni score à rapporter.',
+  cancelledNoCheckin:
+    'Aucune des deux équipes n’a confirmé son check-in avant le coup d’envoi.',
+  // Forfait (walkover) : qui, et pourquoi quand on le sait.
+  walkoverMine: 'Ton équipe a été déclarée forfait.',
+  walkoverOpponent:
+    '{team} a déclaré forfait : la victoire revient à ton équipe.',
+  walkoverUnknown: 'Ce match s’est terminé par un forfait.',
+  forfeitReason: 'Motif : {reason}.',
+  reasonNoCheckin: 'check-in non confirmé avant le coup d’envoi',
+  reasonManualDq: 'disqualification décidée par le staff',
+  reasonOther: 'décision du staff',
 
   // Étapes du fil.
   stepPrepare: 'Préparation',

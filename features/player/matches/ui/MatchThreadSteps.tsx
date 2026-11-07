@@ -208,12 +208,74 @@ function LiveStep({ data, t }: Props) {
   );
 }
 
+/** `no_show_reason` en mots ; un texte libre (avec espaces) reste tel quel. */
+export function forfeitReasonLabel(reason: string, t: T): string {
+  if (reason === 'auto_forfeit_no_checkin') return t.reasonNoCheckin;
+  if (reason === 'manual_dq') return t.reasonManualDq;
+  return /\s/.test(reason) ? reason : t.reasonOther;
+}
+
+/** Match annulé : une seule carte, aucune étape à faire. */
+function CancelledStep({ data, view, t }: Props) {
+  const { reason } = view.forfeit;
+  return (
+    <MatchThreadStep index={1} title={t.stepCancelled} state="idle">
+      <p>{t.cancelledBody}</p>
+      {reason && (
+        <p className="mt-2">
+          {reason === 'auto_forfeit_no_checkin'
+            ? t.cancelledNoCheckin
+            : format(t.forfeitReason, {
+                reason: forfeitReasonLabel(reason, t),
+              })}
+        </p>
+      )}
+      <div className="mt-3">
+        <ButtonLink
+          size="sm"
+          href={`/match/${encodeURIComponent(data.match.id)}`}
+        >
+          {t.liveMatchPage}
+        </ButtonLink>
+      </div>
+    </MatchThreadStep>
+  );
+}
+
+/** Forfait : qui l'a déclaré, et pourquoi quand le motif est connu. */
+function WalkoverNotice({ data, view, t }: Props) {
+  const { side, reason } = view.forfeit;
+  return (
+    <>
+      <p className={side === 'mine' ? 'text-amber-200' : 'text-emerald-200'}>
+        {side === 'mine'
+          ? t.walkoverMine
+          : side === 'opponent'
+            ? format(t.walkoverOpponent, { team: data.opponent?.name ?? '—' })
+            : t.walkoverUnknown}
+      </p>
+      {reason && (
+        <p className="mt-2">
+          {format(t.forfeitReason, { reason: forfeitReasonLabel(reason, t) })}
+        </p>
+      )}
+    </>
+  );
+}
+
 function ScoreStep(props: Props) {
   const { data, view, t, canAct } = props;
   const { report } = data;
+  // Un forfait à 0–0 n'est pas un score : le forfait se dit, il ne se chiffre pas.
+  const showScore =
+    !!data.score &&
+    data.score.mine !== null &&
+    !(view.isWalkover && !data.score.mine && !data.score.opponent);
   return (
     <MatchThreadStep index={5} title={t.stepScore} state={view.scoreState}>
-      {report.state === 'disputed' ? (
+      {view.isWalkover ? (
+        <WalkoverNotice {...props} />
+      ) : report.state === 'disputed' ? (
         <>
           <p className="text-amber-200">{t.scoreDisputed}</p>
           {/* Litige OUVERT : les deux déclarations, le délai, le recours. */}
@@ -239,10 +301,10 @@ function ScoreStep(props: Props) {
         <p>{t.scoreNone}</p>
       )}
 
-      {data.score && data.score.mine !== null && (
+      {showScore && data.score && (
         <p className="mt-2 font-mono tabular-nums text-[var(--t1,#f4edf7)]">
           {format(t.scoreFinal, {
-            mine: data.score.mine,
+            mine: data.score.mine ?? 0,
             opponent: data.score.opponent ?? 0,
           })}
         </p>
@@ -289,6 +351,7 @@ function ScoreStep(props: Props) {
 
 /** Les cinq étapes, empilées dans l'ordre du soir de match. */
 export default function MatchThreadSteps(props: Props) {
+  if (props.view.isCancelled) return <CancelledStep {...props} />;
   return (
     <>
       <PrepareStep {...props} />

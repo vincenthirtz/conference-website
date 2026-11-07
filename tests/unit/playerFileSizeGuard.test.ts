@@ -48,7 +48,8 @@ const BASELINE: Record<string, number> = {
   // 2026-10-08 : 450 écrites (encart EventSignupCard), redescendu à 418 en
   // sortant les lectures partagées dans `useDashboardSharedReads`. Le gel suit.
   'components/player/screens/PlayerDashboardScreen.tsx': 419,
-  'components/player/screens/PlayerMatchScreen.tsx': 195,
+  // 2026-11-07 : 183, la puce d'état sortie dans MatchStatusChip (lot 1).
+  'components/player/screens/PlayerMatchScreen.tsx': 183,
   // Routes (> 500) : parties dans conference-api (bascule 4e, 2026-10-13).
 };
 
