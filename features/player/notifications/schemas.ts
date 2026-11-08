@@ -39,6 +39,13 @@ export type PlayerNotificationsPayload = {
    */
   teamNotifications: number;
   total: number;
+  /**
+   * Non lues de la BOÎTE de notifications (lot 4) : personnelles + d'équipe,
+   * le même nombre que `unreadCount` de GET /api/player/inbox. Hors `total`
+   * (qui compte ce qui est « en attente ») : ses notifications d'équipe y
+   * sont déjà dans `teamNotifications`.
+   */
+  inboxUnread: number;
 };
 
 /**
@@ -109,3 +116,86 @@ export type NotificationPrefPutInput = z.infer<typeof NotificationPrefPutBody>;
 export const PushUnsubscribeBody = z.object({
   endpoint: z.string().trim().url('endpoint must be a valid URL').max(2048),
 });
+
+/* ------------------------------------------------------------------ *
+ * Boîte de notifications (lot 4, docs/PLAN-interactions-joueuses.md)
+ * ------------------------------------------------------------------ */
+
+/** Taille d'une page de GET /api/player/inbox, par défaut et au plus. */
+export const INBOX_PAGE_DEFAULT = 20;
+export const INBOX_PAGE_MAX = 50;
+/** Plafond de `ids` d'un POST /api/player/inbox/read. */
+export const INBOX_READ_MAX_IDS = 100;
+
+/** GET /api/player/inbox?limit=&before= */
+export const PlayerInboxQuery = z.object({
+  limit: z.coerce
+    .number({ error: 'Nombre invalide.' })
+    .int({ error: 'Nombre invalide.' })
+    .min(1, { error: 'Nombre invalide.' })
+    .max(INBOX_PAGE_MAX, { error: 'Nombre invalide.' })
+    .optional()
+    .meta({ description: 'Taille de la page (1 à 50, 20 par défaut).' }),
+  before: z
+    .string({ error: 'Date invalide.' })
+    .datetime({ offset: true, error: 'Date invalide.' })
+    .optional()
+    .meta({
+      description:
+        'Curseur : les entrées STRICTEMENT plus anciennes (`nextBefore` ' +
+        'de la page précédente).',
+    }),
+});
+export type PlayerInboxQueryInput = z.infer<typeof PlayerInboxQuery>;
+
+/**
+ * Corps de POST /api/player/inbox/read : des `ids` (entrées de la liste,
+ * personnelles ou d'équipe), ou `all: true` (tout ce qui est non lu).
+ */
+export const PlayerInboxReadBody = z.object({
+  ids: z
+    .array(z.string().min(1).max(64), { error: 'Liste invalide.' })
+    .max(INBOX_READ_MAX_IDS, { error: 'Trop d’entrées.' })
+    .optional(),
+  all: z.literal(true).optional(),
+});
+export type PlayerInboxReadInput = z.infer<typeof PlayerInboxReadBody>;
+
+/** Une entrée de GET /api/player/inbox, plus récentes d'abord. */
+export type InboxItem = {
+  /** Personnelle : `player_notifications.id` ; équipe : `demandes.id`. */
+  id: string;
+  /** `personal` : adressée à la joueuse ; `team` : à son équipe. */
+  source: 'personal' | 'team';
+  /**
+   * Personnelle : l'événement de l'outbox (`match.rescheduled`…). Équipe : le
+   * type de la notification (`scrim_accepted`, `rules_reminder`…).
+   */
+  kind: string;
+  /** Texte rangé à l'écriture, en français. */
+  title: string;
+  body: string;
+  /** Chemin relatif côté joueuse, ou `null`. */
+  url: string | null;
+  teamId: string | null;
+  createdAt: string;
+  /**
+   * `null` = non lue. Équipe : l'instant de lecture n'est pas gardé, une
+   * entrée lue rend sa date de création.
+   */
+  readAt: string | null;
+  /** Équipe : l'objet de GET /api/player/notifications/team ; sinon `null`. */
+  team: TeamNotification | null;
+};
+
+/** GET /api/player/inbox */
+export type InboxPayload = {
+  items: InboxItem[];
+  /** Curseur de la page suivante (`before=`), `null` = fin. */
+  nextBefore: string | null;
+  /** Non lues : personnelles + d'équipe. */
+  unreadCount: number;
+};
+
+/** POST /api/player/inbox/read */
+export type InboxReadResult = { ok: true; unreadCount: number };

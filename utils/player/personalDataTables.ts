@@ -866,6 +866,23 @@ export const PERSONAL_DATA_TABLES: readonly PersonalDataTable[] = [
     export: { columns: ['event_type', 'channel', 'enabled', 'updated_at'] },
   },
   {
+    table: 'player_notifications',
+    columns: ['user_id'],
+    policy: { kind: 'cascade', onDelete: { user_id: 'CASCADE' } },
+    why: 'Sa boîte de notifications (180 jours).',
+    export: {
+      columns: [
+        'kind',
+        'title',
+        'body',
+        'url',
+        'team_id',
+        'created_at',
+        'read_at',
+      ],
+    },
+  },
+  {
     table: 'push_subscriptions',
     columns: ['user_id'],
     policy: { kind: 'cascade', onDelete: { user_id: 'CASCADE' } },

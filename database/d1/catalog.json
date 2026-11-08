@@ -11173,6 +11173,143 @@
         }
       ]
     },
+    "player_notifications": {
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": "uuid"
+        },
+        {
+          "name": "tenant_id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "team_id",
+          "type": "uuid",
+          "pg": "uuid",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "kind",
+          "type": "text",
+          "pg": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "pg": "text",
+          "nullable": false,
+          "default": null
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "pg": "text",
+          "nullable": false,
+          "default": "''"
+        },
+        {
+          "name": "url",
+          "type": "text",
+          "pg": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "data",
+          "type": "json",
+          "pg": "jsonb",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "source_event_id",
+          "type": "text",
+          "pg": "text",
+          "nullable": true,
+          "default": null
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz",
+          "pg": "timestamp with time zone",
+          "nullable": false,
+          "default": "now"
+        },
+        {
+          "name": "read_at",
+          "type": "timestamptz",
+          "pg": "timestamp with time zone",
+          "nullable": true,
+          "default": null
+        }
+      ],
+      "primaryKey": [
+        "id"
+      ],
+      "uniques": [
+        {
+          "name": "player_notifications_source_user_key",
+          "columns": [
+            "source_event_id",
+            "user_id"
+          ],
+          "expressions": null,
+          "where": null
+        }
+      ],
+      "foreignKeys": [
+        {
+          "name": "player_notifications_team_id_fkey",
+          "columns": [
+            "team_id"
+          ],
+          "table": "teams",
+          "references": [
+            "id"
+          ],
+          "onDelete": "set null"
+        },
+        {
+          "name": "player_notifications_tenant_id_fkey",
+          "columns": [
+            "tenant_id"
+          ],
+          "table": "tenants",
+          "references": [
+            "id"
+          ],
+          "onDelete": "cascade"
+        },
+        {
+          "name": "player_notifications_user_id_fkey",
+          "columns": [
+            "user_id"
+          ],
+          "table": "auth_user",
+          "references": [
+            "id"
+          ],
+          "onDelete": "cascade"
+        }
+      ]
+    },
     "player_rating_history": {
       "columns": [
         {

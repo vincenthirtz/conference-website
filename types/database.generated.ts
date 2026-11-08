@@ -5231,6 +5231,73 @@ export type Database = {
         }
         Relationships: []
       }
+      player_notifications: {
+        Row: {
+          body: string
+          created_at: string
+          data: Json | null
+          id: string
+          kind: string
+          read_at: string | null
+          source_event_id: string | null
+          team_id: string | null
+          tenant_id: string
+          title: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          kind: string
+          read_at?: string | null
+          source_event_id?: string | null
+          team_id?: string | null
+          tenant_id: string
+          title: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          kind?: string
+          read_at?: string | null
+          source_event_id?: string | null
+          team_id?: string | null
+          tenant_id?: string
+          title?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_notifications_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth_user"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_rating_history: {
         Row: {
           created_at: string
