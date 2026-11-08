@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Rules — scope & production safety
 
 - Do only what was asked. If you think extra changes are needed (Dockerfile, lockfiles, `.gitignore`, e2e checks, refactors), propose them first and do not apply them.
-- Never run builds on the bot VPS / any prod host, read production secrets, or write to the production DB (including via subagents) without explicit approval. State these constraints in every subagent prompt.
-- For Supabase DDL, write the migration file under `database/migrations/` and give the exact SQL/CLI commands to apply it (including `supabase link`); do not apply DDL to prod yourself.
+- Never run builds on the bot VPS / any prod host or read production secrets without explicit approval. Subagents never touch production (no DB access, no deploy): state these constraints in every subagent prompt.
+- Production databases — standing authorization from the owner (2026-11-08), no need to ask: D1 (`owwomenscup-db`, production) reads, migrations and data changes run directly with `node ~/.claude/scripts/owwc-d1.mjs "<sql>"` (token in the user env var `OWWC_CF_API_TOKEN`). Every migration is written under `database/migrations/` (conference-api) and applied to BOTH D1 and Supabase (kept as the SQL mirror / fallback, applied through the Supabase MCP), then verified on both; report what ran. Before a destructive statement (DROP, mass UPDATE/DELETE), note a D1 Time Travel bookmark to restore from.
 
 ## Environment
 
