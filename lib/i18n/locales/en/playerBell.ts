@@ -22,4 +22,6 @@ export default {
   candidatures_other: '{count} applications',
   teamNotifications_one: '{count} team notification',
   teamNotifications_other: '{count} team notifications',
+  inbox_one: '{count} new notification',
+  inbox_other: '{count} new notifications',
 };

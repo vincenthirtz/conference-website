@@ -18,6 +18,11 @@ export default {
   closeMenu: 'Close menu',
   bellPending: 'Notifications ({count} pending)',
   bellEmpty: 'Notifications (none pending)',
+  bellSummary: 'Notifications ({summary})',
+  bellActions_one: '{count} action',
+  bellActions_other: '{count} actions',
+  bellUnread_one: '{count} new notification',
+  bellUnread_other: '{count} new notifications',
   adminLink: 'Admin',
   shell: {
     navAria: 'Player space navigation',

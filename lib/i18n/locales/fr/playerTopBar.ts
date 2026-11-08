@@ -17,6 +17,12 @@ export default ns('playerTopBar', {
   closeMenu: 'Fermer le menu',
   bellPending: 'Notifications ({count} en attente)',
   bellEmpty: 'Notifications (aucune en attente)',
+  // Lot 4 : actions en attente + notifications non lues de la boîte.
+  bellSummary: 'Notifications ({summary})',
+  bellActions_one: '{count} action',
+  bellActions_other: '{count} actions',
+  bellUnread_one: '{count} nouvelle notification',
+  bellUnread_other: '{count} nouvelles notifications',
   adminLink: 'Administration',
   shell: {
     navAria: 'Navigation de l’espace joueuse',

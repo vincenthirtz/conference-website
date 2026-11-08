@@ -21,4 +21,7 @@ export default ns('playerBell', {
   candidatures_other: '{count} candidatures',
   teamNotifications_one: '{count} notification d’équipe',
   teamNotifications_other: '{count} notifications d’équipe',
+  // Lot 4 : non lues de la boîte de notifications.
+  inbox_one: '{count} nouvelle notification',
+  inbox_other: '{count} nouvelles notifications',
 });

@@ -6,6 +6,8 @@ import { useDocumentVisible } from '@/hooks/useDocumentVisible';
 import { useAdminFetch } from '@/hooks/useAdminFetch';
 import { useT, format } from '@/lib/i18n/useT';
 import nsPlayerBell from '@/lib/i18n/locales/fr/playerBell';
+import { PLAYER_NOTIFICATIONS_CHANGED } from '@/utils/player/notificationsEvents';
+import { playerBellCounts } from './playerBellCounts';
 
 type Notifications = {
   hasTeam: boolean;
@@ -18,6 +20,8 @@ type Notifications = {
   checkinPending: 0 | 1;
   /** Notifications d'équipe non lues (scrim accepté, pris en compte). */
   teamNotifications?: number;
+  /** Non lues de la boîte durable (lot 4) ; absent avec l'API d'avant. */
+  inboxUnread?: number;
   total: number;
 };
 
@@ -55,6 +59,18 @@ export default function PlayerBell(): JSX.Element | null {
     };
   }, [user, load, visible]);
 
+  // Notifications marquées lues sur /player/notifications : relecture tout de
+  // suite (utils/player/notificationsEvents.ts), comme la barre du haut.
+  useEffect(() => {
+    if (!user) return undefined;
+    const onChanged = () => {
+      void load();
+    };
+    window.addEventListener(PLAYER_NOTIFICATIONS_CHANGED, onChanged);
+    return () =>
+      window.removeEventListener(PLAYER_NOTIFICATIONS_CHANGED, onChanged);
+  }, [user, load]);
+
   // Realtime: refresh counts as soon as Postgres notifies of an inbound
   // demande on the captain's team. Polling stays as a safety net for
   // dropped connections.
@@ -69,8 +85,14 @@ export default function PlayerBell(): JSX.Element | null {
 
   if (loading || !user) return null;
 
-  const total = data?.total ?? 0;
+  // Lot 4 : actions en attente + non lues de la boîte, sans compter deux fois
+  // les notifications d'équipe (./playerBellCounts.ts).
+  const counts = data ? playerBellCounts(data) : null;
+  const total = counts?.total ?? 0;
   const showBadge = total > 0;
+  const unreadInbox = counts?.unread ?? 0;
+  // Avec la boîte, les notifications d'équipe sont comptées dans ses non lues.
+  const teamUnread = counts?.hasInbox ? 0 : (data?.teamNotifications ?? 0);
   const tooltip = data
     ? [
         data.unreadMessages
@@ -93,13 +115,18 @@ export default function PlayerBell(): JSX.Element | null {
             )
           : null,
         data.checkinPending ? t.checkinPending : null,
-        data.teamNotifications
+        teamUnread
           ? format(
-              data.teamNotifications > 1
+              teamUnread > 1
                 ? t.teamNotifications_other
                 : t.teamNotifications_one,
-              { count: data.teamNotifications }
+              { count: teamUnread }
             )
+          : null,
+        unreadInbox
+          ? format(unreadInbox > 1 ? t.inbox_other : t.inbox_one, {
+              count: unreadInbox,
+            })
           : null,
       ]
         .filter(Boolean)
@@ -108,9 +135,9 @@ export default function PlayerBell(): JSX.Element | null {
 
   return (
     <Link
-      // Une notification d'équipe à lire : elle s'affiche (et se lit) sur
-      // l'écran Notifications, pas sur le tableau de bord.
-      href={data?.teamNotifications ? '/player/notifications' : '/player'}
+      // Une notification à lire (équipe, boîte) : elle s'affiche (et se lit)
+      // sur l'écran Notifications, pas sur le tableau de bord.
+      href={teamUnread || unreadInbox ? '/player/notifications' : '/player'}
       title={tooltip}
       aria-label={format(t.ariaLabel, { tooltip })}
       className="group/bell relative ml-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-neutral-200 backdrop-blur-md transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
