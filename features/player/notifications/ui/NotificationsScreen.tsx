@@ -2,20 +2,23 @@
 // « Notifications » sur l'archétype FIL (lot P15) :
 //   (a) invitations reçues (masquées en lecture seule) ;
 //   (b) « En attente » : compteurs actionnables (GET /api/player/notifications) ;
-//   (b') « Notifications de l'équipe » : scrim accepté, scrim pris en compte,
-//       30 derniers jours (GET/POST /api/player/notifications/team) — lues dès
-//       l'affichage, jamais en inspection (hooks/useTeamNotifications) ;
+//   (b') « Historique » (lot 4) : la boîte durable, personnelles + équipe, de
+//       TOUTES ses équipes (GET /api/player/inbox, POST …/read) — lues dès
+//       l'affichage, jamais en inspection (hooks/useInbox). Repli tant que
+//       l'API d'avant le lot 4 répond (route absente) : « Notifications de
+//       l'équipe » d'avant (GET/POST /api/player/notifications/team,
+//       hooks/useTeamNotifications) ;
 //   (c) préférences : opt-in push de l'appareil + grille par canal + annonces
-//       (GET/PUT /api/player/push/prefs).
-// Pas d'historique push : la PWA ne stocke pas les notifications passées.
+//       (GET/PUT /api/player/push/prefs), et ce que pilote chaque canal.
 //
 // INSPECTION (player-view admin) : les COMPTEURS suivent le sujet ; les
 // préférences, personnelles (appareil + consentement), ne le suivent pas —
 // elles ne sont ni lues ni montrées, la route refuse d'ailleurs `?as=`.
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { usePlayerArea } from '@/components/player/PlayerAreaContext';
+import { useActiveTeam } from '@/components/player/ActiveTeamContext';
 import { useManagedTeam } from '@/hooks/useManagedTeam';
 import { useToast } from '@/components/Toast';
 import { useT } from '@/lib/i18n/useT';
@@ -23,7 +26,12 @@ import nsPlayerNotifications from '@/lib/i18n/locales/fr/playerNotifications';
 import InvitationsSection from '@/components/player/InvitationsSection';
 import BattlenetVerifyCard from '@/components/player/BattlenetVerifyCard';
 import ActiveTeamSwitcher from '@/components/player/ActiveTeamSwitcher';
-import { ButtonLink, rubanErrBox, rubanSpinner } from '@/features/ruban';
+import {
+  ButtonLink,
+  rubanErrBox,
+  rubanHelp,
+  rubanSpinner,
+} from '@/features/ruban';
 import { FilView } from '../../_shared/ui';
 import { usePlayerErrorText } from '../../_shared/useErrorText';
 import {
@@ -32,7 +40,9 @@ import {
   useToggleNotificationPref,
 } from '../hooks/useNotifications';
 import { useTeamNotifications } from '../hooks/useTeamNotifications';
+import { useInbox } from '../hooks/useInbox';
 import type { NotificationChannel } from '../schemas';
+import InboxList from './InboxList';
 import PendingActions from './PendingActions';
 import NotificationPrefsPanel from './NotificationPrefsPanel';
 import TeamNotificationsList from './TeamNotificationsList';
@@ -59,11 +69,23 @@ export default function NotificationsScreen() {
   const counters = useNotificationCounters(ready);
   const prefs = useNotificationPrefs(ready && !isInspecting);
   const toggle = useToggleNotificationPref();
+  const realtimeTeamId = counters.data?.captainTeamId ?? null;
+  const inbox = useInbox({ enabled: ready, readOnly, realtimeTeamId });
+  // L'ancienne liste de l'équipe : seulement quand la boîte ne répond pas
+  // (API d'avant le lot 4) — sinon elle fait partie de l'Historique.
   const team = useTeamNotifications({
-    enabled: ready,
+    enabled: ready && inbox.unavailable,
     readOnly,
-    realtimeTeamId: counters.data?.captainTeamId ?? null,
+    realtimeTeamId,
   });
+  const { managedTeams } = useActiveTeam();
+  const teamNames = useMemo(
+    () =>
+      managedTeams.length > 1
+        ? new Map(managedTeams.map((m) => [m.id, m.name] as const))
+        : null,
+    [managedTeams]
+  );
   // Passe à vrai dès qu'une invitation est acceptée : propose alors la
   // vérification Battle.net (personnelle, donc attrapée ici).
   const [justJoined, setJustJoined] = useState(false);
@@ -146,17 +168,39 @@ export default function NotificationsScreen() {
           <PendingActions counters={counters.data} />
         </section>
 
-        {/* Sans équipe : rien à montrer (la route rend teamId: null). */}
-        {(team.query.data?.teamId || team.query.isError) && (
+        {inbox.available && (
           <section>
-            <h2 className={H2}>{t.teamHeading}</h2>
-            <TeamNotificationsList
-              notifications={team.query.data?.notifications ?? []}
-              fresh={team.fresh}
-              error={team.query.isError && !team.query.data}
+            <h2 className={H2}>{t.historyHeading}</h2>
+            <p className={`-mt-2 mb-4 ${rubanHelp}`}>{t.historyIntro}</p>
+            <InboxList
+              items={inbox.items}
+              fresh={inbox.fresh}
+              olderUnread={inbox.olderUnread}
+              teamNames={teamNames}
+              readOnly={readOnly}
+              hasMore={!!inbox.query.hasNextPage}
+              loadingMore={inbox.query.isFetchingNextPage}
+              moreError={inbox.query.isFetchNextPageError}
+              onLoadMore={() => void inbox.query.fetchNextPage()}
+              onMarkAll={inbox.markAll}
+              markingAll={inbox.markingAll}
             />
           </section>
         )}
+
+        {/* Repli (boîte absente) — sans équipe : rien à montrer (la route
+            rend teamId: null). */}
+        {inbox.unavailable &&
+          (team.query.data?.teamId || team.query.isError) && (
+            <section>
+              <h2 className={H2}>{t.teamHeading}</h2>
+              <TeamNotificationsList
+                notifications={team.query.data?.notifications ?? []}
+                fresh={team.fresh}
+                error={team.query.isError && !team.query.data}
+              />
+            </section>
+          )}
 
         {!isInspecting && (
           <section>

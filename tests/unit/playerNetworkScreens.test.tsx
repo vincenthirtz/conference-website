@@ -131,7 +131,15 @@ const TEAM_FEED = {
 const TEAM_FEED_SENTENCE =
   'La demande de scrim de ton équipe contre Aurora a été prise en compte : l’organisation se fait directement entre les équipes.';
 
+// Boîte du lot 4 : `{}` (autre forme) = l'API d'avant → la liste d'équipe
+// d'avant reste affichée. Un test pose la vraie réponse.
+let inboxReply: unknown = {};
+
 function reply(url: string, method: string, body: any): unknown {
+  if (url.startsWith('/api/player/inbox/read')) {
+    return { ok: true, unreadCount: 0 };
+  }
+  if (url.startsWith('/api/player/inbox')) return inboxReply;
   if (url.startsWith('/api/player/notifications/team')) {
     return method === 'POST' ? { marked: 1 } : TEAM_FEED;
   }
@@ -156,6 +164,7 @@ function reply(url: string, method: string, body: any): unknown {
 
 beforeEach(() => {
   calls = [];
+  inboxReply = {};
   globalThis.fetch = vi.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET';
     const body = init?.body ? JSON.parse(String(init.body)) : null;
@@ -222,6 +231,64 @@ describe('Notifications (Fil)', () => {
             c.url.startsWith('/api/player/notifications/team')
         )
       ).toBe(true)
+    );
+  });
+
+  it('boîte du lot 4 : « Historique » à la place de la liste d’équipe, lu à l’affichage', async () => {
+    inboxReply = {
+      items: [
+        {
+          id: 'p1',
+          source: 'personal',
+          kind: 'match.scheduled',
+          title: 'Match planifié',
+          body: 'Phenix contre Aurora, jeudi 21 h.',
+          url: '/player/match/m1',
+          teamId: 't1',
+          createdAt: '2026-11-05T14:00:00.000Z',
+          readAt: null,
+        },
+        {
+          id: 't-n1',
+          source: 'team',
+          kind: 'scrim_acknowledged',
+          title: 'Demande de scrim prise en compte',
+          body: TEAM_FEED.notifications[0].text,
+          url: null,
+          teamId: 't1',
+          createdAt: '2026-11-04T14:00:00.000Z',
+          readAt: '2026-11-04T15:00:00.000Z',
+          team: TEAM_FEED.notifications[0],
+        },
+      ],
+      nextBefore: null,
+      unreadCount: 1,
+    };
+    render(<NotificationsScreen />);
+    await screen.findByRole('heading', { name: 'Historique' });
+    expect(screen.getByText('Phenix contre Aurora, jeudi 21 h.')).toBeTruthy();
+    // La notification d'équipe garde son rendu (phrase dans la langue).
+    expect(screen.getByText(TEAM_FEED_SENTENCE)).toBeTruthy();
+    expect(
+      screen.queryByRole('heading', { name: 'Notifications de l’équipe' })
+    ).toBe(null);
+    await waitFor(() =>
+      expect(
+        calls.find(
+          (c) => c.method === 'POST' && c.url === '/api/player/inbox/read'
+        )?.body
+      ).toEqual({ ids: ['p1'] })
+    );
+    // L'ancienne liste n'est plus lue ni marquée.
+    expect(
+      calls.some((c) => c.url.startsWith('/api/player/notifications/team'))
+    ).toBe(false);
+    // La lecture couvre toutes les équipes : pas de `teamId=`.
+    const read = calls.find((c) => c.url.startsWith('/api/player/inbox?'));
+    expect(read?.url).toBe('/api/player/inbox?limit=20');
+    // Ce que pilotent les réglages : l'historique reçoit tout.
+    expect(screen.getByTestId('prefs-channels').textContent).toContain(
+      'il reçoit toujours tout'
     );
   });
 

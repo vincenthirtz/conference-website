@@ -6,6 +6,11 @@
 // lien vers la liseuse. Présentationnel : reçoit la liste
 // (hooks/useTeamNotifications).
 //
+// LOT 4. Quand la boîte durable répond (GET /api/player/inbox), l'écran rend
+// l'Historique (InboxList.tsx), qui reprend les fonctions de ce fichier pour
+// les notifications d'équipe ; cette liste reste le REPLI tant que l'API
+// d'avant le lot 4 répond (route absente).
+//
 // LANGUE. Titre et phrase suivent la langue de la joueuse : la phrase est
 // composée à l'affichage depuis le type et l'équipe adverse
 // (`teamNotificationText`). Le texte rangé avec la notification, en
@@ -49,6 +54,15 @@ function scrimDateLabel(iso: string | null, locale: string): string | null {
 
 /** Règlement d'un tournoi à valider : phrase avec le tournoi, lien vers la liseuse. */
 const RULES_KINDS = new Set(['rules_validation_requested', 'rules_reminder']);
+
+/** Lien vers la liseuse du règlement, ou `null` (scrim, tournoi inconnu). */
+export function teamNotificationRulesHref(
+  n: Pick<TeamNotification, 'kind' | 'tournamentId'>
+): string | null {
+  return RULES_KINDS.has(n.kind) && n.tournamentId
+    ? tournamentRulesUrls.readerPage(n.tournamentId)
+    : null;
+}
 
 /**
  * La phrase d'une notification, dans la langue de `t`. Repli sur le texte
@@ -117,6 +131,7 @@ export default function TeamNotificationsList({
     <ul className="grid gap-3" aria-label={t.teamHeading}>
       {notifications.map((n) => {
         const text = teamNotificationText(n, t, locale);
+        const rulesHref = teamNotificationRulesHref(n);
         return (
           <li key={n.id} data-testid="team-notification">
             <Card padding="md">
@@ -142,10 +157,10 @@ export default function TeamNotificationsList({
                 </span>
               </div>
               {text && <p className={`mt-1 text-sm ${rubanMuted}`}>{text}</p>}
-              {RULES_KINDS.has(n.kind) && n.tournamentId && (
+              {rulesHref && (
                 <div className="mt-2">
                   <ButtonLink
-                    href={tournamentRulesUrls.readerPage(n.tournamentId)}
+                    href={rulesHref}
                     variant="secondary"
                     size="sm"
                     data-testid="team-notification-rules-link"

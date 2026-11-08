@@ -1,6 +1,7 @@
 // features/player/notifications/ui/NotificationPrefsPanel.tsx — préférences
 // de la joueuse (lot P15) : opt-in push de CET appareil, grille par canal,
-// puis l'abonnement aux annonces & campagnes. Présentationnel.
+// l'abonnement aux annonces & campagnes, puis ce que pilote chaque canal
+// (lot 4). Présentationnel.
 //
 // Le toggle « Annonces & campagnes » est OPT-OUT (abonnée par défaut) : la
 // sémantique INVERSE de la grille e-mail au-dessus — d'où sa ligne à part.
@@ -62,7 +63,20 @@ export default function NotificationPrefsPanel({
         />
       </Card>
 
-      <p className={`mt-3 ${rubanHelp}`}>{t.prefsFootnote}</p>
+      {/* Quel canal ces réglages pilotent (lot 4) : l'historique reçoit tout,
+          les interrupteurs ne changent que le push de cet appareil et les
+          e-mails ; les messages du bot ne se règlent pas ici. */}
+      <div className="mt-4" data-testid="prefs-channels">
+        <p className={`text-sm font-medium ${rubanStrong}`}>
+          {t.prefsChannelsTitle}
+        </p>
+        <ul className={`mt-2 grid list-disc gap-1.5 pl-5 ${rubanHelp}`}>
+          <li>{t.prefsChannelsHistory}</li>
+          <li>{t.prefsChannelsPush}</li>
+          <li>{t.prefsChannelsEmail}</li>
+          <li>{t.prefsChannelsDiscord}</li>
+        </ul>
+      </div>
     </>
   );
 }

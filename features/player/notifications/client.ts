@@ -18,14 +18,42 @@ import type {
   TeamNotificationsPayload,
   TeamNotificationsReadResult,
 } from './schemas';
+import type { InboxReadInput, InboxReadResult } from './inboxTypes';
 
 export const notificationsUrls = {
   counters: '/api/player/notifications',
   team: '/api/player/notifications/team',
   prefs: '/api/player/push/prefs',
+  inbox: '/api/player/inbox',
+  inboxRead: '/api/player/inbox/read',
 };
 
+/** `?limit=` puis `?before=` (curseur) de la liste de la boîte. */
+export function inboxUrl(limit: number, before: string | null): string {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (before) params.set('before', before);
+  return `${notificationsUrls.inbox}?${params.toString()}`;
+}
+
 export const notificationsClient = {
+  /**
+   * La boîte (lot 4) : TOUTES les équipes de la joueuse, donc jamais
+   * `?teamId=` ; le sujet inspecté, lui, suit (`?as=`). La réponse n'est pas
+   * typée ici : l'écran vérifie sa forme (API d'avant le lot 4 → 404 ou autre
+   * chose), cf. `isInboxPayload`.
+   */
+  inbox: (scope: PlayerScope, limit: number, before: string | null) =>
+    playerRequest<unknown>(inboxUrl(limit, before), {
+      scope: { ...scope, teamId: null },
+      skipAuthRedirect: true,
+    }),
+  /** Marquer lu : la joueuse elle-même, jamais en inspection. */
+  markInboxRead: (body: InboxReadInput) =>
+    playerRequest<InboxReadResult>(notificationsUrls.inboxRead, {
+      method: 'POST',
+      json: body,
+      skipAuthRedirect: true,
+    }),
   counters: (scope: PlayerScope) =>
     playerRequest<PlayerNotificationsPayload>(notificationsUrls.counters, {
       scope,

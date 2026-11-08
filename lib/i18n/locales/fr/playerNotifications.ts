@@ -34,7 +34,7 @@ export default ns('playerNotifications', {
     'team.weekly.recap':
       "Le bilan de la semaine de ton équipe. Envoyé seulement s'il s'est passé quelque chose.",
     'team.join.decided':
-      'Quand une équipe accepte ou refuse ta demande pour la rejoindre (push et message Discord).',
+      'Quand une équipe accepte ou refuse ta demande pour la rejoindre. Le bot t’envoie aussi un message Discord, que ce réglage ne coupe pas.',
     'captain.message':
       'Quand une équipe écrit à la tienne, si tu peux répondre en son nom. Le contenu reste dans la messagerie.',
   },
@@ -53,7 +53,8 @@ export default ns('playerNotifications', {
   checkinPending: 'Check-in à valider',
   checkinPendingDesc: 'Valide ta présence',
   backToDashboard: 'Tableau de bord',
-  intro: 'Tes actions en attente et tes préférences de notifications push.',
+  intro:
+    'Tes actions en attente, l’historique de tes notifications et tes préférences.',
   pendingHeading: 'En attente',
   allUpToDate: 'Tout est à jour ✓',
   noPending: 'Tu n’as aucune action en attente.',
@@ -83,9 +84,40 @@ export default ns('playerNotifications', {
       'Rappel de ton équipe : le règlement de {tournament} attend toujours ta validation. L’inscription de ton équipe reste incomplète tant que tu ne l’as pas accepté.',
   },
   teamRulesCta: 'Lire le règlement',
+  // Historique : la boîte durable (lot 4), personnelles + équipe.
+  historyHeading: 'Historique',
+  historyIntro:
+    'Tout ce qu’on t’a envoyé, lu ou non, même quand le push est coupé.',
+  historyEmpty:
+    'Aucune notification pour l’instant. Celles qu’on t’envoie s’afficheront ici.',
+  historyLoadError: 'Impossible de charger l’historique.',
+  historyMoreError: 'Impossible de charger la suite. Réessaie.',
+  historyLoadMore: 'Voir plus',
+  historyLoadingMore: 'Chargement…',
+  historyMarkAll: 'Tout marquer comme lu',
+  historyUnreadLeft_one: '{count} notification non lue plus ancienne.',
+  historyUnreadLeft_other: '{count} notifications non lues plus anciennes.',
+  historyOpen: 'Ouvrir',
+  historyTeam: 'Équipe {team}',
+  historyGroups: {
+    match: 'Match',
+    team: 'Équipe',
+    scrim: 'Scrim',
+    rules: 'Règlement',
+    other: 'Autre',
+  },
   prefsHeading: 'Préférences de notifications',
-  prefsFootnote:
-    'Ces réglages s’appliquent aux notifications push du navigateur. Active d’abord les notifications ci-dessus pour les recevoir.',
+  // Quel canal ces réglages pilotent (lot 4) — remplace l'ancienne note
+  // « ces réglages s'appliquent aux push ».
+  prefsChannelsTitle: 'Ce que ces réglages changent',
+  prefsChannelsHistory:
+    'Historique : il reçoit toujours tout, quels que soient les réglages ci-dessous.',
+  prefsChannelsPush:
+    'Push : les interrupteurs décident des alertes du navigateur sur cet appareil. Active d’abord les notifications ci-dessus pour les recevoir.',
+  prefsChannelsEmail:
+    'E-mail : les interrupteurs décident du récapitulatif envoyé environ deux fois par jour ; « Annonces & campagnes » décide des e-mails d’annonces. L’e-mail d’ouverture du check-in, envoyé une heure avant le match à la capitaine, à la coach et à la manager, part toujours.',
+  prefsChannelsDiscord:
+    'Discord : les messages du bot (rappels de check-in 30 et 15 minutes avant le match, feuille de match, demandes de scrim…) ne se règlent pas encore ici.',
   broadcastTitle: 'Annonces & campagnes',
   broadcastDesc:
     "Emails d'annonces et de nouveautés de l'OW Women's Cup. Tes notifications de match ne sont pas concernées.",

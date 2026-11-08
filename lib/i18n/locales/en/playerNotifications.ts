@@ -35,7 +35,7 @@ export default {
     'team.weekly.recap':
       "Your team's week in review. Only sent when something actually happened.",
     'team.join.decided':
-      'When a team accepts or declines your request to join it (push and Discord message).',
+      'When a team accepts or declines your request to join it. The bot also sends you a Discord message, which this setting does not turn off.',
     'captain.message':
       'When a team writes to yours, if you can reply on its behalf. The content stays in your messages.',
   },
@@ -54,7 +54,8 @@ export default {
   checkinPending: 'Check-in to confirm',
   checkinPendingDesc: 'Confirm your attendance',
   backToDashboard: 'Dashboard',
-  intro: 'Your pending actions and your push notification preferences.',
+  intro:
+    'Your pending actions, your notification history and your preferences.',
   pendingHeading: 'Pending',
   allUpToDate: 'All caught up ✓',
   noPending: 'You have no pending actions.',
@@ -81,9 +82,36 @@ export default {
       'A reminder from your team: the rules of {tournament} are still waiting for you. Your team’s registration stays incomplete until you accept them.',
   },
   teamRulesCta: 'Read the rules',
+  historyHeading: 'History',
+  historyIntro:
+    'Everything we have sent you, read or not, even when push is turned off.',
+  historyEmpty: 'No notifications yet. The ones we send you will show up here.',
+  historyLoadError: 'Could not load your history.',
+  historyMoreError: 'Could not load more. Please try again.',
+  historyLoadMore: 'Show more',
+  historyLoadingMore: 'Loading…',
+  historyMarkAll: 'Mark all as read',
+  historyUnreadLeft_one: '{count} older unread notification.',
+  historyUnreadLeft_other: '{count} older unread notifications.',
+  historyOpen: 'Open',
+  historyTeam: 'Team {team}',
+  historyGroups: {
+    match: 'Match',
+    team: 'Team',
+    scrim: 'Scrim',
+    rules: 'Rules',
+    other: 'Other',
+  },
   prefsHeading: 'Notification preferences',
-  prefsFootnote:
-    'These settings apply to browser push notifications. Enable notifications above first to receive them.',
+  prefsChannelsTitle: 'What these settings change',
+  prefsChannelsHistory:
+    'History: it always receives everything, whatever the settings below.',
+  prefsChannelsPush:
+    'Push: the switches decide which browser alerts you get on this device. Enable notifications above first to receive them.',
+  prefsChannelsEmail:
+    'Email: the switches decide what goes into the digest sent about twice a day; “Announcements & campaigns” decides on announcement emails. The check-in email, sent an hour before the match to the captain, the coach and the manager, always goes out.',
+  prefsChannelsDiscord:
+    'Discord: messages from the bot (check-in reminders 30 and 15 minutes before the match, match sheet, scrim requests…) cannot be set here yet.',
   broadcastTitle: 'Announcements & campaigns',
   broadcastDesc:
     "Announcement and news emails from the OW Women's Cup. Your match notifications are not affected.",
